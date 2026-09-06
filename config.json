@@ -1,0 +1,276 @@
+{
+  "timezone": "Europe/Berlin",
+  "scanSchedule": [
+    {
+      "from": "00:00",
+      "to": "06:00",
+      "everyMinutes": 60
+    },
+    {
+      "from": "06:00",
+      "to": "08:00",
+      "everyMinutes": 5
+    },
+    {
+      "from": "08:00",
+      "to": "21:00",
+      "everyMinutes": 3
+    },
+    {
+      "from": "21:00",
+      "to": "24:00",
+      "everyMinutes": 10
+    }
+  ],
+  "stations": [
+    {
+      "name": "Mannheim Hbf",
+      "trainNumbers": [
+        "225",
+        "224",
+        "5",
+        "371",
+        "106",
+        "108"
+      ]
+    },
+    {
+      "name": "Köln Hbf",
+      "trainNumbers": [
+        "225",
+        "122",
+        "124",
+        "224",
+        "106",
+        "108"
+      ]
+    },
+    {
+      "name": "Berlin Hbf",
+      "trainNumbers": [
+        "178",
+        "141",
+        "143",
+        "145",
+        "146",
+        "142",
+        "140"
+      ]
+    },
+    {
+      "name": "Bad Bentheim",
+      "trainNumbers": [
+        "141",
+        "143",
+        "145",
+        "146",
+        "142",
+        "140"
+      ]
+    },
+    {
+      "name": "Basel Bad Bf",
+      "trainNumbers": [
+        "106",
+        "108",
+        "371",
+        "5",
+        "403",
+        "402"
+      ]
+    },
+    {
+      "name": "Arnhem Centraal",
+      "trainNumbers": [
+        "402",
+        "403",
+        "225",
+        "224",
+        "122",
+        "421",
+        "420",
+        "40421",
+        "40490",
+        "124",
+        "141",
+        "143",
+        "145",
+        "146",
+        "142",
+        "140"
+      ]
+    },
+    {
+      "name": "Deventer",
+      "trainNumbers": [
+        "141",
+        "143",
+        "145",
+        "146",
+        "142",
+        "140"
+      ]
+    },
+    {
+      "name": "Wien Hbf",
+      "trainNumbers": [
+        "40421",
+        "66",
+        "146",
+        "40490",
+        "19929",
+        "1031",
+        "143",
+        "61",
+        "347",
+        "269"
+      ],
+      "arrivalTrainNumbers": [
+        "40421",
+        "66",
+        "146"
+      ],
+      "departureTrainNumbers": [
+        "40490",
+        "19929",
+        "1031",
+        "143",
+        "61",
+        "347",
+        "269"
+      ]
+    },
+    {
+      "name": "Innsbruck Hbf",
+      "trainNumbers": [
+        "421",
+        "420",
+        "81",
+        "83",
+        "87",
+        "82",
+        "13479",
+        "165"
+      ],
+      "arrivalTrainNumbers": [
+        "421"
+      ],
+      "departureTrainNumbers": [
+        "420",
+        "81",
+        "83",
+        "87",
+        "82",
+        "13479",
+        "165"
+      ]
+    }
+  ],
+  "allowedCategories": [
+    "ICE",
+    "IC",
+    "EC",
+    "ECE",
+    "NJ",
+    "EN",
+    "TGV",
+    "RJ",
+    "RJX"
+  ],
+  "planHoursBefore": 1,
+  "planHoursAfter": 2,
+  "maxTrains": 60,
+  "screenSwitchSeconds": 10,
+  "italy": {
+    "enabled": true,
+    "scanSchedule": [
+      {
+        "from": "00:00",
+        "to": "06:00",
+        "everyMinutes": 60
+      },
+      {
+        "from": "06:00",
+        "to": "08:00",
+        "everyMinutes": 5
+      },
+      {
+        "from": "08:00",
+        "to": "21:00",
+        "everyMinutes": 3
+      },
+      {
+        "from": "21:00",
+        "to": "24:00",
+        "everyMinutes": 10
+      }
+    ],
+    "trains": [
+      {
+        "number": "151",
+        "station": "Milano Centrale",
+        "mode": "arrival"
+      },
+      {
+        "number": "2821",
+        "station": "Milano Centrale",
+        "mode": "arrival"
+      },
+      {
+        "number": "2823",
+        "station": "Milano Centrale",
+        "mode": "arrival"
+      },
+      {
+        "number": "666",
+        "station": "Milano Centrale",
+        "mode": "arrival"
+      },
+      {
+        "number": "665",
+        "station": "Milano Centrale",
+        "mode": "departure"
+      },
+      {
+        "number": "673",
+        "station": "Milano Centrale",
+        "mode": "departure"
+      },
+      {
+        "number": "685",
+        "station": "Milano Centrale",
+        "mode": "departure"
+      },
+      {
+        "number": "9631",
+        "station": "Milano Centrale",
+        "mode": "departure"
+      },
+      {
+        "number": "9633",
+        "station": "Milano Centrale",
+        "mode": "departure"
+      },
+      {
+        "number": "9539",
+        "station": "Milano Centrale",
+        "mode": "departure"
+      },
+      {
+        "number": "2832",
+        "station": "Milano Centrale",
+        "mode": "departure"
+      },
+      {
+        "number": "8508",
+        "station": "Roma Termini",
+        "mode": "departure"
+      },
+      {
+        "number": "8509",
+        "station": "Roma Termini",
+        "mode": "departure"
+      }
+    ]
+  }
+}

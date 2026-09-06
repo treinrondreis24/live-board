@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Treinrondreis – live treinen</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app">
+
+    <section id="db-screen" class="screen db-screen active">
+      <header class="topbar db-topbar">
+        <div class="brand">
+          <div class="logo-fallback">TREINRONDREIS.NL</div>
+          <div class="brand-text">
+            <div class="brand-name">Treinrondreis</div>
+            <div class="title">Internationale treinen</div>
+          </div>
+        </div>
+        <div class="clockbox">
+          <div class="clock shared-clock">--:--</div>
+          <div class="date shared-date"></div>
+        </div>
+      </header>
+
+      <section class="db-columns db-row">
+        <div>Tijd</div>
+        <div>Trein</div>
+        <div>Van</div>
+        <div>Naar</div>
+        <div>Scanpunt</div>
+        <div>Status</div>
+      </section>
+
+      <section id="db-rows" class="db-rows"></section>
+
+      <footer class="db-footer">
+        <div>
+          <span id="db-dot" class="dot"></span>
+          <span id="db-data-status">DB Timetables starten…</span>
+        </div>
+        <div id="db-page-indicator">1 / 1</div>
+      </footer>
+    </section>
+
+    <section id="italy-milano-split" class="screen italy-screen italy-split-screen">
+      <header class="italy-topbar">
+        <div class="italy-heading">
+          <div class="italy-title">ITALIA</div>
+          <div class="italy-subtitle">Milano Centrale</div>
+        </div>
+        <div class="italy-clockbox">
+          <div class="italy-clock shared-clock">--:--</div>
+          <div class="italy-date shared-date"></div>
+        </div>
+      </header>
+
+      <section class="italy-split-body">
+        <div class="italy-panel">
+          <div class="italy-panel-title">Partenze</div>
+          <section class="italy-columns italy-row">
+            <div>Ora</div>
+            <div>Treno</div>
+            <div>A</div>
+            <div>Bin.</div>
+            <div>Stato</div>
+          </section>
+          <section id="italy-milano-dep-rows" class="italy-split-rows"></section>
+        </div>
+
+        <div class="italy-panel">
+          <div class="italy-panel-title">Arrivi</div>
+          <section class="italy-columns italy-row">
+            <div>Ora</div>
+            <div>Treno</div>
+            <div>Da</div>
+            <div>Bin.</div>
+            <div>Stato</div>
+          </section>
+          <section id="italy-milano-arr-rows" class="italy-split-rows"></section>
+        </div>
+      </section>
+
+      <footer class="italy-footer">
+        <div><span class="italy-dot" id="italy-dot-1"></span><span id="italy-status-1">ViaggiaTreno starten…</span></div>
+        <div>Milano Centrale · Partenze / Arrivi</div>
+      </footer>
+    </section>
+
+    <section id="italy-roma-dep" class="screen italy-screen">
+      <header class="italy-topbar">
+        <div class="italy-heading">
+          <div class="italy-title">ITALIA</div>
+          <div class="italy-subtitle">Roma Termini · Partenze</div>
+        </div>
+        <div class="italy-clockbox">
+          <div class="italy-clock shared-clock">--:--</div>
+          <div class="italy-date shared-date"></div>
+        </div>
+      </header>
+
+      <section class="italy-columns italy-row">
+        <div>Ora</div>
+        <div>Treno</div>
+        <div>Da</div>
+        <div>A</div>
+        <div>Binario</div>
+        <div>Stato</div>
+      </section>
+
+      <section id="italy-roma-dep-rows" class="italy-rows"></section>
+
+      <footer class="italy-footer">
+        <div><span class="italy-dot" id="italy-dot-2"></span><span id="italy-status-2">ViaggiaTreno starten…</span></div>
+        <div>Roma Termini · Partenze</div>
+      </footer>
+    </section>
+
+    <div id="error-panel" class="error-panel hidden">
+      <div class="error-title">Databron niet beschikbaar</div>
+      <div id="error-text" class="error-text"></div>
+    </div>
+
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

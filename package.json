@@ -1,0 +1,16 @@
+{
+  "name": "treinrondreis-live-board",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "check": "node --check server.mjs && node --check storage.mjs && node --check public/app.js"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "pg": "^8.16.3"
+  }
+}
