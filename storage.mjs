@@ -1,6 +1,12 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
+import {
+  initDataHub,recordCanonicalObservations,startLegacyMigration as startHubLegacyMigration,
+  getMigrationState,getSources as getHubSources,getDataHubStats as getHubStats,
+  getServiceRuns as getHubServiceRuns,getCanonicalEvents as getHubCanonicalEvents,
+  getCombinedTrain as getHubCombinedTrain
+} from "./datahub.mjs";
 
 const __filename=fileURLToPath(import.meta.url);
 const __dirname=path.dirname(__filename);
@@ -86,6 +92,7 @@ export async function initStorage(){
         ON train_observations(source,planned_timestamp,category,train_number);
     `);
     backend="postgresql";
+    await initDataHub({backend,pool,sqlite:null});
     return {backend};
   }
 
@@ -142,6 +149,7 @@ export async function initStorage(){
     LIMIT 1
   `);
   backend="sqlite";
+  await initDataHub({backend,pool:null,sqlite});
   return {backend};
 }
 
@@ -230,6 +238,10 @@ export async function recordObservations(trains,source,observedAt=Date.now()){
       sqlite.exec("COMMIT");
     }catch(e){sqlite.exec("ROLLBACK");throw e;}
   }
+
+  // V4 Data Hub: schrijf dezelfde scan ook naar de bron-onafhankelijke laag.
+  // De oude train_observations-tabel blijft bestaan voor het huidige board en trendlogica.
+  await recordCanonicalObservations(trains,source,observedAt);
 
   await cleanupOldObservations(observedAt);
 }
@@ -408,4 +420,17 @@ export async function getLatestForPlannedWindow({source="DB",start,end,categorie
     `).all(...values);
   }
   return [];
+}
+
+
+// ---------------- V4 Multi-source Data Hub API ----------------
+export async function startLegacyMigration(){return startHubLegacyMigration();}
+export function getDataHubMigrationState(){return getMigrationState();}
+export async function getDataSources(){return getHubSources();}
+export async function getDataHubStats(){return getHubStats();}
+export async function getServiceRuns(args={}){return getHubServiceRuns(args);}
+export async function getCanonicalEvents(args={}){return getHubCanonicalEvents(args);}
+export async function getCombinedTrain(args={}){return getHubCombinedTrain(args);}
+export async function ingestCanonicalObservations(trains,source,observedAt=Date.now(),options={}){
+  return recordCanonicalObservations(trains,source,observedAt,options);
 }

@@ -4,7 +4,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   initStorage,getStorageInfo,recordObservations,findTrendObservation,
-  getHistory,getLatestByStation,getLatestForPlannedWindow
+  getHistory,getLatestByStation,getLatestForPlannedWindow,
+  startLegacyMigration,getDataHubMigrationState,getDataSources,getDataHubStats,
+  getServiceRuns,getCanonicalEvents,getCombinedTrain
 } from "./storage.mjs";
 
 const __filename=fileURLToPath(import.meta.url);
@@ -162,6 +164,18 @@ function resolveEvent(stop,mode){
   if(stop.ar)return {event:stop.ar,resolvedMode:"arrival"};
   return {event:null,resolvedMode:"auto"};
 }
+function dbServiceDateFromStopId(id="") {
+  const m=String(id).match(/-(\d{2})(\d{2})(\d{2})\d{4}-\d+$/);
+  return m?`20${m[1]}-${m[2]}-${m[3]}`:"";
+}
+function countryForStation(name="") {
+  const n=String(name);
+  if(["Arnhem Centraal","Deventer","Utrecht Centraal","Amsterdam Centraal"].some(x=>n===x))return "NL";
+  if(["Wien Hbf","Innsbruck Hbf"].some(x=>n===x))return "AT";
+  if(n==="Basel Bad Bf")return "CH";
+  if(["Mannheim Hbf","Köln Hbf","Berlin Hbf","Bad Bentheim","Düsseldorf Hbf"].some(x=>n===x))return "DE";
+  return "";
+}
 function normalize(stop,station,cfg){
   const tl=stop.tl||{},category=String(tl.c||""),number=String(tl.n||""),train=[category,number].filter(Boolean).join(" ").trim();
   const configuredMode=eventModeFor(cfg,number),{event,resolvedMode}=resolveEvent(stop,configuredMode);
@@ -174,11 +188,13 @@ function normalize(stop,station,cfg){
   const planned=parseDbTime(event.pt),expected=parseDbTime(event.ct||event.pt);
   const plannedTrack=String(event.pp||"").trim(),currentTrack=String(event.cp||event.pp||"").trim();
   return {
-    id:stop.id,trainKey:`${category}|${number}`,time:hhmm(event.pt),plannedTime:hhmm(event.pt),currentTime:hhmm(event.ct||event.pt),
+    id:stop.id,sourceTripId:`${category}|${number}`,sourceEventId:stop.id,serviceDate:dbServiceDateFromStopId(stop.id),
+    trainKey:`${category}|${number}`,time:hhmm(event.pt),plannedTime:hhmm(event.pt),currentTime:hhmm(event.ct||event.pt),
     hasChangedTime:Boolean(event.ct&&hhmm(event.ct)!==hhmm(event.pt)),expectedTimestamp:expected?.getTime()||0,plannedTimestamp:planned?.getTime()||0,
-    from:route.from,to:route.to,route:route.route,pastRoute:route.pastRoute,futureRoute:route.futureRoute,
-    train,category,number,eventMode:resolvedMode,status,type,delay,cancelled,
-    observedAt:station.name,hasRealtime:Boolean(stop.hasRealtime),plannedTrack,currentTrack,track:currentTrack||plannedTrack||"—",
+    actualTimestamp:null,from:route.from,to:route.to,route:route.route,pastRoute:route.pastRoute,futureRoute:route.futureRoute,
+    train,category,number,operatorCode:String(tl.o||""),eventMode:resolvedMode,status,type,delay,cancelled,
+    observedAt:station.name,stationCode:String(station.eva||""),countryCode:countryForStation(station.name),
+    hasRealtime:Boolean(stop.hasRealtime),plannedTrack,currentTrack,track:currentTrack||plannedTrack||"—",
     hasChangedTrack:Boolean(currentTrack&&plannedTrack&&currentTrack!==plannedTrack),trend30:null,rawStop:stop
   };
 }
@@ -374,13 +390,51 @@ function parseAutocomplete(text){
   const out=[];for(const raw of String(text||"").split(/\r?\n/)){const line=raw.trim();if(!line)continue;const m=line.match(/^(.*?)\|(.*)$/);if(m)out.push({label:m[1],value:m[2]});else out.push({label:line,value:line});}return out;
 }
 function italyCandidateInfo(item,number){
-  const value=String(item?.value||item?.label||"");const nums=value.match(/\d+/g)||[];let origin=null,timestamp=null;
-  if(nums.length>=2){origin=nums[0];timestamp=nums.at(-1);}return {number:String(number),origin,timestamp,label:item?.label||value,value};
+  const value=String(item?.value||item?.label||"").trim();
+
+  // ViaggiaTreno autocomplete gebruikt o.a.:
+  // 666-S06000-1753135200000
+  // dus: treinNummer - stationCode - vertrekdagTimestamp.
+  //
+  // De oude parser pakte per ongeluk het eerste getal ("666") als
+  // origin station, waardoor andamentoTreno vrijwel altijd 204 teruggaf.
+  const stationMatch=value.match(/(?:^|[-|])(S\d{5})(?=[-|]|$)/i)
+                    || value.match(/\b(S\d{5})\b/i);
+  const timestampMatch=value.match(/(\d{12,})\s*$/);
+
+  const origin=stationMatch ? stationMatch[1].toUpperCase() : null;
+  const timestamp=timestampMatch ? timestampMatch[1] : null;
+
+  return {
+    number:String(number),
+    origin,
+    timestamp,
+    label:item?.label||value,
+    value
+  };
 }
 function italyDayKey(){return new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Rome",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());}
+function italyCandidateServiceDate(item){
+  const label=String(item?.label||"");
+  const m=label.match(/(\d{2})\/(\d{2})\/(\d{2})/);
+  if(m)return `20${m[3]}-${m[2]}-${m[1]}`;
+  const info=italyCandidateInfo(item,"");
+  const ts=Number(info.timestamp||0);
+  if(ts>0)return new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Rome",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(ts));
+  return italyDayKey();
+}
 async function fetchItalyTrainDetail(candidate,number){
-  const c=italyCandidateInfo(candidate,number);if(!c.origin)throw new Error(`kan origine voor ${number} niet bepalen`);
-  const suffix=c.timestamp?`/${encodeURIComponent(c.timestamp)}`:"";return italyFetch(`andamentoTreno/${encodeURIComponent(c.origin)}/${encodeURIComponent(number)}${suffix}`,{expectJson:true});
+  const c=italyCandidateInfo(candidate,number);
+  if(!c.origin)throw new Error(`kan origine voor ${number} niet bepalen`);
+
+  const suffix=c.timestamp?`/${encodeURIComponent(c.timestamp)}`:"";
+  const data=await italyFetch(
+    `andamentoTreno/${encodeURIComponent(c.origin)}/${encodeURIComponent(number)}${suffix}`,
+    {expectJson:true}
+  );
+
+  if(!data)throw new Error(`geen detaildata voor ${number}`);
+  return data;
 }
 function italyStops(data){return Array.isArray(data?.fermate)?data.fermate:[];}
 function findItalyStop(data,name){return italyStops(data).find(s=>sameStation(s?.stazione,name))||null;}
@@ -388,8 +442,35 @@ async function resolveItalyJourney(cfg){
   const key=`${italyDayKey()}|${cfg.number}|${cfg.station}`;if(italyJourneyCache.has(key))return italyJourneyCache.get(key);
   const text=await italyFetch(`cercaNumeroTrenoTrenoAutocomplete/${encodeURIComponent(cfg.number)}`),items=parseAutocomplete(text);
   if(!items.length)throw new Error(`trein ${cfg.number} niet gevonden`);
-  const candidates=[];for(const item of items){try{const data=await fetchItalyTrainDetail(item,cfg.number);if(findItalyStop(data,cfg.station))candidates.push({item,data});}catch{}await sleep(80);}
-  if(candidates.length){const result={candidate:candidates[0].item,data:candidates[0].data};italyJourneyCache.set(key,result);return result;}
+  const candidates=[];
+  for(const item of items){
+    try{
+      const data=await fetchItalyTrainDetail(item,cfg.number);
+      if(findItalyStop(data,cfg.station))candidates.push({item,data});
+    }catch{}
+    await sleep(80);
+  }
+
+  if(candidates.length){
+    const today=italyDayKey();
+
+    // Autocomplete kan dezelfde trein voor meerdere dagen teruggeven.
+    // Geef een kandidaat met de datum van vandaag voorrang.
+    candidates.sort((a,b)=>{
+      const dateKey=item=>{
+        const label=String(item?.label||"");
+        const m=label.match(/(\d{2})\/(\d{2})\/(\d{2})/);
+        return m ? `20${m[3]}-${m[2]}-${m[1]}` : "";
+      };
+      const aToday=dateKey(a.item)===today ? 0 : 1;
+      const bToday=dateKey(b.item)===today ? 0 : 1;
+      return aToday-bToday;
+    });
+
+    const result={candidate:candidates[0].item,data:candidates[0].data};
+    italyJourneyCache.set(key,result);
+    return result;
+  }
   if(items.length===1){const data=await fetchItalyTrainDetail(items[0],cfg.number),result={candidate:items[0],data};italyJourneyCache.set(key,result);return result;}
   throw new Error(`geen rit van ${cfg.number} via ${cfg.station} gevonden`);
 }
@@ -422,10 +503,18 @@ async function scanOneItaly(cfg){
   const origin=String(data?.origineEstera||data?.origine||data?.origineZero||"").trim(),destination=String(data?.destinazioneEstera||data?.destinazione||data?.destinazioneZero||"").trim();
   const plannedTs=Number(event.planned||event.actual||0),expectedTs=Number(event.actual||0)||plannedTs+(delay*60000);
   return {
-    trainKey:`IT|${cfg.number}|${cfg.station}|${cfg.mode}`,number:String(cfg.number),train:italyTrainName(data,cfg.number),category:String(data?.categoriaDescrizione||data?.categoria||"").trim(),
-    from:origin||"—",to:destination||"—",station:cfg.station,mode:cfg.mode,eventMode:cfg.mode,time:hhmmMs(event.planned||event.actual),plannedTime:hhmmMs(event.planned||event.actual),currentTime:hhmmMs(event.actual||event.planned),
-    plannedTimestamp:plannedTs,expectedTimestamp:expectedTs,plannedTrack:event.plannedTrack,currentTrack:event.currentTrack,track:event.track||"—",delay,status,type,cancelled,trend30:null,
-    lastDetection:String(data?.stazioneUltimoRilevamento||"").trim(),lastDetectionAt:data?.oraUltimoRilevamento||null
+    trainKey:`IT|${cfg.number}|${cfg.station}|${cfg.mode}`,
+    sourceTripId:String(resolved.candidate?.value||`IT|${cfg.number}`),
+    sourceEventId:String(stop?.id||stop?.idFermata||`${cfg.station}|${cfg.mode}`),
+    serviceDate:italyCandidateServiceDate(resolved.candidate),
+    number:String(cfg.number),train:italyTrainName(data,cfg.number),category:String(data?.categoriaDescrizione||data?.categoria||"").trim(),
+    from:origin||"—",to:destination||"—",station:cfg.station,mode:cfg.mode,eventMode:cfg.mode,
+    stationCode:String(stop?.id||stop?.idFermata||""),countryCode:"IT",
+    time:hhmmMs(event.planned||event.actual),plannedTime:hhmmMs(event.planned||event.actual),currentTime:hhmmMs(event.actual||event.planned),
+    plannedTimestamp:plannedTs,expectedTimestamp:expectedTs,actualTimestamp:Number(event.actual||0)||null,
+    plannedTrack:event.plannedTrack,currentTrack:event.currentTrack,track:event.track||"—",delay,status,type,cancelled,trend30:null,
+    lastDetection:String(data?.stazioneUltimoRilevamento||"").trim(),lastDetectionAt:data?.oraUltimoRilevamento||null,
+    rawStop:stop,rawData:data
   };
 }
 async function performItalyScan(){
@@ -454,7 +543,8 @@ const pageRoutes={
   "/nightjets":"/nightjets.html","/nightjets/":"/nightjets.html",
   "/duesseldorf":"/station-mobile.html","/duesseldorf/":"/station-mobile.html",
   "/wien":"/station-mobile.html","/wien/":"/station-mobile.html",
-  "/mannheim":"/station-mobile.html","/mannheim/":"/station-mobile.html"
+  "/mannheim":"/station-mobile.html","/mannheim/":"/station-mobile.html",
+  "/datahub":"/datahub.html","/datahub/":"/datahub.html"
 };
 
 const server=http.createServer(async(req,res)=>{
@@ -462,6 +552,46 @@ const server=http.createServer(async(req,res)=>{
     const url=new URL(req.url,`http://${req.headers.host}`);
     if(url.pathname==="/api/health")return sendJson(res,200,{ok:true,credentialsConfigured:Boolean(CLIENT_ID&&API_KEY),api:BASE,storage:getStorageInfo(),config,dbState,collectorState:{lastScanAt:collectorState.lastScanAt,stations:Object.keys(collectorState.byStation)},italyState,nightjetPlanState:{dateKey:nightjetPlanState.dateKey,scanning:nightjetPlanState.scanning,lastUpdatedAt:nightjetPlanState.lastUpdatedAt,count:nightjetPlanState.rows.length,warnings:nightjetPlanState.warnings}});
     if(url.pathname==="/api/storage")return sendJson(res,200,getStorageInfo());
+
+    // V4 bron-onafhankelijke Data Hub API. Het bestaande board blijft de
+    // oudere endpoints gebruiken zodat deze migratie geen schermgedrag wijzigt.
+    if(url.pathname==="/api/v1/sources")return sendJson(res,200,{sources:await getDataSources()});
+    if(url.pathname==="/api/v1/stats")return sendJson(res,200,{...(await getDataHubStats()),migration:getDataHubMigrationState()});
+    if(url.pathname==="/api/v1/services"){
+      const serviceDate=url.searchParams.get("date")||undefined,
+            trainNumber=url.searchParams.get("train")||undefined,
+            source=url.searchParams.get("source")||undefined,
+            limit=Number(url.searchParams.get("limit")||250);
+      const services=await getServiceRuns({serviceDate,trainNumber,source,limit});
+      return sendJson(res,200,{serviceDate:serviceDate||null,train:trainNumber||null,source:source||null,count:services.length,services});
+    }
+    if(url.pathname==="/api/v1/events"){
+      const serviceDate=url.searchParams.get("date")||undefined,
+            trainNumber=url.searchParams.get("train")||undefined,
+            station=url.searchParams.get("station")||undefined,
+            source=url.searchParams.get("source")||undefined,
+            latestOnly=url.searchParams.get("latest")!=="0",
+            limit=Number(url.searchParams.get("limit")||500);
+      const events=await getCanonicalEvents({serviceDate,trainNumber,station,source,latestOnly,limit});
+      return sendJson(res,200,{serviceDate:serviceDate||null,train:trainNumber||null,station:station||null,source:source||null,latestOnly,count:events.length,events});
+    }
+    if(url.pathname.startsWith("/api/v1/train/")){
+      const trainNumber=decodeURIComponent(url.pathname.slice("/api/v1/train/".length)),
+            serviceDate=url.searchParams.get("date")||undefined;
+      const [runs,combined]=await Promise.all([
+        getServiceRuns({serviceDate,trainNumber,limit:100}),
+        getCombinedTrain({trainNumber,serviceDate})
+      ]);
+      return sendJson(res,200,{trainNumber,serviceDate:serviceDate||null,runs,combined});
+    }
+    if(url.pathname.startsWith("/api/v1/station/")){
+      const station=decodeURIComponent(url.pathname.slice("/api/v1/station/".length)),
+            serviceDate=url.searchParams.get("date")||undefined,
+            source=url.searchParams.get("source")||undefined,
+            limit=Number(url.searchParams.get("limit")||500);
+      const events=await getCanonicalEvents({serviceDate,station,source,latestOnly:true,limit});
+      return sendJson(res,200,{station,serviceDate:serviceDate||null,source:source||null,count:events.length,events});
+    }
     if(url.pathname==="/api/history"){
       const source=url.searchParams.get("source")||undefined,trainNumber=url.searchParams.get("train")||undefined,station=url.searchParams.get("station")||undefined,hours=Number(url.searchParams.get("hours")||24),limit=Number(url.searchParams.get("limit")||500);
       const observations=await getHistory({source,trainNumber,station,hours,limit});return sendJson(res,200,{source:source||"all",train:trainNumber||null,station:station||null,hours,count:observations.length,observations});
@@ -488,6 +618,15 @@ const server=http.createServer(async(req,res)=>{
 
 await initStorage();
 server.listen(PORT,async()=>{
-  const storage=getStorageInfo();console.log("");console.log("Treinrondreis Data Hub + Live Board v3.0");console.log(`Open: http://localhost:${PORT}`);console.log(`DB credentials: ${CLIENT_ID&&API_KEY?"ingesteld":"ONTBREKEN"}`);console.log(`Historie: ${storage.backend} (${storage.retention})`);console.log("");
-  await Promise.allSettled([performScan(),performItalyScan()]);scheduleNext();scheduleNextItaly();scheduleNightjetDayCheck();setTimeout(()=>performNightjetDayPlan(),30000);
+  const storage=getStorageInfo();console.log("");console.log("Treinrondreis Multi-source Data Hub + Live Board v4.0");console.log(`Open: http://localhost:${PORT}`);console.log(`DB credentials: ${CLIENT_ID&&API_KEY?"ingesteld":"ONTBREKEN"}`);console.log(`Historie: ${storage.backend} (${storage.retention})`);console.log("");
+  await Promise.allSettled([performScan(),performItalyScan()]);
+  scheduleNext();scheduleNextItaly();scheduleNightjetDayCheck();setTimeout(()=>performNightjetDayPlan(),30000);
+
+  // Bestaande v3-historie wordt op de achtergrond naar de nieuwe v4-laag
+  // gekopieerd. Het live board blijft ondertussen gewoon bereikbaar.
+  setTimeout(()=>{
+    startLegacyMigration()
+      .then(s=>console.log(`V4 historie-migratie: ${s.status}, ${s.migratedRows} rijen`))
+      .catch(e=>console.error("V4 historie-migratie mislukt:",e));
+  },15000);
 });
