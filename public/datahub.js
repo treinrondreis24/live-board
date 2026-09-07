@@ -12,8 +12,9 @@ async function refresh(){
     document.getElementById("stats").innerHTML=[
       stat("Ritten",stats.serviceRuns),
       stat("Waarnemingen",stats.eventObservations),
+      stat("Actuele event-states",stats.currentStates),
       stat("Ingest batches",stats.ingestBatches),
-      stat("Migratie",`${stats.migration?.status||"—"} · ${stats.migration?.migratedRows||0}`)
+      stat("Migratie",`${stats.migration?.status||"—"} · ${stats.migration?.migratedRows||0}${stats.migration?.skippedRows?` · ${stats.migration.skippedRows} overgeslagen`:""}`)
     ].join("");
     document.getElementById("sources").innerHTML=(sourcesPayload.sources||[]).map(s=>`
       <article class="source">
