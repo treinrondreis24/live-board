@@ -272,5 +272,69 @@
         "mode": "departure"
       }
     ]
+  },
+  "collectors": [
+    {
+      "id": "mannheim-fernverkehr",
+      "name": "Mannheim Hbf",
+      "allDepartures": true,
+      "categories": [
+        "ICE",
+        "IC",
+        "EC",
+        "ECE",
+        "TGV",
+        "RJ",
+        "RJX",
+        "NJ",
+        "EN",
+        "D",
+        "WB",
+        "WEST",
+        "FLX"
+      ]
+    },
+    {
+      "id": "wien-fernverkehr",
+      "name": "Wien Hbf",
+      "allDepartures": true,
+      "categories": [
+        "ICE",
+        "IC",
+        "EC",
+        "ECE",
+        "TGV",
+        "RJ",
+        "RJX",
+        "NJ",
+        "EN",
+        "D",
+        "WB",
+        "WEST",
+        "FLX"
+      ]
+    },
+    {
+      "id": "duesseldorf-all",
+      "name": "Düsseldorf Hbf",
+      "allDepartures": true,
+      "categories": []
+    }
+  ],
+  "nightjet": {
+    "numbers": [
+      "40421",
+      "40490",
+      "421",
+      "420",
+      "402",
+      "403"
+    ],
+    "categories": [
+      "NJ",
+      "EN"
+    ],
+    "prefetchAllMonitoredStations": true,
+    "prefetchDelayMs": 1500
   }
 }
