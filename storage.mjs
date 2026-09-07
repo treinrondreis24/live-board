@@ -1,4 +1,5 @@
 import path from "node:path";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import {
@@ -16,6 +17,14 @@ let sqlite=null;
 let pool=null;
 let sqliteInsert=null;
 let sqliteTrend=null;
+const legacyStateCache=new Map();
+const LEGACY_HEARTBEAT_MINUTES=Math.max(5,Number(process.env.LEGACY_HEARTBEAT_MINUTES||15));
+const LEGACY_HEARTBEAT_MS=LEGACY_HEARTBEAT_MINUTES*60*1000;
+function stableLegacyValue(v){if(Array.isArray(v))return v.map(stableLegacyValue);if(v&&typeof v==="object"){const o={};for(const k of Object.keys(v).sort())if(v[k]!==undefined)o[k]=stableLegacyValue(v[k]);return o;}return v;}
+function legacyHash(v){return createHash("sha256").update(JSON.stringify(stableLegacyValue(v===undefined?null:v))).digest("hex");}
+function legacyRawPayload(t){if(t?.rawData!==undefined&&t.rawData!==null)return t.rawData;if(t?.rawStop!==undefined&&t.rawStop!==null)return t.rawStop;return t;}
+function legacyStateKey(r){return [r.source,r.trainKey,r.station,r.eventMode].join("|");}
+function loadLegacyStateCache(){legacyStateCache.clear();if(backend!=="sqlite")return;for(const row of sqlite.prepare("SELECT * FROM train_observation_state").all())legacyStateCache.set(row.state_key,row);}
 
 // 0 = onbeperkt bewaren. Alleen als HISTORY_DAYS expliciet op een positief
 // getal staat, wordt oude historie automatisch verwijderd.
@@ -90,6 +99,10 @@ export async function initStorage(){
         ON train_observations(source,train_number,observed_at DESC);
       CREATE INDEX IF NOT EXISTS idx_train_obs_planned
         ON train_observations(source,planned_timestamp,category,train_number);
+      CREATE TABLE IF NOT EXISTS train_observation_state (
+        state_key TEXT PRIMARY KEY,source TEXT NOT NULL,train_key TEXT NOT NULL,station TEXT NOT NULL DEFAULT '',event_mode TEXT NOT NULL DEFAULT '',
+        state_hash TEXT NOT NULL,raw_hash TEXT NOT NULL,last_seen_at BIGINT NOT NULL,last_observation_at BIGINT NOT NULL,last_payload_at BIGINT
+      );
     `);
     backend="postgresql";
     await initDataHub({backend,pool,sqlite:null});
@@ -124,6 +137,10 @@ export async function initStorage(){
       ON train_observations(source,station,observed_at DESC);
     CREATE INDEX IF NOT EXISTS idx_train_obs_number
       ON train_observations(source,train_number,observed_at DESC);
+    CREATE TABLE IF NOT EXISTS train_observation_state (
+      state_key TEXT PRIMARY KEY,source TEXT NOT NULL,train_key TEXT NOT NULL,station TEXT NOT NULL DEFAULT '',event_mode TEXT NOT NULL DEFAULT '',
+      state_hash TEXT NOT NULL,raw_hash TEXT NOT NULL,last_seen_at INTEGER NOT NULL,last_observation_at INTEGER NOT NULL,last_payload_at INTEGER
+    );
   `);
   ensureSqliteColumn("train_observations","expected_timestamp","INTEGER");
   ensureSqliteColumn("train_observations","expected_time","TEXT");
@@ -149,6 +166,7 @@ export async function initStorage(){
     LIMIT 1
   `);
   backend="sqlite";
+  loadLegacyStateCache();
   await initDataHub({backend,pool:null,sqlite});
   return {backend};
 }
@@ -159,6 +177,7 @@ export function getStorageInfo(){
     backend,
     historyDays:days||null,
     retention:days?`${days} days`:"unlimited",
+    legacyHeartbeatMinutes:LEGACY_HEARTBEAT_MINUTES,
     online:backend==="postgresql"
   };
 }
@@ -171,6 +190,11 @@ function rowForStorage(t,source,observedAt){
   const route=Array.isArray(t.route)?t.route:[],
         pastRoute=Array.isArray(t.pastRoute)?t.pastRoute:[],
         futureRoute=Array.isArray(t.futureRoute)?t.futureRoute:[];
+  const rawPayload=legacyRawPayload(t);
+  const stateHash=legacyHash({plannedTimestamp:plannedTs,expectedTimestamp:expectedTs,plannedTime:String(t.plannedTime||t.time||""),currentTime:String(t.currentTime||t.time||""),
+    delayMinutes:Number(t.delay||0),status:String(t.status||""),cancelled:Boolean(t.cancelled),origin:String(t.from||""),destination:String(t.to||""),
+    track:String(t.track||""),plannedTrack:String(t.plannedTrack||""),currentTrack:String(t.currentTrack||t.track||""),route,pastRoute,futureRoute});
+  const rawHash=legacyHash(rawPayload);
   return {
     source,
     trainKey:String(t.trainKey||""),
@@ -192,57 +216,44 @@ function rowForStorage(t,source,observedAt){
     plannedTrack:String(t.plannedTrack||""),
     currentTrack:String(t.currentTrack||t.track||""),
     route,
-    pastRoute,
-    futureRoute,
-    payload:t
+    pastRoute,futureRoute,payload:rawPayload,stateHash,rawHash
   };
 }
 
 export async function recordObservations(trains,source,observedAt=Date.now()){
-  if(!Array.isArray(trains)||!trains.length) return;
+  if(!Array.isArray(trains)||!trains.length)return;
   const rows=trains.map(t=>rowForStorage(t,source,observedAt));
-
   if(backend==="postgresql"){
     const client=await pool.connect();
-    try{
-      await client.query("BEGIN");
-      const sql=`
-        INSERT INTO train_observations (
-          source,train_key,train_number,category,station,event_mode,observed_at,
-          planned_timestamp,expected_timestamp,planned_time,expected_time,delay_minutes,status,cancelled,
-          origin,destination,track,planned_track,current_track,route,past_route,future_route,payload
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
-      `;
-      for(const r of rows){
-        await client.query(sql,[
-          r.source,r.trainKey,r.trainNumber,r.category,r.station,r.eventMode,r.observedAt,
-          r.plannedTimestamp,r.expectedTimestamp,r.plannedTime,r.currentTime,r.delayMinutes,r.status,r.cancelled,
-          r.origin,r.destination,r.track,r.plannedTrack,r.currentTrack,
-          JSON.stringify(r.route),JSON.stringify(r.pastRoute),JSON.stringify(r.futureRoute),JSON.stringify(r.payload)
-        ]);
-      }
-      await client.query("COMMIT");
-    }catch(e){await client.query("ROLLBACK");throw e;}
-    finally{client.release();}
+    try{await client.query("BEGIN");const keys=rows.map(legacyStateKey),states=new Map();
+      if(keys.length)for(const x of (await client.query("SELECT * FROM train_observation_state WHERE state_key=ANY($1::text[])",[keys])).rows)states.set(x.state_key,x);
+      const sql=`INSERT INTO train_observations(source,train_key,train_number,category,station,event_mode,observed_at,planned_timestamp,expected_timestamp,planned_time,expected_time,
+        delay_minutes,status,cancelled,origin,destination,track,planned_track,current_track,route,past_route,future_route,payload)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)`;
+      for(const r of rows){const key=legacyStateKey(r),prev=states.get(key)||null,stateChanged=!prev||prev.state_hash!==r.stateHash,rawChanged=!prev||prev.raw_hash!==r.rawHash;
+        const lastObs=Number(prev?.last_observation_at||0),heartbeat=Boolean(prev)&&r.observedAt-lastObs>=LEGACY_HEARTBEAT_MS,persist=stateChanged||rawChanged||heartbeat;
+        if(persist)await client.query(sql,[r.source,r.trainKey,r.trainNumber,r.category,r.station,r.eventMode,r.observedAt,r.plannedTimestamp,r.expectedTimestamp,r.plannedTime,r.currentTime,
+          r.delayMinutes,r.status,r.cancelled,r.origin,r.destination,r.track,r.plannedTrack,r.currentTrack,JSON.stringify(r.route),JSON.stringify(r.pastRoute),JSON.stringify(r.futureRoute),rawChanged?JSON.stringify(r.payload):null]);
+        await client.query(`INSERT INTO train_observation_state(state_key,source,train_key,station,event_mode,state_hash,raw_hash,last_seen_at,last_observation_at,last_payload_at)
+          VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT(state_key) DO UPDATE SET state_hash=EXCLUDED.state_hash,raw_hash=EXCLUDED.raw_hash,
+          last_seen_at=GREATEST(train_observation_state.last_seen_at,EXCLUDED.last_seen_at),last_observation_at=CASE WHEN $11 THEN EXCLUDED.last_observation_at ELSE train_observation_state.last_observation_at END,
+          last_payload_at=CASE WHEN $12 THEN EXCLUDED.last_payload_at ELSE train_observation_state.last_payload_at END`,[key,r.source,r.trainKey,r.station,r.eventMode,r.stateHash,r.rawHash,r.observedAt,
+          persist?r.observedAt:lastObs,rawChanged?r.observedAt:Number(prev?.last_payload_at||0)||null,persist,rawChanged]);
+        states.set(key,{state_key:key,state_hash:r.stateHash,raw_hash:r.rawHash,last_seen_at:r.observedAt,last_observation_at:persist?r.observedAt:lastObs,last_payload_at:rawChanged?r.observedAt:Number(prev?.last_payload_at||0)||null});}
+      await client.query("COMMIT");}catch(e){await client.query("ROLLBACK");throw e;}finally{client.release();}
   }else if(backend==="sqlite"){
-    sqlite.exec("BEGIN");
-    try{
-      for(const r of rows){
-        sqliteInsert.run(
-          r.source,r.trainKey,r.trainNumber,r.category,r.station,r.eventMode,r.observedAt,
-          r.plannedTimestamp,r.expectedTimestamp,r.plannedTime,r.currentTime,r.delayMinutes,r.status,r.cancelled?1:0,
-          r.origin,r.destination,r.track,r.plannedTrack,r.currentTrack,
-          JSON.stringify(r.route),JSON.stringify(r.pastRoute),JSON.stringify(r.futureRoute),JSON.stringify(r.payload)
-        );
-      }
-      sqlite.exec("COMMIT");
-    }catch(e){sqlite.exec("ROLLBACK");throw e;}
+    sqlite.exec("BEGIN");try{const stateStmt=sqlite.prepare(`INSERT INTO train_observation_state(state_key,source,train_key,station,event_mode,state_hash,raw_hash,last_seen_at,last_observation_at,last_payload_at)
+      VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(state_key) DO UPDATE SET state_hash=excluded.state_hash,raw_hash=excluded.raw_hash,last_seen_at=MAX(train_observation_state.last_seen_at,excluded.last_seen_at),
+      last_observation_at=CASE WHEN ? THEN excluded.last_observation_at ELSE train_observation_state.last_observation_at END,last_payload_at=CASE WHEN ? THEN excluded.last_payload_at ELSE train_observation_state.last_payload_at END`);
+      for(const r of rows){const key=legacyStateKey(r),prev=legacyStateCache.get(key)||null,stateChanged=!prev||prev.state_hash!==r.stateHash,rawChanged=!prev||prev.raw_hash!==r.rawHash;
+        const lastObs=Number(prev?.last_observation_at||0),heartbeat=Boolean(prev)&&r.observedAt-lastObs>=LEGACY_HEARTBEAT_MS,persist=stateChanged||rawChanged||heartbeat;
+        if(persist)sqliteInsert.run(r.source,r.trainKey,r.trainNumber,r.category,r.station,r.eventMode,r.observedAt,r.plannedTimestamp,r.expectedTimestamp,r.plannedTime,r.currentTime,r.delayMinutes,r.status,
+          r.cancelled?1:0,r.origin,r.destination,r.track,r.plannedTrack,r.currentTrack,JSON.stringify(r.route),JSON.stringify(r.pastRoute),JSON.stringify(r.futureRoute),rawChanged?JSON.stringify(r.payload):null);
+        stateStmt.run(key,r.source,r.trainKey,r.station,r.eventMode,r.stateHash,r.rawHash,r.observedAt,persist?r.observedAt:lastObs,rawChanged?r.observedAt:Number(prev?.last_payload_at||0)||null,persist?1:0,rawChanged?1:0);
+        const next={state_key:key,state_hash:r.stateHash,raw_hash:r.rawHash,last_seen_at:r.observedAt,last_observation_at:persist?r.observedAt:lastObs,last_payload_at:rawChanged?r.observedAt:Number(prev?.last_payload_at||0)||null};legacyStateCache.set(key,next);}
+      sqlite.exec("COMMIT");}catch(e){sqlite.exec("ROLLBACK");throw e;}
   }
-
-  // V4 Data Hub: schrijf dezelfde scan ook naar de bron-onafhankelijke laag.
-  // De oude train_observations-tabel blijft bestaan voor het huidige board en trendlogica.
   await recordCanonicalObservations(trains,source,observedAt);
-
   await cleanupOldObservations(observedAt);
 }
 
