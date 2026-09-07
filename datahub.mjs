@@ -84,6 +84,16 @@ const DATAHUB_HEARTBEAT_MINUTES=Math.max(
   Number(process.env.DATAHUB_HEARTBEAT_MINUTES||180)
 );
 const DATAHUB_HEARTBEAT_MS=DATAHUB_HEARTBEAT_MINUTES*60*1000;
+const FERNVERKEHR_CATEGORIES=(String(process.env.FERNVERKEHR_CATEGORIES||"ICE,IC,EC,ECE,TGV,RJ,RJX,NJ,EN,D,WB,WEST,FLX"))
+  .split(",").map(x=>x.trim().toUpperCase()).filter(Boolean);
+const DB_RETENTION_SOURCES=["DB","DB_PLAN"];
+
+function previousDateKey(value){
+  const m=String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m)return "";
+  const dt=new Date(Date.UTC(Number(m[1]),Number(m[2])-1,Number(m[3])-1));
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth()+1).padStart(2,"0")}-${String(dt.getUTCDate()).padStart(2,"0")}`;
+}
 
 function stableValue(v){
   if(Array.isArray(v))return v.map(stableValue);
@@ -256,6 +266,8 @@ async function pgSchema(){
     CREATE INDEX IF NOT EXISTS idx_event_obs_station ON event_observations(station_name,observed_at DESC);
     CREATE INDEX IF NOT EXISTS idx_event_obs_service ON event_observations(service_uid,station_name,event_mode,observed_at DESC);
     CREATE INDEX IF NOT EXISTS idx_event_obs_source ON event_observations(source_id,observed_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_event_obs_retention ON event_observations(source_id,service_date,category);
+    CREATE INDEX IF NOT EXISTS idx_service_runs_retention ON service_runs(source_id,service_date,category);
     CREATE INDEX IF NOT EXISTS idx_event_state_seen ON event_current_state(source_id,last_seen_at DESC);
     CREATE INDEX IF NOT EXISTS idx_migration_errors_name ON migration_errors(migration_name,legacy_id);
   `);
@@ -316,6 +328,8 @@ function sqliteSchema(){
     CREATE INDEX IF NOT EXISTS idx_event_obs_station ON event_observations(station_name,observed_at DESC);
     CREATE INDEX IF NOT EXISTS idx_event_obs_service ON event_observations(service_uid,station_name,event_mode,observed_at DESC);
     CREATE INDEX IF NOT EXISTS idx_event_obs_source ON event_observations(source_id,observed_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_event_obs_retention ON event_observations(source_id,service_date,category);
+    CREATE INDEX IF NOT EXISTS idx_service_runs_retention ON service_runs(source_id,service_date,category);
     CREATE INDEX IF NOT EXISTS idx_event_state_seen ON event_current_state(source_id,last_seen_at DESC);
     CREATE INDEX IF NOT EXISTS idx_migration_errors_name ON migration_errors(migration_name,legacy_id);
   `);
@@ -716,6 +730,88 @@ export async function startLegacyMigration(){
 }
 export function getMigrationState(){return {...migrationState};}
 
+export async function cleanupDbRegionalData(now=Date.now()){
+  const today=dateKey(now,"Europe/Berlin");
+  const keepFromDate=previousDateKey(today);
+  if(!keepFromDate)return {keepFromDate:null,deletedEvents:0,deletedServices:0,deletedStates:0};
+
+  if(backend==="postgresql"){
+    const client=await pool.connect();
+    try{
+      await client.query("BEGIN");
+      const stateResult=await client.query(`
+        DELETE FROM event_current_state ecs
+        USING service_runs sr
+        WHERE ecs.service_uid=sr.service_uid
+          AND sr.source_id=ANY($1::text[])
+          AND sr.service_date<$2
+          AND NOT (UPPER(COALESCE(sr.category,''))=ANY($3::text[]))
+      `,[DB_RETENTION_SOURCES,keepFromDate,FERNVERKEHR_CATEGORIES]);
+      const eventResult=await client.query(`
+        DELETE FROM event_observations
+        WHERE source_id=ANY($1::text[])
+          AND service_date<$2
+          AND NOT (UPPER(COALESCE(category,''))=ANY($3::text[]))
+      `,[DB_RETENTION_SOURCES,keepFromDate,FERNVERKEHR_CATEGORIES]);
+      const serviceResult=await client.query(`
+        DELETE FROM service_runs
+        WHERE source_id=ANY($1::text[])
+          AND service_date<$2
+          AND NOT (UPPER(COALESCE(category,''))=ANY($3::text[]))
+      `,[DB_RETENTION_SOURCES,keepFromDate,FERNVERKEHR_CATEGORIES]);
+      await client.query("COMMIT");
+      return {
+        keepFromDate,
+        deletedEvents:eventResult.rowCount||0,
+        deletedServices:serviceResult.rowCount||0,
+        deletedStates:stateResult.rowCount||0
+      };
+    }catch(error){
+      await client.query("ROLLBACK");
+      throw error;
+    }finally{client.release();}
+  }
+
+  if(backend==="sqlite"){
+    const placeholders=FERNVERKEHR_CATEGORIES.map(()=>"?").join(",");
+    const sourcePlaceholders=DB_RETENTION_SOURCES.map(()=>"?").join(",");
+    const args=[...DB_RETENTION_SOURCES,keepFromDate,...FERNVERKEHR_CATEGORIES];
+    sqlite.exec("BEGIN");
+    try{
+      const stateResult=sqlite.prepare(`
+        DELETE FROM event_current_state
+        WHERE service_uid IN (
+          SELECT service_uid FROM service_runs
+          WHERE source_id IN (${sourcePlaceholders})
+            AND service_date<?
+            AND UPPER(COALESCE(category,'')) NOT IN (${placeholders})
+        )
+      `).run(...args);
+      const eventResult=sqlite.prepare(`
+        DELETE FROM event_observations
+        WHERE source_id IN (${sourcePlaceholders})
+          AND service_date<?
+          AND UPPER(COALESCE(category,'')) NOT IN (${placeholders})
+      `).run(...args);
+      const serviceResult=sqlite.prepare(`
+        DELETE FROM service_runs
+        WHERE source_id IN (${sourcePlaceholders})
+          AND service_date<?
+          AND UPPER(COALESCE(category,'')) NOT IN (${placeholders})
+      `).run(...args);
+      sqlite.exec("COMMIT");
+      return {
+        keepFromDate,
+        deletedEvents:Number(eventResult.changes||0),
+        deletedServices:Number(serviceResult.changes||0),
+        deletedStates:Number(stateResult.changes||0)
+      };
+    }catch(error){sqlite.exec("ROLLBACK");throw error;}
+  }
+
+  return {keepFromDate,deletedEvents:0,deletedServices:0,deletedStates:0};
+}
+
 function limitValue(v,def=250,max=5000){
   const n=Number(v);
   if(!Number.isFinite(n)||n<1)return def;
@@ -764,18 +860,32 @@ export async function getDataHubStats(){
       pool.query("SELECT COUNT(*)::bigint AS n FROM event_current_state")
     ]);
     return {
-      version:"4.1",backend,
+      version:"4.1.2",backend,
       serviceRuns:Number(services.rows[0].n),eventObservations:Number(events.rows[0].n),currentStates:Number(currentStates.rows[0].n),
       ingestBatches:Number(batches.rows[0].n),lastObservationAt:last.rows[0].n?Number(last.rows[0].n):null,
-      storagePolicy:{mode:"changes-plus-heartbeat",heartbeatMinutes:DATAHUB_HEARTBEAT_MINUTES,rawPayload:"only-when-changed"},migration:getMigrationState()
+      storagePolicy:{
+        mode:"changes-plus-heartbeat",
+        heartbeatMinutes:DATAHUB_HEARTBEAT_MINUTES,
+        rawPayload:"only-when-changed",
+        dbFernverkehr:"permanent",
+        dbRegional:"current-and-previous-service-day",
+        fernverkehrCategories:FERNVERKEHR_CATEGORIES
+      },migration:getMigrationState()
     };
   }
   return {
-    version:"4.1",backend,
+    version:"4.1.2",backend,
     serviceRuns:Number(sqlite.prepare("SELECT COUNT(*) AS n FROM service_runs").get().n),eventObservations:Number(sqlite.prepare("SELECT COUNT(*) AS n FROM event_observations").get().n),
     currentStates:Number(sqlite.prepare("SELECT COUNT(*) AS n FROM event_current_state").get().n),ingestBatches:Number(sqlite.prepare("SELECT COUNT(*) AS n FROM ingest_batches").get().n),
     lastObservationAt:sqlite.prepare("SELECT MAX(observed_at) AS n FROM event_observations").get().n||null,
-    storagePolicy:{mode:"changes-plus-heartbeat",heartbeatMinutes:DATAHUB_HEARTBEAT_MINUTES,rawPayload:"only-when-changed"},migration:getMigrationState()
+    storagePolicy:{
+        mode:"changes-plus-heartbeat",
+        heartbeatMinutes:DATAHUB_HEARTBEAT_MINUTES,
+        rawPayload:"only-when-changed",
+        dbFernverkehr:"permanent",
+        dbRegional:"current-and-previous-service-day",
+        fernverkehrCategories:FERNVERKEHR_CATEGORIES
+      },migration:getMigrationState()
   };
 }
 

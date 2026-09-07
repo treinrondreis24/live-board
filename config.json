@@ -278,47 +278,94 @@
       "id": "mannheim-fernverkehr",
       "name": "Mannheim Hbf",
       "allDepartures": true,
-      "categories": [
-        "ICE",
-        "IC",
-        "EC",
-        "ECE",
-        "TGV",
-        "RJ",
-        "RJX",
-        "NJ",
-        "EN",
-        "D",
-        "WB",
-        "WEST",
-        "FLX"
-      ]
+      "categories": [],
+      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day"
     },
     {
       "id": "wien-fernverkehr",
       "name": "Wien Hbf",
       "allDepartures": true,
-      "categories": [
-        "ICE",
-        "IC",
-        "EC",
-        "ECE",
-        "TGV",
-        "RJ",
-        "RJX",
-        "NJ",
-        "EN",
-        "D",
-        "WB",
-        "WEST",
-        "FLX"
-      ]
+      "categories": [],
+      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day"
     },
     {
       "id": "duesseldorf-all",
       "name": "Düsseldorf Hbf",
       "allDepartures": true,
-      "categories": []
+      "categories": [],
+      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day"
+    },
+    {
+      "id": "hamburg-fernverkehr",
+      "name": "Hamburg Hbf",
+      "allDepartures": true,
+      "categories": [],
+      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day"
+    },
+    {
+      "id": "hannover-fernverkehr",
+      "name": "Hannover Hbf",
+      "allDepartures": true,
+      "categories": [],
+      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day"
+    },
+    {
+      "id": "frankfurt-hbf-fernverkehr",
+      "name": "Frankfurt(Main)Hbf",
+      "allDepartures": true,
+      "categories": [],
+      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day"
+    },
+    {
+      "id": "frankfurt-airport-fernverkehr",
+      "name": "Frankfurt(M) Flughafen Fernbf",
+      "allDepartures": true,
+      "categories": [],
+      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day"
+    },
+    {
+      "id": "stuttgart-fernverkehr",
+      "name": "Stuttgart Hbf",
+      "allDepartures": true,
+      "categories": [],
+      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day"
+    },
+    {
+      "id": "muenchen-fernverkehr",
+      "name": "München Hbf",
+      "allDepartures": true,
+      "categories": [],
+      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day"
+    },
+    {
+      "id": "osnabrueck-fernverkehr",
+      "name": "Osnabrück Hbf",
+      "allDepartures": true,
+      "categories": [],
+      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day"
+    },
+    {
+      "id": "offenburg-fernverkehr",
+      "name": "Offenburg",
+      "allDepartures": true,
+      "categories": [],
+      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day"
+    },
+    {
+      "id": "utrecht-experimental",
+      "name": "Utrecht Centraal",
+      "allDepartures": true,
+      "categories": [],
+      "experimentalCoverage": true,
+      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day"
+    },
+    {
+      "id": "amersfoort-experimental",
+      "name": "Amersfoort Centraal",
+      "allDepartures": true,
+      "categories": [],
+      "experimentalCoverage": true,
+      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day"
     }
   ],
   "nightjet": {
@@ -336,5 +383,21 @@
     ],
     "prefetchAllMonitoredStations": true,
     "prefetchDelayMs": 1500
-  }
+  },
+  "dbRequestMinIntervalMs": 1250,
+  "fernverkehrCategories": [
+    "ICE",
+    "IC",
+    "EC",
+    "ECE",
+    "TGV",
+    "RJ",
+    "RJX",
+    "NJ",
+    "EN",
+    "D",
+    "WB",
+    "WEST",
+    "FLX"
+  ]
 }

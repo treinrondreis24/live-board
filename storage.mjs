@@ -6,7 +6,7 @@ import {
   initDataHub,recordCanonicalObservations,startLegacyMigration as startHubLegacyMigration,
   getMigrationState,getSources as getHubSources,getDataHubStats as getHubStats,
   getServiceRuns as getHubServiceRuns,getCanonicalEvents as getHubCanonicalEvents,
-  getCombinedTrain as getHubCombinedTrain
+  getCombinedTrain as getHubCombinedTrain,cleanupDbRegionalData
 } from "./datahub.mjs";
 
 const __filename=fileURLToPath(import.meta.url);
@@ -20,6 +20,11 @@ let sqliteTrend=null;
 const legacyStateCache=new Map();
 const LEGACY_HEARTBEAT_MINUTES=Math.max(5,Number(process.env.LEGACY_HEARTBEAT_MINUTES||15));
 const LEGACY_HEARTBEAT_MS=LEGACY_HEARTBEAT_MINUTES*60*1000;
+const FERNVERKEHR_CATEGORIES=(String(process.env.FERNVERKEHR_CATEGORIES||"ICE,IC,EC,ECE,TGV,RJ,RJX,NJ,EN,D,WB,WEST,FLX"))
+  .split(",").map(x=>x.trim().toUpperCase()).filter(Boolean);
+const DB_RETENTION_SOURCES=["DB","DB_PLAN"];
+const RETENTION_CLEANUP_INTERVAL_MS=Math.max(15,Number(process.env.RETENTION_CLEANUP_INTERVAL_MINUTES||60))*60*1000;
+let lastRetentionCleanupAt=0;
 function stableLegacyValue(v){if(Array.isArray(v))return v.map(stableLegacyValue);if(v&&typeof v==="object"){const o={};for(const k of Object.keys(v).sort())if(v[k]!==undefined)o[k]=stableLegacyValue(v[k]);return o;}return v;}
 function legacyHash(v){return createHash("sha256").update(JSON.stringify(stableLegacyValue(v===undefined?null:v))).digest("hex");}
 function legacyRawPayload(t){if(t?.rawData!==undefined&&t.rawData!==null)return t.rawData;if(t?.rawStop!==undefined&&t.rawStop!==null)return t.rawStop;return t;}
@@ -99,6 +104,8 @@ export async function initStorage(){
         ON train_observations(source,train_number,observed_at DESC);
       CREATE INDEX IF NOT EXISTS idx_train_obs_planned
         ON train_observations(source,planned_timestamp,category,train_number);
+      CREATE INDEX IF NOT EXISTS idx_train_obs_regional_retention
+        ON train_observations(source,category,planned_timestamp);
       CREATE TABLE IF NOT EXISTS train_observation_state (
         state_key TEXT PRIMARY KEY,source TEXT NOT NULL,train_key TEXT NOT NULL,station TEXT NOT NULL DEFAULT '',event_mode TEXT NOT NULL DEFAULT '',
         state_hash TEXT NOT NULL,raw_hash TEXT NOT NULL,last_seen_at BIGINT NOT NULL,last_observation_at BIGINT NOT NULL,last_payload_at BIGINT
@@ -137,6 +144,8 @@ export async function initStorage(){
       ON train_observations(source,station,observed_at DESC);
     CREATE INDEX IF NOT EXISTS idx_train_obs_number
       ON train_observations(source,train_number,observed_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_train_obs_regional_retention
+      ON train_observations(source,category,planned_timestamp);
     CREATE TABLE IF NOT EXISTS train_observation_state (
       state_key TEXT PRIMARY KEY,source TEXT NOT NULL,train_key TEXT NOT NULL,station TEXT NOT NULL DEFAULT '',event_mode TEXT NOT NULL DEFAULT '',
       state_hash TEXT NOT NULL,raw_hash TEXT NOT NULL,last_seen_at INTEGER NOT NULL,last_observation_at INTEGER NOT NULL,last_payload_at INTEGER
@@ -178,6 +187,12 @@ export function getStorageInfo(){
     historyDays:days||null,
     retention:days?`${days} days`:"unlimited",
     legacyHeartbeatMinutes:LEGACY_HEARTBEAT_MINUTES,
+    dbRetention:{
+      fernverkehr:"permanent",
+      regional:"current-and-previous-service-day",
+      fernverkehrCategories:FERNVERKEHR_CATEGORIES
+    },
+    retentionCleanupIntervalMinutes:Math.round(RETENTION_CLEANUP_INTERVAL_MS/60000),
     online:backend==="postgresql"
   };
 }
@@ -275,15 +290,72 @@ export async function findTrendObservation({source,trainKey,station,eventMode,mi
   return null;
 }
 
-export async function cleanupOldObservations(now=Date.now()){
-  const days=historyDays();
-  if(!days) return;
-  const cutoff=Number(now)-days*24*60*60*1000;
-  if(backend==="postgresql"){
-    await pool.query("DELETE FROM train_observations WHERE observed_at < $1",[cutoff]);
-  }else if(backend==="sqlite"){
-    sqlite.prepare("DELETE FROM train_observations WHERE observed_at < ?").run(cutoff);
+function dateKeyInZone(ms,timeZone="Europe/Berlin"){
+  return new Intl.DateTimeFormat("en-CA",{timeZone,year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(Number(ms)));
+}
+function previousDateKey(value){
+  const m=String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m)return "";
+  const dt=new Date(Date.UTC(Number(m[1]),Number(m[2])-1,Number(m[3])-1));
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth()+1).padStart(2,"0")}-${String(dt.getUTCDate()).padStart(2,"0")}`;
+}
+function startOfDateInZone(dateKey,timeZone="Europe/Berlin"){
+  const m=String(dateKey).match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m)return 0;
+  const target=Date.UTC(Number(m[1]),Number(m[2])-1,Number(m[3]),0,0,0);
+  let guess=target;
+  const fmt=new Intl.DateTimeFormat("en-CA",{timeZone,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"});
+  for(let i=0;i<4;i++){
+    const p={};for(const part of fmt.formatToParts(new Date(guess)))if(part.type!=="literal")p[part.type]=part.value;
+    const represented=Date.UTC(Number(p.year),Number(p.month)-1,Number(p.day),Number(p.hour),Number(p.minute),Number(p.second));
+    const delta=target-represented;guess+=delta;if(Math.abs(delta)<1000)break;
   }
+  return guess;
+}
+
+export async function cleanupOldObservations(now=Date.now(),{force=false}={}){
+  now=Number(now);
+  if(!force&&lastRetentionCleanupAt&&now-lastRetentionCleanupAt<RETENTION_CLEANUP_INTERVAL_MS)return null;
+  lastRetentionCleanupAt=now;
+
+  const today=dateKeyInZone(now,"Europe/Berlin"),keepFromDate=previousDateKey(today),regionalCutoff=startOfDateInZone(keepFromDate,"Europe/Berlin");
+  let legacyRegionalDeleted=0,globalDeleted=0;
+
+  // DB: Fernverkehr blijft onbeperkt; alle andere categorieën alleen de
+  // huidige + vorige verkeersdag. De Data Hub doet dezelfde cleanup op
+  // service_date, zodat nachtovergangen daar correct behandeld worden.
+  if(backend==="postgresql"){
+    const regional=await pool.query(`
+      DELETE FROM train_observations
+      WHERE source=ANY($1::text[])
+        AND COALESCE(planned_timestamp,observed_at)<$2
+        AND NOT (UPPER(COALESCE(category,''))=ANY($3::text[]))
+    `,[DB_RETENTION_SOURCES,regionalCutoff,FERNVERKEHR_CATEGORIES]);
+    legacyRegionalDeleted=regional.rowCount||0;
+  }else if(backend==="sqlite"){
+    const src=DB_RETENTION_SOURCES.map(()=>"?").join(","),cats=FERNVERKEHR_CATEGORIES.map(()=>"?").join(",");
+    const regional=sqlite.prepare(`
+      DELETE FROM train_observations
+      WHERE source IN (${src})
+        AND COALESCE(planned_timestamp,observed_at)<?
+        AND UPPER(COALESCE(category,'')) NOT IN (${cats})
+    `).run(...DB_RETENTION_SOURCES,regionalCutoff,...FERNVERKEHR_CATEGORIES);
+    legacyRegionalDeleted=Number(regional.changes||0);
+  }
+
+  const hub=await cleanupDbRegionalData(now);
+
+  // HISTORY_DAYS blijft een optionele globale noodrem. Zolang deze variable
+  // niet is gezet (huidige productieconfiguratie), blijft Fernverkehr permanent.
+  const days=historyDays();
+  if(days){
+    const cutoff=now-days*24*60*60*1000;
+    if(backend==="postgresql")globalDeleted=(await pool.query("DELETE FROM train_observations WHERE observed_at < $1",[cutoff])).rowCount||0;
+    else if(backend==="sqlite")globalDeleted=Number(sqlite.prepare("DELETE FROM train_observations WHERE observed_at < ?").run(cutoff).changes||0);
+  }
+
+  const result={keepFromDate,legacyRegionalDeleted,globalDeleted,hub};
+  const total=legacyRegionalDeleted+globalDeleted+Number(hub?.deletedEvents||0)+Number(hub?.deletedServices||0)+Number(hub?.deletedStates||0);
+  if(total>0)console.log(`Retentie-cleanup: ${total} regionale/oude records verwijderd; DB regionaal vanaf ${keepFromDate} bewaard`);
+  return result;
 }
 
 function clampLimit(v,def=250,max=5000){

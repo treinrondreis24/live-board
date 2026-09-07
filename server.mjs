@@ -19,6 +19,13 @@ const API_KEY=process.env.DB_API_KEY||"";
 const BASE="https://apis.deutschebahn.com/db-api-marketplace/apis/timetables/v1";
 const publicDir=path.join(__dirname,"public");
 const config=JSON.parse(fs.readFileSync(path.join(__dirname,"config.json"),"utf8"));
+const FERNVERKEHR_CATEGORIES=new Set(
+  (config.fernverkehrCategories||["ICE","IC","EC","ECE","TGV","RJ","RJX","NJ","EN","D","WB","WEST","FLX"])
+    .map(x=>String(x).toUpperCase().trim())
+);
+function isFernverkehrCategory(category=""){
+  return FERNVERKEHR_CATEGORIES.has(String(category).toUpperCase().trim());
+}
 
 const ITALY_BASES=[
   "https://www.viaggiatreno.it/infomobilita/resteasy/viaggiatreno",
@@ -51,9 +58,40 @@ function sendFile(res,filename){
   const types={".html":"text/html; charset=utf-8",".css":"text/css; charset=utf-8",".js":"text/javascript; charset=utf-8",".svg":"image/svg+xml"};
   fs.readFile(filename,(err,data)=>{if(err){res.writeHead(404);return res.end("Not found");}res.writeHead(200,{"Content-Type":types[path.extname(filename).toLowerCase()]||"application/octet-stream","Cache-Control":"no-cache"});res.end(data);});
 }
+let dbRequestQueue=Promise.resolve();
+let dbLastRequestStartedAt=0;
+
 async function dbGet(url){
-  const r=await fetch(url,{headers:{"DB-Client-ID":CLIENT_ID,"DB-Api-Key":API_KEY,"Accept":"application/xml,text/xml,*/*"}});
-  const text=await r.text();if(!r.ok)throw new Error(`DB API ${r.status}: ${text.slice(0,500)}`);return text;
+  // Met meer scanstations kan een eerste scan veel /station- en /plan-calls
+  // veroorzaken. Serializeer alle DB-calls en houd standaard minimaal
+  // 1250 ms tussen starts (~48 requests/min), ruim onder de gratis 60/min.
+  let releaseQueue;
+  const previous=dbRequestQueue;
+  dbRequestQueue=new Promise(resolve=>{releaseQueue=resolve;});
+  await previous;
+
+  try{
+    const minInterval=Math.max(
+      1000,
+      Number(process.env.DB_REQUEST_MIN_INTERVAL_MS||config.dbRequestMinIntervalMs||1250)
+    );
+    const wait=Math.max(0,minInterval-(Date.now()-dbLastRequestStartedAt));
+    if(wait)await new Promise(resolve=>setTimeout(resolve,wait));
+    dbLastRequestStartedAt=Date.now();
+
+    const r=await fetch(url,{
+      headers:{
+        "DB-Client-ID":CLIENT_ID,
+        "DB-Api-Key":API_KEY,
+        "Accept":"application/xml,text/xml,*/*"
+      }
+    });
+    const text=await r.text();
+    if(!r.ok)throw new Error(`DB API ${r.status}: ${text.slice(0,500)}`);
+    return text;
+  }finally{
+    releaseQueue();
+  }
 }
 function decodeXml(v=""){return String(v).replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&amp;/g,"&").replace(/&#(\d+);/g,(_,n)=>String.fromCharCode(Number(n))).replace(/&#x([0-9a-f]+);/gi,(_,n)=>String.fromCharCode(parseInt(n,16)));}
 function attrs(tag=""){const out={};const re=/([:\w-]+)\s*=\s*(["'])(.*?)\2/g;let m;while((m=re.exec(tag)))out[m[1]]=decodeXml(m[3]);return out;}
@@ -170,10 +208,14 @@ function dbServiceDateFromStopId(id="") {
 }
 function countryForStation(name="") {
   const n=String(name);
-  if(["Arnhem Centraal","Deventer","Utrecht Centraal","Amsterdam Centraal"].some(x=>n===x))return "NL";
+  if(["Arnhem Centraal","Deventer","Utrecht Centraal","Amersfoort Centraal","Amsterdam Centraal"].some(x=>n===x))return "NL";
   if(["Wien Hbf","Innsbruck Hbf"].some(x=>n===x))return "AT";
   if(n==="Basel Bad Bf")return "CH";
-  if(["Mannheim Hbf","Köln Hbf","Berlin Hbf","Bad Bentheim","Düsseldorf Hbf"].some(x=>n===x))return "DE";
+  if([
+    "Mannheim Hbf","Köln Hbf","Berlin Hbf","Bad Bentheim","Düsseldorf Hbf",
+    "Hamburg Hbf","Hannover Hbf","Frankfurt(Main)Hbf","Frankfurt(M) Flughafen Fernbf",
+    "Stuttgart Hbf","München Hbf","Osnabrück Hbf","Offenburg"
+  ].some(x=>n===x))return "DE";
   return "";
 }
 function normalize(stop,station,cfg){
@@ -529,6 +571,11 @@ function scheduleNextItaly(){if(!config.italy?.enabled)return;const {interval,de
 
 function stationViewPayload(station,kind){
   let rows=currentCollectorRows(station);
+  if(kind==="fern"){
+    // De collector bewaart vanaf v4.1.2 alle treinsoorten, maar de bestaande
+    // Mannheim/Wien-pagina's blijven bewust alleen Fernverkehr tonen.
+    rows=rows.filter(r=>isFernverkehrCategory(r.category));
+  }
   if(kind==="netherlands"){
     const targets=["Amsterdam Centraal","Arnhem Centraal","Venlo","Utrecht Centraal"];
     // Alleen toekomstige haltes ná Düsseldorf tellen. Zo komt een trein
@@ -618,7 +665,7 @@ const server=http.createServer(async(req,res)=>{
 
 await initStorage();
 server.listen(PORT,async()=>{
-  const storage=getStorageInfo();console.log("");console.log("Treinrondreis Multi-source Data Hub + Live Board v4.1");console.log(`Open: http://localhost:${PORT}`);console.log(`DB credentials: ${CLIENT_ID&&API_KEY?"ingesteld":"ONTBREKEN"}`);console.log(`Historie: ${storage.backend} (${storage.retention})`);console.log("");
+  const storage=getStorageInfo();console.log("");console.log("Treinrondreis Multi-source Data Hub + Live Board v4.1.2");console.log(`Open: http://localhost:${PORT}`);console.log(`DB credentials: ${CLIENT_ID&&API_KEY?"ingesteld":"ONTBREKEN"}`);console.log(`Historie: ${storage.backend} (${storage.retention})`);console.log("");
   await Promise.allSettled([performScan(),performItalyScan()]);
   scheduleNext();scheduleNextItaly();scheduleNightjetDayCheck();setTimeout(()=>performNightjetDayPlan(),30000);
 
