@@ -757,6 +757,7 @@ function stationViewPayload(station,kind){
 
 const pageRoutes={
   "/mobile":"/mobile.html","/mobile/":"/mobile.html",
+  "/embed/duesseldorf":"/koeln-embed.html","/embed/duesseldorf/":"/koeln-embed.html",
   "/embed/koeln":"/koeln-embed.html","/embed/koeln/":"/koeln-embed.html",
   "/nightjets":"/nightjets.html","/nightjets/":"/nightjets.html",
   "/duesseldorf":"/station-mobile.html","/duesseldorf/":"/station-mobile.html",
@@ -823,7 +824,7 @@ const server=http.createServer(async(req,res)=>{
       if(!payload)return sendJson(res,404,{error:"Stationpagina niet geconfigureerd"});
       return sendJson(res,200,payload);
     }
-    if(url.pathname==="/api/views/duesseldorf")return sendJson(res,200,stationViewPayload("Düsseldorf Hbf","netherlands"));
+    if(url.pathname==="/api/views/duesseldorf")return sendJson(res,200,{...stationViewPayload("Düsseldorf Hbf","netherlands"),...stationPagePayload("duesseldorf")});
     if(url.pathname==="/api/views/wien")return sendJson(res,200,stationViewPayload("Wien Hbf","fern"));
     if(url.pathname==="/api/views/mannheim")return sendJson(res,200,stationViewPayload("Mannheim Hbf","fern"));
     if(url.pathname==="/api/views/nightjets")return sendJson(res,200,{source:"DB Timetables",...(await getNightjetView())});
