@@ -279,14 +279,16 @@
       "name": "Mannheim Hbf",
       "allDepartures": true,
       "categories": [],
-      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day"
+      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day",
+      "planHoursAfter": 8
     },
     {
       "id": "wien-fernverkehr",
       "name": "Wien Hbf",
       "allDepartures": true,
       "categories": [],
-      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day"
+      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day",
+      "planHoursAfter": 8
     },
     {
       "id": "duesseldorf-all",
@@ -301,14 +303,16 @@
       "name": "Hamburg Hbf",
       "allDepartures": true,
       "categories": [],
-      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day"
+      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day",
+      "planHoursAfter": 8
     },
     {
       "id": "hannover-fernverkehr",
       "name": "Hannover Hbf",
       "allDepartures": true,
       "categories": [],
-      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day"
+      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day",
+      "planHoursAfter": 8
     },
     {
       "id": "frankfurt-hbf-fernverkehr",
@@ -336,7 +340,8 @@
       "name": "München Hbf",
       "allDepartures": true,
       "categories": [],
-      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day"
+      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day",
+      "planHoursAfter": 8
     },
     {
       "id": "osnabrueck-fernverkehr",
@@ -375,6 +380,46 @@
       "categories": [],
       "planHoursAfter": 8,
       "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day"
+    },
+    {
+      "id": "berlin-all",
+      "name": "Berlin Hbf",
+      "allDepartures": true,
+      "categories": [],
+      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day",
+      "planHoursAfter": 8
+    },
+    {
+      "id": "berlin-tief-all",
+      "name": "Berlin Hbf (tief)",
+      "allDepartures": true,
+      "categories": [],
+      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day",
+      "planHoursAfter": 8
+    },
+    {
+      "id": "basel-bad-all",
+      "name": "Basel Bad Bf",
+      "allDepartures": true,
+      "categories": [],
+      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day",
+      "planHoursAfter": 8
+    },
+    {
+      "id": "bad-bentheim-all",
+      "name": "Bad Bentheim",
+      "allDepartures": true,
+      "categories": [],
+      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day",
+      "planHoursAfter": 8
+    },
+    {
+      "id": "innsbruck-all",
+      "name": "Innsbruck Hbf",
+      "allDepartures": true,
+      "categories": [],
+      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day",
+      "planHoursAfter": 8
     }
   ],
   "nightjet": {
@@ -511,6 +556,458 @@
           "label": "Frankfurt Hbf",
           "futureStops": [
             "Frankfurt(Main)Hbf"
+          ]
+        }
+      ]
+    },
+    "berlin": {
+      "station": "Berlin Hbf",
+      "title": "Vertrektijden Berlin Hbf",
+      "country": "DE",
+      "quickDirections": [
+        {
+          "id": "praag",
+          "label": "Praag",
+          "futureStops": [
+            "Praha hl.n.",
+            "Praha-Holesovice",
+            "Praha-Holešovice",
+            "Prag"
+          ]
+        },
+        {
+          "id": "nederland",
+          "label": "Nederland",
+          "futureStops": [
+            "Amsterdam Centraal",
+            "Utrecht Centraal",
+            "Arnhem Centraal",
+            "Amersfoort Centraal",
+            "Hengelo",
+            "Enschede",
+            "Deventer",
+            "Venlo",
+            "Eindhoven Centraal"
+          ]
+        },
+        {
+          "id": "hannover",
+          "label": "Hannover",
+          "futureStops": [
+            "Hannover Hbf"
+          ]
+        },
+        {
+          "id": "duesseldorf-koeln",
+          "label": "Düsseldorf / Köln",
+          "futureStops": [
+            "Düsseldorf Hbf",
+            "Köln Hbf"
+          ]
+        }
+      ],
+      "stations": [
+        "Berlin Hbf",
+        "Berlin Hbf (tief)"
+      ]
+    },
+    "basel-bad": {
+      "station": "Basel Bad Bf",
+      "title": "Vertrektijden Basel Bad Bf",
+      "country": "CH",
+      "quickDirections": [
+        {
+          "id": "frankfurt",
+          "label": "Frankfurt Hbf",
+          "futureStops": [
+            "Frankfurt(Main)Hbf"
+          ]
+        },
+        {
+          "id": "koeln",
+          "label": "Köln Hbf",
+          "futureStops": [
+            "Köln Hbf"
+          ]
+        },
+        {
+          "id": "basel-sbb",
+          "label": "Basel SBB",
+          "futureStops": [
+            "Basel SBB"
+          ]
+        },
+        {
+          "id": "schaffhausen",
+          "label": "Schaffhausen",
+          "futureStops": [
+            "Schaffhausen"
+          ]
+        }
+      ]
+    },
+    "hamburg": {
+      "station": "Hamburg Hbf",
+      "title": "Vertrektijden Hamburg Hbf",
+      "country": "DE",
+      "quickDirections": [
+        {
+          "id": "kopenhagen",
+          "label": "Kopenhagen",
+          "futureStops": [
+            "København H",
+            "Koebenhavn H",
+            "Kobenhavn H",
+            "Kopenhagen"
+          ]
+        },
+        {
+          "id": "osnabrueck",
+          "label": "Osnabrück (ICE)",
+          "futureStops": [
+            "Osnabrück Hbf",
+            "Osnabrueck Hbf"
+          ],
+          "categories": [
+            "ICE"
+          ]
+        },
+        {
+          "id": "kiel",
+          "label": "Kiel",
+          "futureStops": [
+            "Kiel Hbf"
+          ]
+        },
+        {
+          "id": "flensburg",
+          "label": "Flensburg",
+          "futureStops": [
+            "Flensburg"
+          ]
+        }
+      ]
+    },
+    "mannheim": {
+      "station": "Mannheim Hbf",
+      "title": "Vertrektijden Mannheim Hbf",
+      "country": "DE",
+      "quickDirections": [
+        {
+          "id": "nederland-koeln",
+          "label": "Nederland en Köln",
+          "futureStops": [
+            "Amsterdam Centraal",
+            "Utrecht Centraal",
+            "Arnhem Centraal",
+            "Amersfoort Centraal",
+            "Hengelo",
+            "Enschede",
+            "Deventer",
+            "Venlo",
+            "Eindhoven Centraal",
+            "Köln Hbf"
+          ]
+        },
+        {
+          "id": "zwitserland",
+          "label": "Zwitserland",
+          "futureStops": [
+            "Basel SBB",
+            "Basel Bad Bf",
+            "Zürich HB",
+            "Zuerich HB",
+            "Bern",
+            "Interlaken Ost",
+            "Chur",
+            "Buchs SG",
+            "St. Margrethen",
+            "St. Gallen",
+            "St Gallen",
+            "Sargans"
+          ]
+        },
+        {
+          "id": "frankfurt",
+          "label": "Frankfurt Hbf",
+          "futureStops": [
+            "Frankfurt(Main)Hbf"
+          ]
+        },
+        {
+          "id": "muenchen",
+          "label": "München Hbf",
+          "futureStops": [
+            "München Hbf"
+          ]
+        }
+      ]
+    },
+    "muenchen": {
+      "station": "München Hbf",
+      "title": "Vertrektijden München Hbf",
+      "country": "DE",
+      "quickDirections": [
+        {
+          "id": "koeln-duesseldorf",
+          "label": "Köln en Düsseldorf",
+          "futureStops": [
+            "Köln Hbf",
+            "Düsseldorf Hbf"
+          ]
+        },
+        {
+          "id": "italie",
+          "label": "Italië",
+          "futureStops": [
+            "Brennero",
+            "Brenner",
+            "Bolzano",
+            "Bozen",
+            "Bressanone",
+            "Brixen",
+            "Fortezza",
+            "Franzensfeste",
+            "Trento",
+            "Verona",
+            "Venezia",
+            "Venice",
+            "Bologna",
+            "Milano",
+            "Roma",
+            "Tarvisio",
+            "Udine",
+            "Trieste"
+          ]
+        },
+        {
+          "id": "wenen",
+          "label": "Wenen",
+          "futureStops": [
+            "Wien Hbf",
+            "Wien Meidling",
+            "Wien Westbahnhof"
+          ]
+        },
+        {
+          "id": "hannover",
+          "label": "Hannover",
+          "futureStops": [
+            "Hannover Hbf"
+          ]
+        }
+      ]
+    },
+    "hannover": {
+      "station": "Hannover Hbf",
+      "title": "Vertrektijden Hannover Hbf",
+      "country": "DE",
+      "quickDirections": [
+        {
+          "id": "nederland",
+          "label": "Nederland",
+          "futureStops": [
+            "Amsterdam Centraal",
+            "Utrecht Centraal",
+            "Arnhem Centraal",
+            "Amersfoort Centraal",
+            "Hengelo",
+            "Enschede",
+            "Deventer",
+            "Venlo",
+            "Eindhoven Centraal"
+          ]
+        },
+        {
+          "id": "berlijn",
+          "label": "Berlijn",
+          "futureStops": [
+            "Berlin Hbf",
+            "Berlin Hauptbahnhof"
+          ]
+        },
+        {
+          "id": "muenchen",
+          "label": "München",
+          "futureStops": [
+            "München Hbf"
+          ]
+        },
+        {
+          "id": "hamburg",
+          "label": "Hamburg",
+          "futureStops": [
+            "Hamburg Hbf"
+          ]
+        }
+      ]
+    },
+    "bad-bentheim": {
+      "station": "Bad Bentheim",
+      "title": "Vertrektijden Bad Bentheim",
+      "country": "DE",
+      "quickDirections": [
+        {
+          "id": "nederland",
+          "label": "Nederland",
+          "futureStops": [
+            "Amsterdam Centraal",
+            "Utrecht Centraal",
+            "Arnhem Centraal",
+            "Amersfoort Centraal",
+            "Hengelo",
+            "Enschede",
+            "Deventer",
+            "Venlo",
+            "Eindhoven Centraal"
+          ]
+        },
+        {
+          "id": "berlijn",
+          "label": "Berlijn",
+          "futureStops": [
+            "Berlin Hbf",
+            "Berlin Hauptbahnhof"
+          ]
+        }
+      ]
+    },
+    "innsbruck": {
+      "station": "Innsbruck Hbf",
+      "title": "Vertrektijden Innsbruck Hbf",
+      "country": "AT",
+      "quickDirections": [
+        {
+          "id": "nightjet-nederland",
+          "label": "Nightjet naar Nederland",
+          "futureStops": [
+            "Amsterdam Centraal",
+            "Utrecht Centraal",
+            "Arnhem Centraal",
+            "Amersfoort Centraal",
+            "Hengelo",
+            "Enschede",
+            "Deventer",
+            "Venlo",
+            "Eindhoven Centraal"
+          ],
+          "categories": [
+            "NJ"
+          ]
+        },
+        {
+          "id": "muenchen",
+          "label": "München",
+          "futureStops": [
+            "München Hbf"
+          ]
+        },
+        {
+          "id": "italie",
+          "label": "Italië",
+          "futureStops": [
+            "Brennero",
+            "Brenner",
+            "Bolzano",
+            "Bozen",
+            "Bressanone",
+            "Brixen",
+            "Fortezza",
+            "Franzensfeste",
+            "Trento",
+            "Verona",
+            "Venezia",
+            "Venice",
+            "Bologna",
+            "Milano",
+            "Roma",
+            "Tarvisio",
+            "Udine",
+            "Trieste"
+          ]
+        },
+        {
+          "id": "wenen",
+          "label": "Wenen",
+          "futureStops": [
+            "Wien Hbf",
+            "Wien Meidling",
+            "Wien Westbahnhof"
+          ]
+        },
+        {
+          "id": "zwitserland",
+          "label": "Zwitserland",
+          "futureStops": [
+            "Basel SBB",
+            "Basel Bad Bf",
+            "Zürich HB",
+            "Zuerich HB",
+            "Bern",
+            "Interlaken Ost",
+            "Chur",
+            "Buchs SG",
+            "St. Margrethen",
+            "St. Gallen",
+            "St Gallen",
+            "Sargans"
+          ]
+        }
+      ]
+    },
+    "wien": {
+      "station": "Wien Hbf",
+      "title": "Vertrektijden Wien Hbf",
+      "country": "AT",
+      "quickDirections": [
+        {
+          "id": "nightjet-nederland",
+          "label": "Nightjet naar Nederland",
+          "futureStops": [
+            "Amsterdam Centraal",
+            "Utrecht Centraal",
+            "Arnhem Centraal",
+            "Amersfoort Centraal",
+            "Hengelo",
+            "Enschede",
+            "Deventer",
+            "Venlo",
+            "Eindhoven Centraal"
+          ],
+          "categories": [
+            "NJ"
+          ]
+        },
+        {
+          "id": "en-nj",
+          "label": "EuroNight en Nightjet",
+          "categories": [
+            "EN",
+            "NJ"
+          ]
+        },
+        {
+          "id": "boedapest",
+          "label": "Boedapest en verder",
+          "futureStops": [
+            "Budapest"
+          ]
+        },
+        {
+          "id": "salzburg",
+          "label": "Salzburg",
+          "futureStops": [
+            "Salzburg Hbf"
+          ]
+        },
+        {
+          "id": "railjet",
+          "label": "Railjet",
+          "categories": [
+            "RJ",
+            "RJX",
+            "RAILJET",
+            "RAILJET XPRESS"
           ]
         }
       ]
