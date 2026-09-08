@@ -1,7 +1,6 @@
-const stationPageId=/\/embed\/duesseldorf\/?$/.test(location.pathname)?"duesseldorf":"koeln";
-const stationTitle=stationPageId==="duesseldorf"?"Vertrektijden Düsseldorf Hbf":"Vertrektijden Keulen";
-document.title=stationTitle;
-document.querySelector(".board-head h2").textContent=stationTitle;
+const stationPageId=location.pathname.match(/^\/embed\/([a-z0-9-]+)\/?$/)?.[1]||"koeln";
+document.title="Vertrektijden";
+document.querySelector(".board-head h2").textContent="Vertrektijden";
 let data=null,activeTab="fernverkehr";
 const quickEl=document.getElementById("quick");
 const fullEl=document.getElementById("full-board");
@@ -95,6 +94,8 @@ async function refresh(){
     const r=await fetch(`/api/views/${stationPageId}`,{cache:"no-store"});
     const p=await r.json();
     if(!r.ok)throw new Error(p.error||`HTTP ${r.status}`);
+    document.title=p.title||"Vertrektijden";
+    document.querySelector(".board-head h2").textContent=document.title;
     data=p;renderQuick();if(!fullEl.hidden)renderFull();
     const d=p.lastScanAt?new Date(p.lastScanAt):null;
     scanStatus.textContent=d&&!Number.isNaN(d.getTime())
