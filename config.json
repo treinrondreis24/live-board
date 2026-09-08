@@ -293,7 +293,8 @@
       "name": "Düsseldorf Hbf",
       "allDepartures": true,
       "categories": [],
-      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day"
+      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day",
+      "planHoursAfter": 8
     },
     {
       "id": "hamburg-fernverkehr",
@@ -457,6 +458,59 @@
           "label": "Köln Messe/Deutz",
           "futureStops": [
             "Köln Messe/Deutz"
+          ]
+        }
+      ]
+    },
+    "duesseldorf": {
+      "station": "Düsseldorf Hbf",
+      "title": "Vertrektijden Düsseldorf Hbf",
+      "country": "DE",
+      "quickDirections": [
+        {
+          "id": "nederland",
+          "label": "Nederland",
+          "futureStops": [
+            "Amsterdam Centraal",
+            "Arnhem Centraal",
+            "Utrecht Centraal",
+            "Venlo",
+            "Eindhoven Centraal"
+          ]
+        },
+        {
+          "id": "muenchen",
+          "label": "München",
+          "futureStops": [
+            "München Hbf"
+          ]
+        },
+        {
+          "id": "zwitserland",
+          "label": "Zwitserland",
+          "futureStops": [
+            "Basel SBB",
+            "Basel Bad Bf",
+            "Zürich HB",
+            "Zuerich HB",
+            "Bern",
+            "Interlaken Ost",
+            "Chur"
+          ]
+        },
+        {
+          "id": "moenchengladbach-venlo",
+          "label": "Mönchengladbach en Venlo",
+          "futureStops": [
+            "Mönchengladbach Hbf",
+            "Venlo"
+          ]
+        },
+        {
+          "id": "frankfurt",
+          "label": "Frankfurt Hbf",
+          "futureStops": [
+            "Frankfurt(Main)Hbf"
           ]
         }
       ]
