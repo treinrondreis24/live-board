@@ -860,7 +860,7 @@ export async function getDataHubStats(){
       pool.query("SELECT COUNT(*)::bigint AS n FROM event_current_state")
     ]);
     return {
-      version:"4.1.2",backend,
+      version:"4.1.3",backend,
       serviceRuns:Number(services.rows[0].n),eventObservations:Number(events.rows[0].n),currentStates:Number(currentStates.rows[0].n),
       ingestBatches:Number(batches.rows[0].n),lastObservationAt:last.rows[0].n?Number(last.rows[0].n):null,
       storagePolicy:{
@@ -874,7 +874,7 @@ export async function getDataHubStats(){
     };
   }
   return {
-    version:"4.1.2",backend,
+    version:"4.1.3",backend,
     serviceRuns:Number(sqlite.prepare("SELECT COUNT(*) AS n FROM service_runs").get().n),eventObservations:Number(sqlite.prepare("SELECT COUNT(*) AS n FROM event_observations").get().n),
     currentStates:Number(sqlite.prepare("SELECT COUNT(*) AS n FROM event_current_state").get().n),ingestBatches:Number(sqlite.prepare("SELECT COUNT(*) AS n FROM ingest_batches").get().n),
     lastObservationAt:sqlite.prepare("SELECT MAX(observed_at) AS n FROM event_observations").get().n||null,

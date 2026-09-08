@@ -56,7 +56,24 @@ function loadDotEnv(filename){
 function sendJson(res,status,obj){res.writeHead(status,{"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"});res.end(JSON.stringify(obj));}
 function sendFile(res,filename){
   const types={".html":"text/html; charset=utf-8",".css":"text/css; charset=utf-8",".js":"text/javascript; charset=utf-8",".svg":"image/svg+xml"};
-  fs.readFile(filename,(err,data)=>{if(err){res.writeHead(404);return res.end("Not found");}res.writeHead(200,{"Content-Type":types[path.extname(filename).toLowerCase()]||"application/octet-stream","Cache-Control":"no-cache"});res.end(data);});
+  fs.readFile(filename,(err,data)=>{
+    if(err){res.writeHead(404);return res.end("Not found");}
+
+    // V4.1.3: vertraging >30 min moet op zowel groot als mobiel bord
+    // altijd rood blijven, ongeacht oudere CSS-cascade/caching.
+    if(path.extname(filename).toLowerCase()===".css"){
+      const base=path.basename(filename).toLowerCase();
+      if(base==="styles.css"||base==="mobile.css"){
+        data=Buffer.concat([data,Buffer.from(`
+/* v4.1.3 delay-color guard */
+.db-status.major-delay,.m-status.major-delay{color:#c92828!important;}
+`)]);
+      }
+    }
+
+    res.writeHead(200,{"Content-Type":types[path.extname(filename).toLowerCase()]||"application/octet-stream","Cache-Control":"no-cache"});
+    res.end(data);
+  });
 }
 let dbRequestQueue=Promise.resolve();
 let dbLastRequestStartedAt=0;
@@ -268,6 +285,70 @@ function chooseBest(items){
     if(ad!==bd)return ad-bd;if(a.hasRealtime!==b.hasRealtime)return a.hasRealtime?-1:1;return Number(a.plannedTimestamp||0)-Number(b.plannedTimestamp||0);
   })[0];
 }
+
+function naturalTrainNumberSort(a,b){
+  const an=Number(a),bn=Number(b);
+  if(Number.isFinite(an)&&Number.isFinite(bn)&&an!==bn)return an-bn;
+  return String(a).localeCompare(String(b),"nl",{numeric:true,sensitivity:"base"});
+}
+function boardMergeKey(row){
+  // Alleen vertrekken samenvoegen. Voor arrivals blijft ieder treinnummer
+  // afzonderlijk zichtbaar. Twee vertrekregels mogen alleen samen wanneer
+  // alle relevante bordgegevens gelijk zijn behalve het treinnummer.
+  if(row.eventMode!=="departure")return null;
+  return [
+    normalizeStationName(row.observedAt||""),
+    String(row.category||"").toUpperCase(),
+    Number(row.plannedTimestamp||0),
+    Number(row.expectedTimestamp||row.plannedTimestamp||0),
+    normalizeStationName(row.from||""),
+    normalizeStationName(row.to||""),
+    String(row.track||"—").trim().toUpperCase(),
+    Number(row.delay||0),
+    row.cancelled?"1":"0"
+  ].join("|");
+}
+function mergeEquivalentBoardTrains(rows){
+  const buckets=new Map(),result=[];
+
+  for(const row of rows){
+    // Versterk tevens de presentatieclassificatie: >30 minuten = rood.
+    if(!row.cancelled&&Number(row.delay||0)>30)row.type="major-delay";
+
+    const key=boardMergeKey(row);
+    if(!key){result.push(row);continue;}
+    if(!buckets.has(key))buckets.set(key,[]);
+    buckets.get(key).push(row);
+  }
+
+  for(const items of buckets.values()){
+    if(items.length===1){result.push(items[0]);continue;}
+
+    const numbers=[...new Set(items.map(x=>String(x.number||"").trim()).filter(Boolean))]
+      .sort(naturalTrainNumberSort);
+    if(numbers.length<=1){result.push(items[0]);continue;}
+
+    const first=items[0],category=String(first.category||"").trim();
+    result.push({
+      ...first,
+      merged:true,
+      mergedCount:numbers.length,
+      trainNumbers:numbers,
+      // Compact: ICE 105 / 505 in plaats van ICE 105 / ICE 505.
+      train:category?`${category} ${numbers.join(" / ")}`:numbers.join(" / "),
+      number:numbers.join(" / "),
+      mergedTrainKeys:items.map(x=>x.trainKey).filter(Boolean)
+    });
+  }
+
+  // Hoofdbord altijd op geplande eventtijd; voor vertrekregels is dit de
+  // geplande vertrektijd. Arrivals blijven op hun geplande aankomsttijd.
+  return result.sort((a,b)=>{
+    const at=Number(a.plannedTimestamp||0),bt=Number(b.plannedTimestamp||0);
+    if(at!==bt)return at-bt;
+    return String(a.train||"").localeCompare(String(b.train||""),"nl",{numeric:true,sensitivity:"base"});
+  });
+}
 async function addTrend30(train,now){
   if(train.cancelled){train.trend30=null;return;}
   const target=now-30*60000,min=now-40*60000,max=now-20*60000;
@@ -328,7 +409,13 @@ async function performScan(){
     const displayRows=dedupeRows(boardRows).filter(row=>visibleOnBoard(row,now));
     const groups=new Map();
     for(const row of displayRows){const key=String(row.number||"").trim();if(!key)continue;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(row);}
-    const trains=[];for(const items of groups.values())trains.push(chooseBest(items));trains.sort((a,b)=>a.plannedTimestamp-b.plannedTimestamp);
+    const selected=[];
+    for(const items of groups.values())selected.push(chooseBest(items));
+
+    // V4.1.3: dezelfde fysieke vertrekbeweging met meerdere treinnummers
+    // wordt één bordregel. Opslag blijft volledig: alle individuele nummers
+    // zijn hierboven al afzonderlijk naar de Data Hub geschreven.
+    const trains=mergeEquivalentBoardTrains(selected);
 
     dbState.trains=trains.slice(0,Number(config.maxTrains||60));dbState.warnings=warnings;dbState.stations=stations;dbState.lastScanAt=new Date(now).toISOString();
     collectorState={lastScanAt:dbState.lastScanAt,byStation:collectorByStation,warnings};
@@ -665,7 +752,7 @@ const server=http.createServer(async(req,res)=>{
 
 await initStorage();
 server.listen(PORT,async()=>{
-  const storage=getStorageInfo();console.log("");console.log("Treinrondreis Multi-source Data Hub + Live Board v4.1.2");console.log(`Open: http://localhost:${PORT}`);console.log(`DB credentials: ${CLIENT_ID&&API_KEY?"ingesteld":"ONTBREKEN"}`);console.log(`Historie: ${storage.backend} (${storage.retention})`);console.log("");
+  const storage=getStorageInfo();console.log("");console.log("Treinrondreis Multi-source Data Hub + Live Board v4.1.3");console.log(`Open: http://localhost:${PORT}`);console.log(`DB credentials: ${CLIENT_ID&&API_KEY?"ingesteld":"ONTBREKEN"}`);console.log(`Historie: ${storage.backend} (${storage.retention})`);console.log("");
   await Promise.allSettled([performScan(),performItalyScan()]);
   scheduleNext();scheduleNextItaly();scheduleNightjetDayCheck();setTimeout(()=>performNightjetDayPlan(),30000);
 
