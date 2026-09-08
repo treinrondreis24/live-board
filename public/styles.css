@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&family=Open+Sans:wght@400;500;600;700;800&display=swap");
+
 
 :root{
   --navy:#003082;
@@ -28,7 +30,7 @@ html,body{
   height:100%;
   overflow:hidden;
   background:#000;
-  font-family:Arial,Helvetica,sans-serif;
+  font-family:"Open Sans",Arial,Helvetica,sans-serif;
 }
 
 .app{
@@ -243,7 +245,7 @@ html,body{
   grid-template-rows:12vh 5vh 1fr 5vh;
   background:var(--it-bg);
   color:var(--it-amber);
-  font-family:"Courier New",Consolas,monospace;
+  font-family:"Open Sans",Arial,Helvetica,sans-serif;
 }
 
 .italy-topbar{
@@ -447,10 +449,12 @@ html,body{
   border:2px solid rgba(201,40,40,.55);
   background:#fff3f2;
   color:#7b1e1e;
-  font-family:Arial,Helvetica,sans-serif;
+  font-family:"Open Sans",Arial,Helvetica,sans-serif;
   box-shadow:0 8px 26px rgba(0,0,0,.2);
 }
 
 .error-panel.hidden{display:none}
 .error-title{font-size:clamp(18px,1.4vw,32px);font-weight:700;margin-bottom:.35em}
 .error-text{font-size:clamp(13px,.95vw,22px);line-height:1.35}
+
+.logo-fallback,.brand-name,.title,.italy-title,.italy-subtitle,.italy-panel-title,.error-title{font-family:Montserrat,"Open Sans",sans-serif}
