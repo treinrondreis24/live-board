@@ -1,10 +1,12 @@
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&family=Open+Sans:wght@400;500;600;700;800&display=swap");
+
 :root{
   --red:#e5303c;--text:#252525;--muted:#737373;--line:#e6e3df;
   --soft:#faf8f5;--green:#3d8062;--delay:#a96a00;--major:#c92828;
   --blue:#1c6e92;--button-green:#669620;
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:transparent;color:var(--text);font-family:Arial,Helvetica,sans-serif}
+html,body{margin:0;background:transparent;color:var(--text);font-family:"Open Sans",Arial,Helvetica,sans-serif}
 body{padding:4px}
 button{font:inherit}
 .board{width:100%;max-width:1050px;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
@@ -65,3 +67,5 @@ h2{margin:0;color:var(--red);font-size:22px;line-height:1.2;font-weight:700;lett
   .columns span:last-child,.full-row .status{display:none}
   .full-row .destination{color:var(--text);font-size:12px}
 }
+
+h1,h2,h3,.where,.primary{font-family:Montserrat,"Open Sans",sans-serif}
