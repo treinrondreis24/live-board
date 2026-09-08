@@ -235,7 +235,7 @@ function countryForStation(name="") {
   if([
     "Mannheim Hbf","Köln Hbf","Berlin Hbf","Bad Bentheim","Düsseldorf Hbf",
     "Hamburg Hbf","Hannover Hbf","Frankfurt(Main)Hbf","Frankfurt(M) Flughafen Fernbf",
-    "Stuttgart Hbf","München Hbf","Osnabrück Hbf","Offenburg"
+    "Stuttgart Hbf","München Hbf","Osnabrück Hbf","Offenburg","Nürnberg Hbf","Berlin Hbf (tief)"
   ].some(x=>n===x))return "DE";
   return "";
 }
