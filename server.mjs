@@ -469,7 +469,9 @@ function currentCollectorRows(station){
 function stationUpcomingDepartures(station){
   const now=Date.now(),graceMs=10*60*1000;
 
-  const rows=(collectorState.byStation[station]||[])
+  const stations=Array.isArray(station)?station:[station];
+  const rows=stations.flatMap(name=>collectorState.byStation[name]||[])
+    .map(row=>stations.length>1?{...row,observedAt:stations[0]}:row)
     .filter(isPassengerBoardTrain)
     .filter(r=>r.eventMode==="departure")
     .filter(r=>{
@@ -488,10 +490,19 @@ function stationUpcomingDepartures(station){
   });
 }
 
+function stationDirectionMatches(row,direction){
+  const normalizeCategory=value=>String(value||"").toUpperCase().replace(/[\s_-]+/g,"");
+  const categories=direction.categories||[];
+  const stops=direction.futureStops||[];
+  if(!categories.length&&!stops.length)return false;
+  if(categories.length&&!categories.some(c=>normalizeCategory(c)===normalizeCategory(row.category)))return false;
+  return !stops.length||futureRouteContains(row,stops);
+}
+
 function stationQuickDirections(pageCfg,rows){
   return (pageCfg.quickDirections||[]).map(direction=>{
     const matches=rows
-      .filter(r=>futureRouteContains(r,direction.futureStops||[]))
+      .filter(r=>stationDirectionMatches(r,direction))
       .slice(0,8);
 
     return {
@@ -507,7 +518,7 @@ function stationPagePayload(pageId){
   const pageCfg=config.stationPages?.[pageId];
   if(!pageCfg)return null;
 
-  const rows=stationUpcomingDepartures(pageCfg.station);
+  const rows=stationUpcomingDepartures(pageCfg.stations||pageCfg.station);
 
   return {
     source:"DB Timetables",
@@ -756,6 +767,7 @@ function stationViewPayload(station,kind){
 }
 
 const pageRoutes={
+  ...Object.fromEntries(Object.keys(config.stationPages||{}).flatMap(id=>[[`/embed/${id}`,"/koeln-embed.html"],[`/embed/${id}/`,"/koeln-embed.html"]])),
   "/mobile":"/mobile.html","/mobile/":"/mobile.html",
   "/embed/duesseldorf":"/koeln-embed.html","/embed/duesseldorf/":"/koeln-embed.html",
   "/embed/koeln":"/koeln-embed.html","/embed/koeln/":"/koeln-embed.html",
@@ -819,14 +831,16 @@ const server=http.createServer(async(req,res)=>{
       const station=decodeURIComponent(url.pathname.slice("/api/station/".length)),source=url.searchParams.get("source")||"DB",hours=Number(url.searchParams.get("hours")||6),limit=Number(url.searchParams.get("limit")||100);
       const observations=await getLatestByStation({station,source,hours,limit});return sendJson(res,200,{source,station,count:observations.length,observations});
     }
-    if(url.pathname==="/api/views/koeln"){
-      const payload=stationPagePayload("koeln");
-      if(!payload)return sendJson(res,404,{error:"Stationpagina niet geconfigureerd"});
-      return sendJson(res,200,payload);
+    const stationViewMatch=url.pathname.match(/^\/api\/views\/([a-z0-9-]+)\/?$/);
+    const stationPageId=stationViewMatch?.[1];
+    if(stationPageId&&Object.hasOwn(config.stationPages||{},stationPageId)){
+      const payload=stationPagePayload(stationPageId);
+      // Preserve the existing mobile API fields alongside the complete embed board.
+      const legacy=stationPageId==="duesseldorf"?stationViewPayload("Düsseldorf Hbf","netherlands")
+        :stationPageId==="wien"?stationViewPayload("Wien Hbf","fern")
+        :stationPageId==="mannheim"?stationViewPayload("Mannheim Hbf","fern"):{};
+      return sendJson(res,200,{...legacy,...payload});
     }
-    if(url.pathname==="/api/views/duesseldorf")return sendJson(res,200,{...stationViewPayload("Düsseldorf Hbf","netherlands"),...stationPagePayload("duesseldorf")});
-    if(url.pathname==="/api/views/wien")return sendJson(res,200,stationViewPayload("Wien Hbf","fern"));
-    if(url.pathname==="/api/views/mannheim")return sendJson(res,200,stationViewPayload("Mannheim Hbf","fern"));
     if(url.pathname==="/api/views/nightjets")return sendJson(res,200,{source:"DB Timetables",...(await getNightjetView())});
     if(url.pathname==="/api/italy"){
       if(!italyState.lastScanAt&&!italyState.scanning)await performItalyScan();if(!italyState.lastScanAt&&italyState.warnings.length)return sendJson(res,503,{source:"ViaggiaTreno",error:italyState.warnings.join(" | ")});
