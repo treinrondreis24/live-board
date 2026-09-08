@@ -306,57 +306,62 @@ function naturalTrainNumberSort(a,b){
   return String(a).localeCompare(String(b),"nl",{numeric:true,sensitivity:"base"});
 }
 function boardMergeKey(row){
-  // Alleen vertrekken samenvoegen. Voor arrivals blijft ieder treinnummer
-  // afzonderlijk zichtbaar. Twee vertrekregels mogen alleen samen wanneer
-  // alle relevante bordgegevens gelijk zijn behalve het treinnummer.
-  if(row.eventMode!=="departure")return null;
-  return [
-    normalizeStationName(row.observedAt||""),
-    String(row.category||"").toUpperCase(),
-    Number(row.plannedTimestamp||0),
-    Number(row.expectedTimestamp||row.plannedTimestamp||0),
-    normalizeStationName(row.from||""),
-    normalizeStationName(row.to||""),
-    String(row.track||"—").trim().toUpperCase(),
-    Number(row.delay||0),
-    row.cancelled?"1":"0"
-  ].join("|");
+  if((row.eventMode||row.mode)!=="departure")return null;
+  const station=normalizeStationName(row.observedAt||row.station||"");
+  const planned=Number(row.plannedTimestamp||0);
+  const destination=normalizeStationName(row.to||"");
+  const track=String(row.track||"").trim().toUpperCase();
+  // Missing times, destinations or tracks are not evidence of a shared departure.
+  if(!station||!Number.isFinite(planned)||planned<=0||!destination||["","—","-","?"].includes(track))return null;
+  return [station,Math.floor(planned/60000),destination,track].join("|");
+}
+function isFernverkehrRow(row){
+  return (row.mergedServices||[row]).some(service=>isFernverkehrCategory(service.category));
 }
 function mergeEquivalentBoardTrains(rows){
   const buckets=new Map(),result=[];
-
-  for(const row of rows){
-    // Versterk tevens de presentatieclassificatie: >30 minuten = rood.
+  for(const input of rows){
+    const row={...input};
     if(!row.cancelled&&Number(row.delay||0)>30)row.type="major-delay";
-
     const key=boardMergeKey(row);
     if(!key){result.push(row);continue;}
     if(!buckets.has(key))buckets.set(key,[]);
     buckets.get(key).push(row);
   }
-
   for(const items of buckets.values()){
     if(items.length===1){result.push(items[0]);continue;}
-
-    const numbers=[...new Set(items.map(x=>String(x.number||"").trim()).filter(Boolean))]
-      .sort(naturalTrainNumberSort);
-    if(numbers.length<=1){result.push(items[0]);continue;}
-
-    const first=items[0],category=String(first.category||"").trim();
+    const members=items.flatMap(row=>row.mergedServices||[row]);
+    const active=members.filter(row=>!row.cancelled);
+    const first=[...(active.length?active:members)].sort((a,b)=>
+      Number(b.delay||0)-Number(a.delay||0)||Number(Boolean(b.hasRealtime))-Number(Boolean(a.hasRealtime))
+    )[0];
+    const byCategory=new Map();
+    for(const row of members){
+      const category=String(row.category||"").trim();
+      if(!byCategory.has(category))byCategory.set(category,new Set());
+      for(const n of row.trainNumbers||[row.number]){
+        const number=String(n||"").trim();if(number)byCategory.get(category).add(number);
+      }
+    }
+    const labels=[...byCategory].sort(([a],[b])=>a.localeCompare(b)).map(([category,numbers])=>
+      [category,[...numbers].sort(naturalTrainNumberSort).join(" / ")].filter(Boolean).join(" ")
+    );
+    const numbers=[...new Set([...byCategory.values()].flatMap(set=>[...set]))].sort(naturalTrainNumberSort);
+    const cancelled=active.length===0;
+    const partialCancellation=active.length>0&&active.length<members.length;
+    const delay=Number(first.delay||0);
+    const type=cancelled?"cancel":delay>30?"major-delay":partialCancellation?"delay":first.type;
+    const status=cancelled?"Geannuleerd":partialCancellation
+      ?`Deels geannuleerd${delay>0?` · +${delay} min`:""}`:first.status;
     result.push({
-      ...first,
-      merged:true,
-      mergedCount:numbers.length,
-      trainNumbers:numbers,
-      // Compact: ICE 105 / 505 in plaats van ICE 105 / ICE 505.
-      train:category?`${category} ${numbers.join(" / ")}`:numbers.join(" / "),
-      number:numbers.join(" / "),
-      mergedTrainKeys:items.map(x=>x.trainKey).filter(Boolean)
+      ...first,cancelled,partialCancellation,type,status,
+      merged:true,mergedCount:[...byCategory.values()].reduce((n,set)=>n+set.size,0),
+      trainNumbers:numbers,train:labels.join(" / "),number:numbers.join(" / "),
+      mergedTrainKeys:[...new Set(members.map(row=>row.trainKey).filter(Boolean))],
+      // Retain per-service categories and routes for direction filters after merging.
+      mergedServices:members.map(({rawStop,mergedServices,...row})=>row)
     });
   }
-
-  // Hoofdbord altijd op geplande eventtijd; voor vertrekregels is dit de
-  // geplande vertrektijd. Arrivals blijven op hun geplande aankomsttijd.
   return result.sort((a,b)=>{
     const at=Number(a.plannedTimestamp||0),bt=Number(b.plannedTimestamp||0);
     if(at!==bt)return at-bt;
@@ -491,6 +496,7 @@ function stationUpcomingDepartures(station){
 }
 
 function stationDirectionMatches(row,direction){
+  if(row.mergedServices)return row.mergedServices.some(service=>stationDirectionMatches(service,direction));
   const normalizeCategory=value=>String(value||"").toUpperCase().replace(/[\s_-]+/g,"");
   const categories=direction.categories||[];
   const stops=direction.futureStops||[];
@@ -530,8 +536,8 @@ function stationPagePayload(pageId){
     quick:stationQuickDirections(pageCfg,rows),
     departures:{
       all:rows,
-      fernverkehr:rows.filter(r=>isFernverkehrCategory(r.category)),
-      regional:rows.filter(r=>!isFernverkehrCategory(r.category))
+      fernverkehr:rows.filter(isFernverkehrRow),
+      regional:rows.filter(r=>!isFernverkehrRow(r))
     }
   };
 }
@@ -598,7 +604,7 @@ async function getNightjetView(){
   const groups=new Map();
   for(const r of candidates){if(!nightjetTarget({tl:{c:r.category,n:r.number}}))continue;const key=String(r.number||"");if(!key)continue;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(r);}
   const trains=[];for(const items of groups.values())trains.push(chooseBest(items));trains.sort((a,b)=>(a.plannedTimestamp||0)-(b.plannedTimestamp||0));
-  return {dateKey,trains,planReady:nightjetPlanState.dateKey===dateKey&&!nightjetPlanState.scanning,planScanning:nightjetPlanState.scanning,planUpdatedAt:nightjetPlanState.lastUpdatedAt,warnings:nightjetPlanState.warnings};
+  return {dateKey,trains:mergeEquivalentBoardTrains(trains),planReady:nightjetPlanState.dateKey===dateKey&&!nightjetPlanState.scanning,planScanning:nightjetPlanState.scanning,planUpdatedAt:nightjetPlanState.lastUpdatedAt,warnings:nightjetPlanState.warnings};
 }
 
 // -------- ViaggiaTreno --------
@@ -745,7 +751,7 @@ async function performItalyScan(){
   try{
     for(const cfg of config.italy.trains||[]){try{rows.push(await scanOneItaly(cfg));}catch(e){warnings.push(`${cfg.number} (${cfg.station}): ${e.message}`);}await sleep(120);}
     rows.sort((a,b)=>(a.plannedTimestamp||0)-(b.plannedTimestamp||0));const now=Date.now();for(const row of rows)await addItalyTrend(row,now);if(rows.length)await recordObservations(rows,"ViaggiaTreno",now);
-    italyState.trains=rows.filter(isPassengerBoardTrain);italyState.warnings=warnings;italyState.lastScanAt=new Date(now).toISOString();console.log(`[${new Date().toLocaleTimeString()}] Italia-scan: ${rows.length} geselecteerde trein(en)`);if(warnings.length)console.log("Italia:",warnings.join(" | "));
+    italyState.trains=mergeEquivalentBoardTrains(rows.filter(isPassengerBoardTrain));italyState.warnings=warnings;italyState.lastScanAt=new Date(now).toISOString();console.log(`[${new Date().toLocaleTimeString()}] Italia-scan: ${rows.length} geselecteerde trein(en)`);if(warnings.length)console.log("Italia:",warnings.join(" | "));
   }finally{italyState.scanning=false;}
 }
 function scheduleNextItaly(){if(!config.italy?.enabled)return;const {interval,delay}=nextDelay(new Date());italyState.currentIntervalMinutes=interval;italyState.nextScanAt=new Date(Date.now()+delay).toISOString();setTimeout(async()=>{await performItalyScan();scheduleNextItaly();},delay);}
@@ -763,6 +769,7 @@ function stationViewPayload(station,kind){
     // die vanuit Nederland naar Duitsland rijdt niet per ongeluk op dit bord.
     rows=rows.filter(r=>futureRouteContains(r,targets));
   }
+  rows=mergeEquivalentBoardTrains(rows);
   return {source:"DB Timetables",station,lastScanAt:collectorState.lastScanAt,count:rows.length,trains:rows};
 }
 
