@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vertrektijden Keulen</title>
+<link rel="stylesheet" href="/koeln-embed.css">
+</head>
+<body>
+<section class="board">
+  <header class="board-head">
+    <h2>Vertrektijden Keulen</h2>
+    <span class="live"><i></i><span id="scan-status">laden…</span></span>
+  </header>
+
+  <div id="quick"></div>
+
+  <footer class="board-footer">
+    <button id="toggle-full" class="primary" type="button">Toon compleet vertrekbord</button>
+  </footer>
+
+  <section id="full-board" class="full-board" hidden>
+    <div class="tabs">
+      <button class="tab active" data-tab="fernverkehr" type="button">Langeafstand</button>
+      <button class="tab" data-tab="regional" type="button">Regionaal</button>
+    </div>
+    <div class="columns">
+      <span>Tijd</span><span>Trein</span><span>Bestemming</span><span>Spoor</span><span>Status</span>
+    </div>
+    <div id="full-rows"></div>
+  </section>
+</section>
+<script src="/koeln-embed.js"></script>
+</body>
+</html>

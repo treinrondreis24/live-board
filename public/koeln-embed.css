@@ -1,0 +1,67 @@
+:root{
+  --red:#e5303c;--text:#252525;--muted:#737373;--line:#e6e3df;
+  --soft:#faf8f5;--green:#3d8062;--delay:#a96a00;--major:#c92828;
+  --blue:#1c6e92;--button-green:#669620;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:transparent;color:var(--text);font-family:Arial,Helvetica,sans-serif}
+body{padding:4px}
+button{font:inherit}
+.board{width:100%;max-width:1050px;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.board-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 15px 10px;border-bottom:1px solid var(--line)}
+h2{margin:0;color:var(--red);font-size:22px;line-height:1.2;font-weight:700;letter-spacing:-.01em}
+.live{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:11px;white-space:nowrap}
+.live i{width:7px;height:7px;border-radius:50%;background:var(--green)}
+.direction{border-bottom:1px solid var(--line)}
+.direction:nth-child(even){background:var(--soft)}
+.direction-main{
+  display:grid;grid-template-columns:minmax(165px,1.15fr) 62px 105px minmax(175px,1.65fr) 75px 78px;
+  align-items:center;gap:8px;min-height:51px;padding:6px 14px
+}
+.where-line{display:flex;align-items:baseline;gap:7px;min-width:0}
+.where{font-size:15px;font-weight:700}
+.more{padding:0;border:0;background:none;color:#555;text-decoration:underline;text-underline-offset:3px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap}
+.time{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
+.train{font-size:14px;font-weight:700}
+.destination{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+.track{font-size:12px;color:var(--muted)}
+.track strong{color:var(--text);font-size:13px}
+.status{text-align:right;font-size:12px;font-weight:700;color:var(--green)}
+.status.delay{color:var(--delay)}
+.status.major-delay,.status.cancel{color:var(--major)!important}
+.extra{border-top:1px dashed #e9e5df}
+.extra[hidden]{display:none}
+.extra .direction-main{min-height:45px;padding-top:4px;padding-bottom:4px}
+.empty{padding:10px 14px;color:var(--muted);font-size:13px}
+.board-footer{display:flex;justify-content:flex-end;padding:10px 13px}
+.primary{
+  border:0;border-radius:11px;background:linear-gradient(90deg,var(--blue),var(--button-green));
+  color:#fff;padding:9px 17px;min-height:38px;font-size:14px;font-weight:500;cursor:pointer
+}
+.primary:hover{filter:brightness(.96)}
+.full-board{border-top:1px solid var(--line)}
+.tabs{display:flex;background:var(--soft);border-bottom:1px solid var(--line)}
+.tab{border:0;background:transparent;padding:10px 14px;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer}
+.tab.active{background:#fff;color:var(--red);box-shadow:inset 0 -2px var(--red)}
+.columns,.full-row{display:grid;grid-template-columns:68px 105px minmax(0,1fr) 70px 88px;align-items:center;gap:8px;padding:7px 14px}
+.columns{color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--line)}
+.full-row{min-height:43px;border-bottom:1px solid #efedea;font-size:13px}
+.full-row:last-child{border-bottom:0}
+.full-row .time{font-size:15px}
+.full-row .train{font-size:13px}
+@media(max-width:720px){
+  body{padding:0}.board{border-left:0;border-right:0;border-radius:0}
+  .board-head{padding:11px 11px 8px}h2{font-size:19px}
+  .direction-main{
+    grid-template-columns:minmax(0,1fr) 54px 73px 57px;
+    grid-template-areas:"where time train status" "dest dest track status";
+    min-height:58px;gap:1px 7px;padding:7px 11px
+  }
+  .where-line{grid-area:where;gap:5px}.time{grid-area:time;font-size:16px}
+  .train{grid-area:train;font-size:12px}.destination{grid-area:dest;color:var(--muted);font-size:11px}
+  .track{grid-area:track;font-size:11px}.status{grid-area:status;font-size:11px}.more{font-size:10px}
+  .board-footer{padding:8px 11px}.primary{width:100%}
+  .columns,.full-row{grid-template-columns:57px 73px minmax(0,1fr) 52px;padding-left:11px;padding-right:11px}
+  .columns span:last-child,.full-row .status{display:none}
+  .full-row .destination{color:var(--text);font-size:12px}
+}
