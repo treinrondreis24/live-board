@@ -1,11 +1,11 @@
 {
   "name": "treinrondreis-live-board",
-  "version": "4.1.3",
+  "version": "4.2.0",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
-    "check": "node --check server.mjs && node --check storage.mjs && node --check datahub.mjs && node --check public/app.js && node --check public/mobile-common.js && node --check public/mobile.js && node --check public/nightjets.js && node --check public/station-mobile.js && node --check public/datahub.js"
+    "check": "node --check server.mjs && node --check storage.mjs && node --check datahub.mjs && node --check public/app.js && node --check public/mobile-common.js && node --check public/mobile.js && node --check public/nightjets.js && node --check public/station-mobile.js && node --check public/datahub.js && node --check public/koeln-embed.js"
   },
   "engines": {
     "node": ">=22.13.0"

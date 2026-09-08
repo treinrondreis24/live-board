@@ -366,6 +366,14 @@
       "categories": [],
       "experimentalCoverage": true,
       "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day"
+    },
+    {
+      "id": "koeln-all",
+      "name": "Köln Hbf",
+      "allDepartures": true,
+      "categories": [],
+      "planHoursAfter": 8,
+      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day"
     }
   ],
   "nightjet": {
@@ -399,5 +407,59 @@
     "WB",
     "WEST",
     "FLX"
-  ]
+  ],
+  "stationPages": {
+    "koeln": {
+      "station": "Köln Hbf",
+      "title": "Vertrektijden Keulen",
+      "country": "DE",
+      "quickDirections": [
+        {
+          "id": "nederland",
+          "label": "Nederland",
+          "futureStops": [
+            "Amsterdam Centraal",
+            "Arnhem Centraal",
+            "Utrecht Centraal",
+            "Venlo",
+            "Eindhoven Centraal"
+          ]
+        },
+        {
+          "id": "muenchen",
+          "label": "München",
+          "futureStops": [
+            "München Hbf"
+          ]
+        },
+        {
+          "id": "zwitserland",
+          "label": "Zwitserland",
+          "futureStops": [
+            "Basel SBB",
+            "Basel Bad Bf",
+            "Zürich HB",
+            "Zuerich HB",
+            "Bern",
+            "Interlaken Ost",
+            "Chur"
+          ]
+        },
+        {
+          "id": "moenchengladbach",
+          "label": "Mönchengladbach",
+          "futureStops": [
+            "Mönchengladbach Hbf"
+          ]
+        },
+        {
+          "id": "messe-deutz",
+          "label": "Köln Messe/Deutz",
+          "futureStops": [
+            "Köln Messe/Deutz"
+          ]
+        }
+      ]
+    }
+  }
 }

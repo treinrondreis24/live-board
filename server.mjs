@@ -142,9 +142,13 @@ async function getPlanHour(station,dateKey,hour){
   if(!cached){cached=parseStops(await dbGet(`${BASE}/plan/${station.eva}/${dateKey}/${hh}`));planCache.set(key,cached);}
   return cached;
 }
-async function getPlanWindow(station){
-  const all=[],before=Number(config.planHoursBefore||1),after=Number(config.planHoursAfter||2),now=new Date();
-  for(let off=-before;off<=after;off++){
+async function getPlanWindow(station,{before,after}={}){
+  const all=[],
+        windowBefore=Number(before??config.planHoursBefore??1),
+        windowAfter=Number(after??config.planHoursAfter??2),
+        now=new Date();
+
+  for(let off=-windowBefore;off<=windowAfter;off++){
     const p=tzParts(new Date(now.getTime()+off*3600000));
     all.push(...await getPlanHour(station,p.date,p.hour));
   }
@@ -262,8 +266,10 @@ function rowsForSelector(stops,station,cfg){
   for(const stop of stops){if(selectorAllows(stop,cfg)){const row=normalize(stop,station,cfg);if(row)rows.push(row);}}
   return rows;
 }
-async function fetchMergedStation(name){
-  const station=await resolveStation(name),[planned,changes]=await Promise.all([getPlanWindow(station),getChanges(station)]),changeMap=new Map(changes.map(s=>[s.id,s])),rows=[],planIds=new Set();
+async function fetchMergedStation(name,windowCfg={}){
+  const station=await resolveStation(name),
+        [planned,changes]=await Promise.all([getPlanWindow(station,windowCfg),getChanges(station)]),
+        changeMap=new Map(changes.map(s=>[s.id,s])),rows=[],planIds=new Set();
   for(const p of planned){planIds.add(p.id);rows.push(mergeStop(p,changeMap.get(p.id)));}
   for(const c of changes){if(!planIds.has(c.id))rows.push({...c,hasRealtime:true});}
   return {station,stops:rows};
@@ -365,9 +371,18 @@ async function performScan(){
   try{
     for(const name of monitoredStationNames()){
       try{
-        const fetched=await fetchMergedStation(name);
         const boardSelectors=selectorsForStation(name,config.stations),
-              collectorSelectors=selectorsForStation(name,config.collectors);
+              collectorSelectors=selectorsForStation(name,config.collectors),
+              allSelectors=[...boardSelectors,...collectorSelectors],
+              windowBefore=Math.max(
+                Number(config.planHoursBefore||1),
+                ...allSelectors.map(x=>Number(x.planHoursBefore||0))
+              ),
+              windowAfter=Math.max(
+                Number(config.planHoursAfter||2),
+                ...allSelectors.map(x=>Number(x.planHoursAfter||0))
+              ),
+              fetched=await fetchMergedStation(name,{before:windowBefore,after:windowAfter});
 
         for(const cfg of boardSelectors){
           boardRows.push(...rowsForSelector(fetched.stops,fetched.station,cfg));
@@ -442,6 +457,65 @@ function currentCollectorRows(station){
     .filter(r=>visibleOnBoard(r,Date.now()))
     .sort((a,b)=>(a.expectedTimestamp||a.plannedTimestamp||0)-(b.expectedTimestamp||b.plannedTimestamp||0));
 }
+
+function stationUpcomingDepartures(station){
+  const now=Date.now(),graceMs=10*60*1000;
+
+  const rows=(collectorState.byStation[station]||[])
+    .filter(r=>r.eventMode==="departure")
+    .filter(r=>{
+      if(r.cancelled){
+        const planned=Number(r.plannedTimestamp||0);
+        return !planned||planned>=now-graceMs;
+      }
+      const expected=Number(r.expectedTimestamp||r.plannedTimestamp||0);
+      return !expected||expected>=now-graceMs;
+    });
+
+  return mergeEquivalentBoardTrains(rows).sort((a,b)=>{
+    const at=Number(a.plannedTimestamp||0),bt=Number(b.plannedTimestamp||0);
+    if(at!==bt)return at-bt;
+    return String(a.train||"").localeCompare(String(b.train||""),"nl",{numeric:true});
+  });
+}
+
+function stationQuickDirections(pageCfg,rows){
+  return (pageCfg.quickDirections||[]).map(direction=>{
+    const matches=rows
+      .filter(r=>futureRouteContains(r,direction.futureStops||[]))
+      .slice(0,8);
+
+    return {
+      id:direction.id,
+      label:direction.label,
+      count:matches.length,
+      trains:matches
+    };
+  });
+}
+
+function stationPagePayload(pageId){
+  const pageCfg=config.stationPages?.[pageId];
+  if(!pageCfg)return null;
+
+  const rows=stationUpcomingDepartures(pageCfg.station);
+
+  return {
+    source:"DB Timetables",
+    page:pageId,
+    station:pageCfg.station,
+    title:pageCfg.title,
+    country:pageCfg.country,
+    lastScanAt:collectorState.lastScanAt,
+    quick:stationQuickDirections(pageCfg,rows),
+    departures:{
+      all:rows,
+      fernverkehr:rows.filter(r=>isFernverkehrCategory(r.category)),
+      regional:rows.filter(r=>!isFernverkehrCategory(r.category))
+    }
+  };
+}
+
 function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
 
 // -------- Volledige dagplanning voor Nightjet/EuroNight --------
@@ -674,6 +748,7 @@ function stationViewPayload(station,kind){
 
 const pageRoutes={
   "/mobile":"/mobile.html","/mobile/":"/mobile.html",
+  "/embed/koeln":"/koeln-embed.html","/embed/koeln/":"/koeln-embed.html",
   "/nightjets":"/nightjets.html","/nightjets/":"/nightjets.html",
   "/duesseldorf":"/station-mobile.html","/duesseldorf/":"/station-mobile.html",
   "/wien":"/station-mobile.html","/wien/":"/station-mobile.html",
@@ -734,6 +809,11 @@ const server=http.createServer(async(req,res)=>{
       const station=decodeURIComponent(url.pathname.slice("/api/station/".length)),source=url.searchParams.get("source")||"DB",hours=Number(url.searchParams.get("hours")||6),limit=Number(url.searchParams.get("limit")||100);
       const observations=await getLatestByStation({station,source,hours,limit});return sendJson(res,200,{source,station,count:observations.length,observations});
     }
+    if(url.pathname==="/api/views/koeln"){
+      const payload=stationPagePayload("koeln");
+      if(!payload)return sendJson(res,404,{error:"Stationpagina niet geconfigureerd"});
+      return sendJson(res,200,payload);
+    }
     if(url.pathname==="/api/views/duesseldorf")return sendJson(res,200,stationViewPayload("Düsseldorf Hbf","netherlands"));
     if(url.pathname==="/api/views/wien")return sendJson(res,200,stationViewPayload("Wien Hbf","fern"));
     if(url.pathname==="/api/views/mannheim")return sendJson(res,200,stationViewPayload("Mannheim Hbf","fern"));
@@ -752,7 +832,7 @@ const server=http.createServer(async(req,res)=>{
 
 await initStorage();
 server.listen(PORT,async()=>{
-  const storage=getStorageInfo();console.log("");console.log("Treinrondreis Multi-source Data Hub + Live Board v4.1.3");console.log(`Open: http://localhost:${PORT}`);console.log(`DB credentials: ${CLIENT_ID&&API_KEY?"ingesteld":"ONTBREKEN"}`);console.log(`Historie: ${storage.backend} (${storage.retention})`);console.log("");
+  const storage=getStorageInfo();console.log("");console.log("Treinrondreis Multi-source Data Hub + Live Board v4.2.0");console.log(`Open: http://localhost:${PORT}`);console.log(`DB credentials: ${CLIENT_ID&&API_KEY?"ingesteld":"ONTBREKEN"}`);console.log(`Historie: ${storage.backend} (${storage.retention})`);console.log("");
   await Promise.allSettled([performScan(),performItalyScan()]);
   scheduleNext();scheduleNextItaly();scheduleNightjetDayCheck();setTimeout(()=>performNightjetDayPlan(),30000);
 
