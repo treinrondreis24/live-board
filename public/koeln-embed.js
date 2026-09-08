@@ -1,3 +1,7 @@
+const stationPageId=/\/embed\/duesseldorf\/?$/.test(location.pathname)?"duesseldorf":"koeln";
+const stationTitle=stationPageId==="duesseldorf"?"Vertrektijden Düsseldorf Hbf":"Vertrektijden Keulen";
+document.title=stationTitle;
+document.querySelector(".board-head h2").textContent=stationTitle;
 let data=null,activeTab="fernverkehr";
 const quickEl=document.getElementById("quick");
 const fullEl=document.getElementById("full-board");
@@ -88,7 +92,7 @@ document.querySelectorAll(".tab").forEach(btn=>btn.addEventListener("click",()=>
 }));
 async function refresh(){
   try{
-    const r=await fetch("/api/views/koeln",{cache:"no-store"});
+    const r=await fetch(`/api/views/${stationPageId}`,{cache:"no-store"});
     const p=await r.json();
     if(!r.ok)throw new Error(p.error||`HTTP ${r.status}`);
     data=p;renderQuick();if(!fullEl.hidden)renderFull();
