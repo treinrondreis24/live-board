@@ -420,6 +420,30 @@
       "categories": [],
       "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day",
       "planHoursAfter": 8
+    },
+    {
+      "id": "arnhem-all",
+      "name": "Arnhem Centraal",
+      "allDepartures": true,
+      "categories": [],
+      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day",
+      "planHoursAfter": 8
+    },
+    {
+      "id": "deventer-all",
+      "name": "Deventer",
+      "allDepartures": true,
+      "categories": [],
+      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day",
+      "planHoursAfter": 8
+    },
+    {
+      "id": "nuernberg-all",
+      "name": "Nürnberg Hbf",
+      "allDepartures": true,
+      "categories": [],
+      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day",
+      "planHoursAfter": 8
     }
   ],
   "nightjet": {
