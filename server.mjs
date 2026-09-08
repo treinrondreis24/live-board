@@ -279,7 +279,15 @@ function dedupeRows(rows){
   for(const r of rows){const key=`${r.id}|${r.observedAt}|${r.eventMode}|${r.number}`;const old=map.get(key);if(!old||(!old.hasRealtime&&r.hasRealtime))map.set(key,r);}
   return [...map.values()];
 }
+// Passenger displays exclude charter trains, FlixTrain and WESTbahn.
+// Apply this only after collection/storage so observations remain complete.
+function isPassengerBoardTrain(row){
+  const category=String(row.category||"").toUpperCase().replace(/[\s_-]+/g,"");
+  return !["DZ","FLX","FLIXTRAIN","WB","WEST","WESTBAHN"].includes(category);
+}
+
 function visibleOnBoard(row,now){
+  if(!isPassengerBoardTrain(row))return false;
   const normalRetentionMs=90*60*1000,cancelledRetentionMs=6*60*60*1000;
   if(row.cancelled){const p=Number(row.plannedTimestamp||0);return !p||now<=p+cancelledRetentionMs;}
   const e=Number(row.expectedTimestamp||row.plannedTimestamp||0);return !e||now<=e+normalRetentionMs;
@@ -462,6 +470,7 @@ function stationUpcomingDepartures(station){
   const now=Date.now(),graceMs=10*60*1000;
 
   const rows=(collectorState.byStation[station]||[])
+    .filter(isPassengerBoardTrain)
     .filter(r=>r.eventMode==="departure")
     .filter(r=>{
       if(r.cancelled){
@@ -574,7 +583,7 @@ async function getNightjetView(){
   const dateKey=tzParts(new Date()).date,{start,end}=localDayBounds(dateKey),cats=config.nightjet?.categories||[],nums=config.nightjet?.numbers||[];
   const history=(await getLatestForPlannedWindow({source:"DB",start,end,categories:cats,trainNumbers:nums,limit:5000})).map(historyRowToTrain);
   const planned=nightjetPlanState.dateKey===dateKey?nightjetPlanState.rows:[];
-  const candidates=[...planned,...history];
+  const candidates=[...planned,...history].filter(isPassengerBoardTrain);
   const groups=new Map();
   for(const r of candidates){if(!nightjetTarget({tl:{c:r.category,n:r.number}}))continue;const key=String(r.number||"");if(!key)continue;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(r);}
   const trains=[];for(const items of groups.values())trains.push(chooseBest(items));trains.sort((a,b)=>(a.plannedTimestamp||0)-(b.plannedTimestamp||0));
@@ -725,7 +734,7 @@ async function performItalyScan(){
   try{
     for(const cfg of config.italy.trains||[]){try{rows.push(await scanOneItaly(cfg));}catch(e){warnings.push(`${cfg.number} (${cfg.station}): ${e.message}`);}await sleep(120);}
     rows.sort((a,b)=>(a.plannedTimestamp||0)-(b.plannedTimestamp||0));const now=Date.now();for(const row of rows)await addItalyTrend(row,now);if(rows.length)await recordObservations(rows,"ViaggiaTreno",now);
-    italyState.trains=rows;italyState.warnings=warnings;italyState.lastScanAt=new Date(now).toISOString();console.log(`[${new Date().toLocaleTimeString()}] Italia-scan: ${rows.length} geselecteerde trein(en)`);if(warnings.length)console.log("Italia:",warnings.join(" | "));
+    italyState.trains=rows.filter(isPassengerBoardTrain);italyState.warnings=warnings;italyState.lastScanAt=new Date(now).toISOString();console.log(`[${new Date().toLocaleTimeString()}] Italia-scan: ${rows.length} geselecteerde trein(en)`);if(warnings.length)console.log("Italia:",warnings.join(" | "));
   }finally{italyState.scanning=false;}
 }
 function scheduleNextItaly(){if(!config.italy?.enabled)return;const {interval,delay}=nextDelay(new Date());italyState.currentIntervalMinutes=interval;italyState.nextScanAt=new Date(Date.now()+delay).toISOString();setTimeout(async()=>{await performItalyScan();scheduleNextItaly();},delay);}
