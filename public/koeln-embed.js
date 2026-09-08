@@ -10,12 +10,14 @@ const scanStatus=document.getElementById("scan-status");
 
 function esc(v){return String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;")}
 function statusClass(t){
+  if(t.partialCancellation)return Number(t.delay||0)>30?"major-delay":"delay";
   if(t.cancelled||t.type==="cancel")return "cancel";
   if(Number(t.delay||0)>30||t.type==="major-delay")return "major-delay";
   if(Number(t.delay||0)>0||t.type==="delay")return "delay";
   return "";
 }
 function statusText(t){
+  if(t.partialCancellation)return t.status||"Deels geannuleerd";
   if(t.cancelled)return "Geannuleerd";
   if(Number(t.delay||0)>0)return `+${Number(t.delay)} min`;
   if(Number(t.delay||0)<0)return `${Number(t.delay)} min`;
