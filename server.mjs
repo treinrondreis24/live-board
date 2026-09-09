@@ -117,6 +117,8 @@ function parseStops(xml){const out=[];const re=/<s\b([^>]*)>([\s\S]*?)<\/s>/gi;l
 function parseStations(xml){const out=[];const re=/<station\b([^>]*)\/?>/gi;let m;while((m=re.exec(xml))){const a=attrs(m[1]);if(a.eva)out.push({name:a.name||"",eva:String(a.eva),ds100:a.ds100||""});}return out;}
 async function resolveStation(pattern){
   if(stationCache.has(pattern))return stationCache.get(pattern);
+  const configured=[...(config.collectors||[]),...(config.stations||[])].find(x=>x.name===pattern&&x.eva);
+  if(configured){const station={name:pattern,eva:String(configured.eva)};stationCache.set(pattern,station);return station;}
   const list=parseStations(await dbGet(`${BASE}/station/${encodeURIComponent(pattern)}`));
   if(!list.length)throw new Error(`Station niet gevonden: ${pattern}`);
   const exact=list.find(s=>s.name.toLowerCase()===pattern.toLowerCase())||list[0];stationCache.set(pattern,exact);return exact;
@@ -380,7 +382,7 @@ function monitoredStationNames(){return [...new Set([...(config.stations||[]),..
 
 async function performScan(){
   if(dbState.scanning)return;dbState.scanning=true;
-  const boardRows=[],collectorRows=[],warnings=[],stations=[],collectorByStation={};
+  const boardRows=[],collectorRows=[],warnings=[],stations=[],collectorByStation={...collectorState.byStation};
   try{
     for(const name of monitoredStationNames()){
       try{
@@ -419,6 +421,7 @@ async function performScan(){
         collectorByStation[name]=dedupeRows(cRows)
           .sort((a,b)=>(a.plannedTimestamp||0)-(b.plannedTimestamp||0));
         collectorRows.push(...collectorByStation[name]);
+        collectorState.byStation[name]=collectorByStation[name];
 
         stations.push({
           configuredName:name,
@@ -454,7 +457,11 @@ async function performScan(){
 function scheduleNext(){const {interval,delay}=nextDelay(new Date());dbState.currentIntervalMinutes=interval;dbState.nextScanAt=new Date(Date.now()+delay).toISOString();setTimeout(async()=>{await performScan();scheduleNext();},delay);}
 
 function normalizeStationName(value=""){return String(value).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-Z0-9]/g,"");}
-function sameStation(a,b){const x=normalizeStationName(a),y=normalizeStationName(b);return x===y||x.includes(y)||y.includes(x);}
+function sameStation(a,b){
+  const words=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-Z0-9]+/g," ").trim();
+  const x=words(a),y=words(b);
+  return Boolean(x&&y)&&(x===y||x.startsWith(y+" ")||y.startsWith(x+" "));
+}
 function routeContains(row,names){
   const route=Array.isArray(row.route)?row.route:[row.from,row.to];
   return route.some(s=>names.some(n=>sameStation(s,n)));
@@ -500,8 +507,12 @@ function stationDirectionMatches(row,direction){
   const normalizeCategory=value=>String(value||"").toUpperCase().replace(/[\s_-]+/g,"");
   const categories=direction.categories||[];
   const stops=direction.futureStops||[];
-  if(!categories.length&&!stops.length)return false;
-  if(categories.length&&!categories.some(c=>normalizeCategory(c)===normalizeCategory(row.category)))return false;
+  const category=normalizeCategory(row.category);
+  const internationalIC=direction.internationalIC&&category==="IC"&&routeContains(row,["Bad Bentheim","Berlin Hbf","Hannover Hbf","Osnabrück Hbf"]);
+  if(direction.serviceBrand==="regiojet")return ["REGIOJET","RJI"].includes(category)||/REGIOJET/i.test(row.operatorName||row.operatorCode||"")||String(row.operatorCode)==="3247";
+  if(direction.regionalOnly&&isFernverkehrCategory(row.category))return false;
+  if(!categories.length&&!stops.length&&!direction.internationalIC)return false;
+  if(categories.length&&!categories.some(c=>normalizeCategory(c)===category)&&!internationalIC)return false;
   return !stops.length||futureRouteContains(row,stops);
 }
 
