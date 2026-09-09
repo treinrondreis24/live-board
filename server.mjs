@@ -1,3 +1,4 @@
+import {belgianStations,belgiumState,startBelgium,belgianPayload} from './belgium.mjs';
 import {startJourneyPlanning,parseRitJourneys,recordJourneySnapshot,getJourney,listJourneys,getJourneyRevisions,journeyImportState,journeyPage} from "./journeys.mjs";
 import http from "node:http";
 import fs from "node:fs";
@@ -931,6 +932,7 @@ async function startNdov(){
 }
 
 const pageRoutes={
+  ...Object.fromEntries(Object.keys(belgianStations).flatMap(id=>[[`/embed/${id}`,"/koeln-embed.html"],[`/embed/${id}/`,"/koeln-embed.html"]])),
   ...Object.fromEntries(Object.keys(config.stationPages||{}).flatMap(id=>[[`/embed/${id}`,"/koeln-embed.html"],[`/embed/${id}/`,"/koeln-embed.html"]])),
   "/mobile":"/mobile.html","/mobile/":"/mobile.html",
   "/embed/duesseldorf":"/koeln-embed.html","/embed/duesseldorf/":"/koeln-embed.html",
@@ -1018,6 +1020,9 @@ const server=http.createServer(async(req,res)=>{
       const station=decodeURIComponent(url.pathname.slice("/api/station/".length)),source=url.searchParams.get("source")||"DB",hours=Number(url.searchParams.get("hours")||6),limit=Number(url.searchParams.get("limit")||100);
       const observations=await getLatestByStation({station,source,hours,limit});return sendJson(res,200,{source,station,count:observations.length,observations});
     }
+    if(url.pathname==="/api/belgium/status")return sendJson(res,200,belgiumState);
+    const belgianPage=url.pathname.match(/^\/api\/views\/([a-z0-9-]+)\/?$/)?.[1];
+    if(belgianPage&&belgianStations[belgianPage])return sendJson(res,200,belgianPayload(belgianPage));
     const stationViewMatch=url.pathname.match(/^\/api\/views\/([a-z0-9-]+)\/?$/);
     const stationPageId=stationViewMatch?.[1];
     if(stationPageId&&Object.hasOwn(config.stationPages||{},stationPageId)){
@@ -1045,6 +1050,7 @@ await initStorage();
 server.listen(PORT,async()=>{
   void checkNdovAccess();
   void startNdov();
+  startBelgium();
   startJourneyPlanning(config.journeyArchive?.trainNumbers||[]);
   const storage=getStorageInfo();console.log("");console.log("Treinrondreis Multi-source Data Hub + Live Board v4.2.0");console.log(`Open: http://localhost:${PORT}`);console.log(`DB credentials: ${CLIENT_ID&&API_KEY?"ingesteld":"ONTBREKEN"}`);console.log(`Historie: ${storage.backend} (${storage.retention})`);console.log("");
   await Promise.allSettled([performScan(),performItalyScan()]);
