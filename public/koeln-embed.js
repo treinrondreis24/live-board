@@ -2,6 +2,7 @@ const stationPageId=location.pathname.match(/^\/embed\/([a-z0-9-]+)\/?$/)?.[1]||
 document.title="Vertrektijden";
 document.querySelector(".board-head h2").textContent="Vertrektijden";
 let data=null,activeTab="fernverkehr";
+const expandedDirections=new Set();
 const quickEl=document.getElementById("quick");
 const fullEl=document.getElementById("full-board");
 const fullRowsEl=document.getElementById("full-rows");
@@ -48,10 +49,11 @@ function renderQuick(){
     }
 
     const [first,...rest]=group.trains;
+    const groupKey=group.id||group.label,expanded=expandedDirections.has(groupKey);
     section.innerHTML=`<div class="direction-main">
       <div class="where-line">
         <span class="where">${esc(group.label)}</span>
-        ${rest.length?'<button class="more" type="button">toon meer</button>':""}
+        ${rest.length?`<button class="more" type="button" aria-expanded="${expanded}">${expanded?"toon minder":"toon meer"}</button>`:""}
       </div>
       <div class="time">${esc(first.plannedTime||first.time||"--:--")}</div>
       <div class="train">${esc(first.train||"—")}</div>
@@ -59,13 +61,15 @@ function renderQuick(){
       <div class="track">spoor <strong>${esc(first.track||"—")}</strong></div>
       <div class="status ${statusClass(first)}">${esc(statusText(first))}</div>
     </div>
-    ${rest.map(t=>`<div class="extra" hidden>${compactRow(t)}</div>`).join("")}`;
+    ${rest.map(t=>`<div class="extra" ${expanded?"":"hidden"}>${compactRow(t)}</div>`).join("")}`;
 
     const btn=section.querySelector(".more");
     if(btn)btn.addEventListener("click",()=>{
       const extras=[...section.querySelectorAll(".extra")];
       const open=extras.some(x=>x.hidden);
+      if(open)expandedDirections.add(groupKey);else expandedDirections.delete(groupKey);
       extras.forEach(x=>x.hidden=!open);
+      btn.setAttribute("aria-expanded",String(open));
       btn.textContent=open?"toon minder":"toon meer";
     });
     quickEl.appendChild(section);
@@ -77,7 +81,7 @@ function renderFull(){
     <div class="time">${esc(t.plannedTime||t.time||"--:--")}</div>
     <div class="train">${esc(t.train||"—")}</div>
     <div class="destination">${esc(t.to||"—")}</div>
-    <div class="track"><strong>${esc(t.track||"—")}</strong></div>
+    <div class="track"><span class="mobile-track-label">spoor </span><strong>${esc(t.track||"—")}</strong></div>
     <div class="status ${statusClass(t)}">${esc(statusText(t))}</div>
   </div>`).join(""):'<div class="empty">Geen actuele vertrekken gevonden.</div>';
 }
@@ -105,7 +109,7 @@ async function refresh(){
       :"actueel";
   }catch(e){
     scanStatus.textContent="tijdelijk niet beschikbaar";
-    quickEl.innerHTML=`<div class="empty">${esc(e.message)}</div>`;
+    if(!data)quickEl.innerHTML=`<div class="empty">${esc(e.message)}</div>`;
   }
 }
 refresh();setInterval(refresh,20000);
