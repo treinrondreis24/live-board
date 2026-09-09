@@ -477,7 +477,15 @@
     "D",
     "WB",
     "WEST",
-    "FLX"
+    "FLX",
+    "ECD",
+    "ICD",
+    "INT",
+    "EST",
+    "ES",
+    "EU",
+    "THA",
+    "EUROSTAR"
   ],
   "stationPages": {
     "koeln": {
@@ -1181,8 +1189,500 @@
           "futureStops": [
             "Arnhem Centraal"
           ]
+        },
+        {
+          "id": "almelo",
+          "label": "Almelo (alleen IC)",
+          "futureStops": [
+            "Almelo"
+          ],
+          "categories": [
+            "IC"
+          ]
+        }
+      ]
+    },
+    "amsterdam": {
+      "station": "Amsterdam Centraal",
+      "title": "Vertrektijden Amsterdam Centraal",
+      "country": "NL",
+      "quickDirections": [
+        {
+          "id": "berlijn",
+          "label": "Berlijn en Praag",
+          "futureStops": [
+            "Berlin Hbf",
+            "Berlijn Hbf",
+            "Praha hl.n.",
+            "Praag"
+          ]
+        },
+        {
+          "id": "frankfurt",
+          "label": "Frankfurt en München",
+          "futureStops": [
+            "Frankfurt(Main)Hbf",
+            "Frankfurt (Main) Hbf",
+            "Frankfurt Hbf",
+            "München Hbf",
+            "Munchen Hbf"
+          ]
+        },
+        {
+          "id": "nightjet",
+          "label": "Nightjet",
+          "categories": [
+            "NJ"
+          ]
+        },
+        {
+          "id": "alkmaar",
+          "label": "Alkmaar (alleen IC)",
+          "futureStops": [
+            "Alkmaar"
+          ],
+          "categories": [
+            "IC"
+          ]
+        },
+        {
+          "id": "schiphol",
+          "label": "Schiphol",
+          "futureStops": [
+            "Schiphol Airport"
+          ]
+        }
+      ]
+    },
+    "schiphol": {
+      "station": "Schiphol Airport",
+      "title": "Vertrektijden Schiphol Airport",
+      "country": "NL",
+      "quickDirections": []
+    },
+    "amersfoort": {
+      "station": "Amersfoort Centraal",
+      "title": "Vertrektijden Amersfoort Centraal",
+      "country": "NL",
+      "quickDirections": []
+    },
+    "hengelo": {
+      "station": "Hengelo",
+      "title": "Vertrektijden Hengelo",
+      "country": "NL",
+      "quickDirections": []
+    },
+    "rotterdam": {
+      "station": "Rotterdam Centraal",
+      "title": "Vertrektijden Rotterdam Centraal",
+      "country": "NL",
+      "quickDirections": [
+        {
+          "id": "eurocity",
+          "label": "EuroCity richting Brussel",
+          "futureStops": [
+            "Brussel",
+            "Bruxelles"
+          ],
+          "serviceBrand": "eurocity"
+        },
+        {
+          "id": "eurocity-direct",
+          "label": "EuroCity Direct richting Brussel",
+          "futureStops": [
+            "Brussel",
+            "Bruxelles"
+          ],
+          "serviceBrand": "eurocity-direct"
+        },
+        {
+          "id": "eurostar-londen",
+          "label": "Eurostar Londen",
+          "futureStops": [
+            "London",
+            "Londen"
+          ],
+          "serviceBrand": "eurostar"
+        },
+        {
+          "id": "eurostar-parijs",
+          "label": "Eurostar Parijs",
+          "futureStops": [
+            "Paris",
+            "Parijs"
+          ],
+          "serviceBrand": "eurostar"
+        },
+        {
+          "id": "utrecht",
+          "label": "Utrecht (alleen IC)",
+          "futureStops": [
+            "Utrecht Centraal"
+          ],
+          "categories": [
+            "IC"
+          ]
+        },
+        {
+          "id": "den-haag",
+          "label": "Den Haag Centraal",
+          "futureStops": [
+            "Den Haag Centraal"
+          ]
+        }
+      ]
+    },
+    "breda": {
+      "station": "Breda",
+      "title": "Vertrektijden Breda",
+      "country": "NL",
+      "quickDirections": []
+    },
+    "zwolle": {
+      "station": "Zwolle",
+      "title": "Vertrektijden Zwolle",
+      "country": "NL",
+      "quickDirections": [
+        {
+          "id": "utrecht",
+          "label": "Utrecht (alleen IC)",
+          "futureStops": [
+            "Utrecht Centraal"
+          ],
+          "categories": [
+            "IC"
+          ]
+        },
+        {
+          "id": "deventer",
+          "label": "Deventer (alleen IC)",
+          "futureStops": [
+            "Deventer"
+          ],
+          "categories": [
+            "IC"
+          ]
+        },
+        {
+          "id": "groningen",
+          "label": "Groningen (alleen IC)",
+          "futureStops": [
+            "Groningen"
+          ],
+          "categories": [
+            "IC"
+          ]
+        },
+        {
+          "id": "leeuwarden",
+          "label": "Leeuwarden (alleen IC)",
+          "futureStops": [
+            "Leeuwarden"
+          ],
+          "categories": [
+            "IC"
+          ]
+        },
+        {
+          "id": "hengelo",
+          "label": "Hengelo",
+          "futureStops": [
+            "Hengelo"
+          ]
+        }
+      ]
+    },
+    "den-haag": {
+      "station": "Den Haag Centraal",
+      "title": "Vertrektijden Den Haag Centraal",
+      "country": "NL",
+      "quickDirections": []
+    },
+    "leiden": {
+      "station": "Leiden Centraal",
+      "title": "Vertrektijden Leiden Centraal",
+      "country": "NL",
+      "quickDirections": []
+    },
+    "groningen": {
+      "station": "Groningen",
+      "title": "Vertrektijden Groningen",
+      "country": "NL",
+      "quickDirections": [
+        {
+          "id": "utrecht",
+          "label": "Utrecht (alleen IC)",
+          "futureStops": [
+            "Utrecht Centraal"
+          ],
+          "categories": [
+            "IC"
+          ]
+        },
+        {
+          "id": "zwolle",
+          "label": "Zwolle",
+          "futureStops": [
+            "Zwolle"
+          ]
+        },
+        {
+          "id": "leer",
+          "label": "Leer",
+          "futureStops": [
+            "Leer (Ostfriesl)",
+            "Leer"
+          ]
+        },
+        {
+          "id": "leeuwarden",
+          "label": "Leeuwarden",
+          "futureStops": [
+            "Leeuwarden"
+          ]
+        }
+      ]
+    },
+    "eindhoven": {
+      "station": "Eindhoven Centraal",
+      "title": "Vertrektijden Eindhoven Centraal",
+      "country": "NL",
+      "quickDirections": [
+        {
+          "id": "venlo",
+          "label": "Venlo",
+          "futureStops": [
+            "Venlo"
+          ]
+        },
+        {
+          "id": "utrecht",
+          "label": "Utrecht",
+          "futureStops": [
+            "Utrecht Centraal"
+          ]
+        },
+        {
+          "id": "breda",
+          "label": "Breda",
+          "futureStops": [
+            "Breda"
+          ]
+        },
+        {
+          "id": "maastricht",
+          "label": "Maastricht",
+          "futureStops": [
+            "Maastricht"
+          ]
+        }
+      ]
+    },
+    "venlo": {
+      "station": "Venlo",
+      "title": "Vertrektijden Venlo",
+      "country": "NL",
+      "quickDirections": [
+        {
+          "id": "duitsland",
+          "label": "Duitsland",
+          "futureStops": [
+            "Kaldenkirchen",
+            "Viersen",
+            "Mönchengladbach Hbf",
+            "Düsseldorf Hbf",
+            "Hamm (Westf) Hbf"
+          ]
+        },
+        {
+          "id": "eindhoven",
+          "label": "Eindhoven",
+          "futureStops": [
+            "Eindhoven Centraal"
+          ]
+        },
+        {
+          "id": "nijmegen",
+          "label": "Nijmegen",
+          "futureStops": [
+            "Nijmegen"
+          ]
+        },
+        {
+          "id": "roermond",
+          "label": "Roermond",
+          "futureStops": [
+            "Roermond"
+          ]
+        }
+      ]
+    },
+    "den-bosch": {
+      "station": "'s-Hertogenbosch",
+      "title": "Vertrektijden 's-Hertogenbosch",
+      "country": "NL",
+      "quickDirections": []
+    },
+    "tilburg": {
+      "station": "Tilburg",
+      "title": "Vertrektijden Tilburg",
+      "country": "NL",
+      "quickDirections": []
+    },
+    "utrecht": {
+      "station": "Utrecht Centraal",
+      "title": "Vertrektijden Utrecht Centraal",
+      "country": "NL",
+      "quickDirections": [
+        {
+          "id": "frankfurt",
+          "label": "Frankfurt en München",
+          "futureStops": [
+            "Frankfurt(Main)Hbf",
+            "Frankfurt (Main) Hbf",
+            "Frankfurt Hbf",
+            "München Hbf",
+            "Munchen Hbf"
+          ]
+        },
+        {
+          "id": "nightjet",
+          "label": "Nightjet",
+          "categories": [
+            "NJ"
+          ]
+        },
+        {
+          "id": "rotterdam",
+          "label": "Rotterdam (alleen IC)",
+          "futureStops": [
+            "Rotterdam Centraal"
+          ],
+          "categories": [
+            "IC"
+          ]
+        },
+        {
+          "id": "amersfoort",
+          "label": "Amersfoort (alleen IC)",
+          "futureStops": [
+            "Amersfoort Centraal"
+          ],
+          "categories": [
+            "IC"
+          ]
+        },
+        {
+          "id": "den-bosch",
+          "label": "Den Bosch (alleen IC)",
+          "futureStops": [
+            "'s-Hertogenbosch",
+            "Den Bosch"
+          ],
+          "categories": [
+            "IC"
+          ]
+        },
+        {
+          "id": "den-haag",
+          "label": "Den Haag (alleen IC)",
+          "futureStops": [
+            "Den Haag Centraal"
+          ],
+          "categories": [
+            "IC"
+          ]
         }
       ]
     }
+  },
+  "ndov": {
+    "stations": [
+      {
+        "code": "AH",
+        "name": "Arnhem Centraal",
+        "page": "arnhem"
+      },
+      {
+        "code": "ASD",
+        "name": "Amsterdam Centraal",
+        "page": "amsterdam"
+      },
+      {
+        "code": "SHL",
+        "name": "Schiphol Airport",
+        "page": "schiphol"
+      },
+      {
+        "code": "AMF",
+        "name": "Amersfoort Centraal",
+        "page": "amersfoort"
+      },
+      {
+        "code": "DV",
+        "name": "Deventer",
+        "page": "deventer"
+      },
+      {
+        "code": "HGL",
+        "name": "Hengelo",
+        "page": "hengelo"
+      },
+      {
+        "code": "RTD",
+        "name": "Rotterdam Centraal",
+        "page": "rotterdam"
+      },
+      {
+        "code": "BD",
+        "name": "Breda",
+        "page": "breda"
+      },
+      {
+        "code": "ZL",
+        "name": "Zwolle",
+        "page": "zwolle"
+      },
+      {
+        "code": "GVC",
+        "name": "Den Haag Centraal",
+        "page": "den-haag"
+      },
+      {
+        "code": "LED",
+        "name": "Leiden Centraal",
+        "page": "leiden"
+      },
+      {
+        "code": "GN",
+        "name": "Groningen",
+        "page": "groningen"
+      },
+      {
+        "code": "EHV",
+        "name": "Eindhoven Centraal",
+        "page": "eindhoven"
+      },
+      {
+        "code": "VL",
+        "name": "Venlo",
+        "page": "venlo"
+      },
+      {
+        "code": "HT",
+        "name": "'s-Hertogenbosch",
+        "page": "den-bosch"
+      },
+      {
+        "code": "TB",
+        "name": "Tilburg",
+        "page": "tilburg"
+      },
+      {
+        "code": "UT",
+        "name": "Utrecht Centraal",
+        "page": "utrecht"
+      }
+    ]
   }
 }

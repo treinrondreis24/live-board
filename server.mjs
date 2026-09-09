@@ -480,14 +480,14 @@ function currentCollectorRows(station){
 
 
 function withNdovDepartures(station,dbRows){
-  if(station!=="Arnhem Centraal"||!ndovStatus().boardEnabled||!ndovStatus().fresh)return dbRows;
-  const known=[...ndovRows.values()];
+  if(!ndovBoardEnabled(station)||!ndovStatus().fresh)return dbRows;
+  const known=[...ndovRows.values()].filter(row=>row.observedAt===station);
   // Replace the same service across sources even if NDOV changes its platform or destination.
   // Departed/non-boardable messages are retained in known so DB cannot reintroduce them.
   const remaining=dbRows.filter(db=>!known.some(n=>
     [n.number,n.rideId].includes(String(db.number))&&Math.abs(n.plannedTimestamp-Number(db.plannedTimestamp||0))<3*3600000
   ));
-  return [...remaining,...ndovArnhemRows()];
+  return [...remaining,...ndovStationRows(station)];
 }
 
 function stationUpcomingDepartures(station){
@@ -522,6 +522,14 @@ function stationDirectionMatches(row,direction){
   const category=normalizeCategory(row.category);
   const internationalIC=direction.internationalIC&&category==="IC"&&routeContains(row,["Bad Bentheim","Berlin Hbf","Hannover Hbf","Osnabrück Hbf"]);
   if(direction.serviceBrand==="regiojet")return ["REGIOJET","RJI"].includes(category)||/REGIOJET/i.test(row.operatorName||row.operatorCode||"")||String(row.operatorCode)==="3247";
+  if(["eurocity","eurocity-direct","eurostar"].includes(direction.serviceBrand)){
+    const name=normalizeCategory(row.categoryName||""),brand=direction.serviceBrand;
+    const direct=category==="ECD"||name.includes("EUROCITYDIRECT");
+    const ec=category==="EC"||name==="EUROCITY";
+    const eurostar=["EST","ES","EU","THA","EUROSTAR"].includes(category)||name.includes("EUROSTAR");
+    const matches=brand==="eurostar"?eurostar:brand==="eurocity-direct"?direct:(ec&&!direct);
+    return matches&&(!stops.length||futureRouteContains(row,stops));
+  }
   if(direction.regionalOnly&&isFernverkehrCategory(row.category))return false;
   if(!categories.length&&!stops.length&&!direction.internationalIC)return false;
   if(categories.length&&!categories.some(c=>normalizeCategory(c)===category)&&!internationalIC)return false;
@@ -548,14 +556,15 @@ function stationPagePayload(pageId){
   if(!pageCfg)return null;
 
   const rows=stationUpcomingDepartures(pageCfg.stations||pageCfg.station);
+  const ndovActive=ndovBoardEnabled(pageCfg.station)&&ndovStatus().fresh&&[...ndovRows.values()].some(row=>row.observedAt===pageCfg.station);
 
   return {
-    source:pageId==="arnhem"&&ndovStatus().boardEnabled&&ndovStatus().fresh&&ndovRows.size?"NDOV + DB Timetables":"DB Timetables",
+    source:ndovActive?(rows.some(row=>row.source!=="NDOV")?"NDOV + DB Timetables":"NDOV"):pageCfg.country==="NL"&&!collectorState.byStation[pageCfg.station]?"NDOV":"DB Timetables",
     page:pageId,
     station:pageCfg.station,
     title:pageCfg.title,
     country:pageCfg.country,
-    lastScanAt:pageId==="arnhem"&&ndovStatus().boardEnabled&&ndovState.lastArnhemAt?[collectorState.lastScanAt,ndovState.lastArnhemAt].filter(Boolean).sort().at(-1):collectorState.lastScanAt,
+    lastScanAt:ndovActive?[collectorState.lastScanAt,ndovState.stations[pageCfg.station]?.lastMessageAt].filter(Boolean).sort().at(-1):collectorState.lastScanAt,
     quick:stationQuickDirections(pageCfg,rows),
     departures:{
       all:rows,
@@ -811,10 +820,12 @@ async function checkNdovAccess(){
   console.log("NDOV access probe:",JSON.stringify(ndovAccessProbe));
 }
 
-// NDOV InfoPlus/DVS: one subscription, initially observed alongside the DB board.
+// NDOV InfoPlus/DVS: one subscription shared by all configured Dutch stations.
+const ndovStations=new Map((config.ndov?.stations||[{code:"AH",name:"Arnhem Centraal",page:"arnhem"}]).map(station=>[station.code,station]));
+function ndovBoardEnabled(station){return process.env.NDOV_BOARD_ENABLED!=="false"&&(station!=="Arnhem Centraal"||process.env.NDOV_ARNHEM_ENABLED!=="false")&&[...ndovStations.values()].some(x=>x.name===station); }
 const ndovRows=new Map();
 const ndovPending=new Map();
-const ndovState={status:"starting",endpoint:"tcp://pubsub.ndovloket.nl:7664",startedAt:null,lastMessageAt:null,lastArnhemAt:null,messages:0,arnhemMessages:0,parseErrors:0,storageError:null};
+const ndovState={status:"starting",endpoint:"tcp://pubsub.ndovloket.nl:7664",startedAt:null,lastMessageAt:null,lastArnhemAt:null,messages:0,arnhemMessages:0,selectedMessages:0,stations:{},parseErrors:0,storageError:null};
 let ndovParser,ndovSocket,ndovFlushing=false;
 const ndovList=value=>value==null?[]:Array.isArray(value)?value:[value];
 const ndovText=value=>String(value&&typeof value==="object"?value["#text"]??"":value??"").trim();
@@ -832,7 +843,9 @@ function parseNdovRows(xml){
   const products=ndovProducts(ndovParser.parse(xml)),rows=[];
   for(const product of products){
     const dvs=product.DynamischeVertrekStaat,station=dvs?.RitStation;
-    if(ndovText(station?.StationCode).toUpperCase()!=="AH")continue;
+    const stationShortCode=ndovText(station?.StationCode).toUpperCase(),selectedStation=ndovStations.get(stationShortCode);
+    if(!selectedStation)continue;
+    const stationName=selectedStation.name;
     const train=dvs.Trein;if(!train)continue;
     const number=ndovText(train.TreinNummer),ride=ndovText(dvs.RitId),date=ndovText(dvs.RitDatum);
     const plannedTimestamp=Date.parse(ndovText(ndovVariant(train.VertrekTijd,"Gepland")));
@@ -849,14 +862,14 @@ function parseNdovRows(xml){
     const currentTrack=trackText(ndovCurrent(train.TreinVertrekSpoor));
     const changes=ndovList(train.Wijziging).map(x=>ndovText(x.WijzigingType));
     const cancelled=changes.includes("32"),departed=ndovText(train.TreinStatus)==="5";
-    const notBoardable=[train.NietInstappen,train.RangeerBeweging,train.SpeciaalKaartje].some(x=>ndovText(x)==="J");
+    const notBoardable=[train.NietInstappen,train.RangeerBeweging].some(x=>ndovText(x)==="J");
     const category=ndovText(train.TreinSoort?.["@_Code"])||ndovText(train.TreinSoort);
     const wingStops=ndovList(train.TreinVleugel).flatMap(wing=>ndovList(routeVersion(wing.StopStations)?.Station).map(ndovName));
-    const futureRoute=[...new Set([...(wingStops.length?wingStops:ndovList(routeVersion(train.VerkorteRoute)?.Station).map(ndovName)),destination].filter(name=>name&&name!=="Arnhem Centraal"))];
+    const futureRoute=[...new Set([...(wingStops.length?wingStops:ndovList(routeVersion(train.VerkorteRoute)?.Station).map(ndovName)),destination].filter(name=>name&&name!==stationName))];
     const delay=Math.round((expectedTimestamp-plannedTimestamp)/60000);
     const status=cancelled?"Geannuleerd":notBoardable?"Niet instappen":delay>0?`+${delay} min`:"Op tijd";
-    const id=`NDOV|AH|${date}|${ride}`;
-    rows.push({id,source:"NDOV",sourceTripId:`${date}|${ride}`,sourceEventId:id,serviceDate:date,trainKey:`${category}|${number}`,number,rideId:ride,train:[category,number].filter(Boolean).join(" "),category,operatorCode:ndovText(train.Vervoerder),operatorName:ndovText(train.Vervoerder),observedAt:"Arnhem Centraal",stationCode:ndovText(station.UICCode)||"AH",countryCode:"NL",eventMode:"departure",plannedTimestamp,expectedTimestamp,plannedTime:ndovClock(plannedTimestamp),time:ndovClock(plannedTimestamp),currentTime:ndovClock(expectedTimestamp),plannedTrack,currentTrack,track:cancelled?"—":currentTrack||plannedTrack||"—",delay,status,type:cancelled?"cancel":delay>30?"major-delay":delay>0?"delay":"ok",cancelled,departed,notBoardable,from:"Arnhem Centraal",to:destination,route:["Arnhem Centraal",...futureRoute],futureRoute,pastRoute:[],hasRealtime:true,hasChangedTrack:Boolean(currentTrack&&plannedTrack&&currentTrack!==plannedTrack),messageTimestamp,rawStop:dvs});
+    const id=`NDOV|${stationShortCode}|${date}|${ride}`;
+    rows.push({id,source:"NDOV",sourceTripId:`${date}|${ride}`,sourceEventId:id,serviceDate:date,trainKey:`${category}|${number}`,number,rideId:ride,train:[category,number].filter(Boolean).join(" "),category,categoryName:ndovText(train.TreinSoort),specialTicket:ndovText(train.SpeciaalKaartje)==="J",operatorCode:ndovText(train.Vervoerder),operatorName:ndovText(train.Vervoerder),observedAt:stationName,stationShortCode,stationCode:ndovText(station.UICCode)||stationShortCode,countryCode:"NL",eventMode:"departure",plannedTimestamp,expectedTimestamp,plannedTime:ndovClock(plannedTimestamp),time:ndovClock(plannedTimestamp),currentTime:ndovClock(expectedTimestamp),plannedTrack,currentTrack,track:cancelled?"—":currentTrack||plannedTrack||"—",delay,status,type:cancelled?"cancel":delay>30?"major-delay":delay>0?"delay":"ok",cancelled,departed,notBoardable,from:stationName,to:destination,route:[stationName,...futureRoute],futureRoute,pastRoute:[],hasRealtime:true,hasChangedTrack:Boolean(currentTrack&&plannedTrack&&currentTrack!==plannedTrack),messageTimestamp,rawStop:dvs});
   }
   return rows;
 }
@@ -865,14 +878,18 @@ function acceptNdovRow(row){
   if(old&&old.messageTimestamp>=row.messageTimestamp)return false;
   if(row.plannedTimestamp<Date.now()-86400000||row.plannedTimestamp>Date.now()+172800000)return false;
   ndovRows.set(row.id,row);ndovPending.set(row.id,row);
-  ndovState.lastArnhemAt=new Date().toISOString();ndovState.arnhemMessages++;
+  const receivedAt=new Date().toISOString();
+  ndovState.selectedMessages++;
+  const state=ndovState.stations[row.observedAt]??={messages:0,lastMessageAt:null};state.messages++;state.lastMessageAt=receivedAt;
+  if(row.observedAt==="Arnhem Centraal"){ndovState.lastArnhemAt=receivedAt;ndovState.arnhemMessages++;}
   return true;
 }
-function ndovArnhemRows(){
+function ndovArnhemRows(){return ndovStationRows("Arnhem Centraal");}
+function ndovStationRows(station){
   const cutoff=Date.now()-10*60000;
-  return [...ndovRows.values()].filter(r=>!r.departed&&!r.notBoardable&&(r.cancelled?r.plannedTimestamp:r.expectedTimestamp)>=cutoff).sort((a,b)=>a.plannedTimestamp-b.plannedTimestamp);
+  return [...ndovRows.values()].filter(r=>r.observedAt===station&&!r.departed&&!r.notBoardable&&(r.cancelled?r.plannedTimestamp:r.expectedTimestamp)>=cutoff).sort((a,b)=>a.plannedTimestamp-b.plannedTimestamp);
 }
-function ndovStatus(){return {...ndovState,arnhemCount:ndovArnhemRows().length,pendingStorage:ndovPending.size,boardEnabled:process.env.NDOV_ARNHEM_ENABLED!=="false",fresh:Boolean(ndovState.lastMessageAt&&Date.now()-Date.parse(ndovState.lastMessageAt)<180000)};}
+function ndovStatus(){return {...ndovState,monitoredStations:[...ndovStations.values()].map(s=>({...s,...ndovState.stations[s.name],count:ndovStationRows(s.name).length})),arnhemCount:ndovArnhemRows().length,pendingStorage:ndovPending.size,boardEnabled:process.env.NDOV_BOARD_ENABLED!=="false",fresh:Boolean(ndovState.lastMessageAt&&Date.now()-Date.parse(ndovState.lastMessageAt)<180000)};}
 async function flushNdov(){
   if(ndovFlushing||!ndovPending.size)return;
   ndovFlushing=true;const rows=[...ndovPending.values()];
@@ -922,7 +939,12 @@ const server=http.createServer(async(req,res)=>{
     const url=new URL(req.url,`http://${req.headers.host}`);
     if(url.pathname==="/api/health")return sendJson(res,200,{ok:true,credentialsConfigured:Boolean(CLIENT_ID&&API_KEY),api:BASE,storage:getStorageInfo(),config,dbState,collectorState:{lastScanAt:collectorState.lastScanAt,stations:Object.keys(collectorState.byStation)},italyState,nightjetPlanState:{dateKey:nightjetPlanState.dateKey,scanning:nightjetPlanState.scanning,lastUpdatedAt:nightjetPlanState.lastUpdatedAt,count:nightjetPlanState.rows.length,warnings:nightjetPlanState.warnings}});
     if(url.pathname==="/api/ndov/status")return sendJson(res,200,{access:ndovAccessProbe,receiver:ndovStatus()});
-    if(url.pathname==="/api/ndov/arnhem")return sendJson(res,200,{...ndovStatus(),trains:ndovArnhemRows().map(({rawStop,...row})=>row)});
+    const ndovPage=url.pathname.match(/^\/api\/ndov\/([a-z0-9-]+)\/?$/)?.[1];
+    if(ndovPage){
+      const station=[...ndovStations.values()].find(s=>s.page===ndovPage);
+      if(!station)return sendJson(res,404,{error:"Onbekend NDOV-station"});
+      return sendJson(res,200,{...ndovStatus(),station:station.name,trains:ndovStationRows(station.name).map(({rawStop,...row})=>row)});
+    }
     if(url.pathname==="/api/storage")return sendJson(res,200,getStorageInfo());
 
     // V4 bron-onafhankelijke Data Hub API. Het bestaande board blijft de
