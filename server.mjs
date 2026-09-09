@@ -784,6 +784,21 @@ function stationViewPayload(station,kind){
   return {source:"DB Timetables",station,lastScanAt:collectorState.lastScanAt,count:rows.length,trains:rows};
 }
 
+
+// One bounded HTTP access probe per deployment. Does not subscribe to live data.
+let ndovAccessProbe={status:"pending",checkedAt:null,httpStatus:null,liveDataReceived:false};
+async function checkNdovAccess(){
+  ndovAccessProbe={...ndovAccessProbe,status:"checking",startedAt:new Date().toISOString()};
+  try{
+    const response=await fetch("http://pubsub.ndovloket.nl/",{signal:AbortSignal.timeout(12000),redirect:"error"});
+    const reader=response.body?.getReader();let text="",bytes=0;
+    if(reader)try{while(true){const part=await reader.read();if(part.done)break;bytes+=part.value.length;if(bytes>262144)break;text+=Buffer.from(part.value).toString("utf8");}}finally{await reader.cancel();}
+    const denied=/access denied|forbidden|not authorized|unauthorized|geen toegang/i.test(text);
+    ndovAccessProbe={status:response.ok&&!denied?"http_reachable":"http_denied_or_error",checkedAt:new Date().toISOString(),httpStatus:response.status,mentionsInfoPlus:/infoplus|DVS/i.test(text),mentionsZeroMQ:/zeromq|tcp:\/\//i.test(text),liveDataReceived:false};
+  }catch(error){ndovAccessProbe={status:"connection_failed",checkedAt:new Date().toISOString(),errorCode:String(error.cause?.code||error.name||"ERROR"),liveDataReceived:false};}
+  console.log("NDOV access probe:",JSON.stringify(ndovAccessProbe));
+}
+
 const pageRoutes={
   ...Object.fromEntries(Object.keys(config.stationPages||{}).flatMap(id=>[[`/embed/${id}`,"/koeln-embed.html"],[`/embed/${id}/`,"/koeln-embed.html"]])),
   "/mobile":"/mobile.html","/mobile/":"/mobile.html",
@@ -800,6 +815,7 @@ const server=http.createServer(async(req,res)=>{
   try{
     const url=new URL(req.url,`http://${req.headers.host}`);
     if(url.pathname==="/api/health")return sendJson(res,200,{ok:true,credentialsConfigured:Boolean(CLIENT_ID&&API_KEY),api:BASE,storage:getStorageInfo(),config,dbState,collectorState:{lastScanAt:collectorState.lastScanAt,stations:Object.keys(collectorState.byStation)},italyState,nightjetPlanState:{dateKey:nightjetPlanState.dateKey,scanning:nightjetPlanState.scanning,lastUpdatedAt:nightjetPlanState.lastUpdatedAt,count:nightjetPlanState.rows.length,warnings:nightjetPlanState.warnings}});
+    if(url.pathname==="/api/ndov/status")return sendJson(res,200,ndovAccessProbe);
     if(url.pathname==="/api/storage")return sendJson(res,200,getStorageInfo());
 
     // V4 bron-onafhankelijke Data Hub API. Het bestaande board blijft de
@@ -874,6 +890,7 @@ const server=http.createServer(async(req,res)=>{
 
 await initStorage();
 server.listen(PORT,async()=>{
+  void checkNdovAccess();
   const storage=getStorageInfo();console.log("");console.log("Treinrondreis Multi-source Data Hub + Live Board v4.2.0");console.log(`Open: http://localhost:${PORT}`);console.log(`DB credentials: ${CLIENT_ID&&API_KEY?"ingesteld":"ONTBREKEN"}`);console.log(`Historie: ${storage.backend} (${storage.retention})`);console.log("");
   await Promise.allSettled([performScan(),performItalyScan()]);
   scheduleNext();scheduleNextItaly();scheduleNightjetDayCheck();setTimeout(()=>performNightjetDayPlan(),30000);
