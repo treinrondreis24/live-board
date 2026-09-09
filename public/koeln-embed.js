@@ -102,6 +102,13 @@ async function refresh(){
     if(!r.ok)throw new Error(p.error||`HTTP ${r.status}`);
     document.title=p.title||"Vertrektijden";
     document.querySelector(".board-head h2").textContent=document.title;
+    if(!data){
+      const allTab=document.querySelector('[data-tab="all"]');
+      allTab.hidden=p.country!=="NL";
+      if(p.country==="NL")activeTab="all";
+      if(!p.quick?.length){fullEl.hidden=false;toggleFull.textContent="Verberg compleet vertrekbord";}
+      document.querySelectorAll(".tab").forEach(btn=>btn.classList.toggle("active",btn.dataset.tab===activeTab));
+    }
     data=p;renderQuick();if(!fullEl.hidden)renderFull();
     const d=p.lastScanAt?new Date(p.lastScanAt):null;
     scanStatus.textContent=d&&!Number.isNaN(d.getTime())
@@ -113,3 +120,22 @@ async function refresh(){
   }
 }
 refresh();setInterval(refresh,20000);
+
+// Measure the content, not the iframe viewport: this also allows shrinking after collapse.
+let lastEmbedHeight=0,embedFrame=0;
+function reportEmbedHeight(force=false){
+  cancelAnimationFrame(embedFrame);
+  embedFrame=requestAnimationFrame(()=>{
+    const board=document.querySelector('.board'),style=getComputedStyle(document.body);
+    const hoogte=Math.ceil(board.getBoundingClientRect().height+parseFloat(style.paddingTop)+parseFloat(style.paddingBottom));
+    if(window.parent!==window&&(force||hoogte!==lastEmbedHeight)){
+      lastEmbedHeight=hoogte;window.parent.postMessage({type:'treinbord:hoogte',hoogte},'*');
+    }
+  });
+}
+new ResizeObserver(()=>reportEmbedHeight()).observe(document.querySelector('.board'));
+window.addEventListener('resize',()=>reportEmbedHeight());
+window.addEventListener('load',()=>reportEmbedHeight(true));
+window.addEventListener('message',event=>{if(event.source===window.parent&&event.data?.type==='treinbord:meet')reportEmbedHeight(true);});
+document.fonts?.ready.then(()=>reportEmbedHeight(true));
+reportEmbedHeight(true);
