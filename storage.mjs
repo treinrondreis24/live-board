@@ -817,7 +817,7 @@ async function initStationPlatformLayouts(){
         "8"
       ]
     ],
-    "Sporen 4/5 lopen uit elkaar; daartussen staan het stationsgebouw en het busstation."
+    "Spoor 4/5 liggen bij elkaar, het uiteinde van het perron (bij sector E), zijn de sporen direct bij elkaar. Verderop buigt spoor 4 af en lopen de sporen uiteen, met het stationsgebouw en busplein ertussen. Bij sector C liggen de perronzijden niet direct meer naast elkaar en zit er een stationsplein tussen (hier vertrekken ook de bussen en taxi's). Je kunt nog steeds gemakkelijk van spoor 4 naar 5 lopen, door over het busstation gelijkvloers over te steken."
   ],
   [
     "berlin",
@@ -920,6 +920,13 @@ async function initStationPlatformLayouts(){
     }else{
       sqlite.prepare('INSERT INTO station_platform_layouts(station_key,station_name,platform_groups,source,verification_status,recorded_at,notes) VALUES(?,?,?,?,?,?,?) ON CONFLICT(station_key) DO NOTHING').run(...values);
     }
+  }
+  const correctedArthNote="Spoor 4/5 liggen bij elkaar, het uiteinde van het perron (bij sector E), zijn de sporen direct bij elkaar. Verderop buigt spoor 4 af en lopen de sporen uiteen, met het stationsgebouw en busplein ertussen. Bij sector C liggen de perronzijden niet direct meer naast elkaar en zit er een stationsplein tussen (hier vertrekken ook de bussen en taxi's). Je kunt nog steeds gemakkelijk van spoor 4 naar 5 lopen, door over het busstation gelijkvloers over te steken.";
+  const previousArthNote="Sporen 4/5 lopen uit elkaar; daartussen staan het stationsgebouw en het busstation.";
+  if(backend==='postgresql'){
+    await pool.query('UPDATE station_platform_layouts SET notes=$1 WHERE station_key=$2 AND notes=$3',[correctedArthNote,'arth-goldau',previousArthNote]);
+  }else{
+    sqlite.prepare('UPDATE station_platform_layouts SET notes=? WHERE station_key=? AND notes=?').run(correctedArthNote,'arth-goldau',previousArthNote);
   }
 }
 export async function getStationPlatformLayout(stationKey){
