@@ -799,6 +799,100 @@ async function checkNdovAccess(){
   console.log("NDOV access probe:",JSON.stringify(ndovAccessProbe));
 }
 
+// NDOV InfoPlus/DVS: one subscription, initially observed alongside the DB board.
+const ndovRows=new Map();
+const ndovPending=new Map();
+const ndovState={status:"starting",endpoint:"tcp://pubsub.ndovloket.nl:7664",startedAt:null,lastMessageAt:null,lastArnhemAt:null,messages:0,arnhemMessages:0,parseErrors:0,storageError:null};
+let ndovParser,ndovSocket,ndovFlushing=false;
+const ndovList=value=>value==null?[]:Array.isArray(value)?value:[value];
+const ndovText=value=>String(value&&typeof value==="object"?value["#text"]??"":value??"").trim();
+function ndovVariant(value,status){return ndovList(value).find(x=>x?.["@_InfoStatus"]===status);}
+function ndovCurrent(value){return ndovVariant(value,"Actueel")??ndovVariant(value,"Gepland")??ndovList(value)[0];}
+function ndovName(station){return ndovText(station?.LangeNaam)||ndovText(station?.MiddelNaam)||ndovText(station?.KorteNaam);}
+function ndovClock(timestamp){return timestamp?new Intl.DateTimeFormat("nl-NL",{timeZone:"Europe/Amsterdam",hour:"2-digit",minute:"2-digit"}).format(timestamp):"--:--";}
+function ndovProducts(value){
+  if(!value||typeof value!=="object")return [];
+  if(value.ReisInformatieProductDVS)return ndovList(value.ReisInformatieProductDVS);
+  return Object.values(value).flatMap(ndovProducts);
+}
+function parseNdovRows(xml){
+  if(/<!DOCTYPE|<!ENTITY/i.test(xml))throw new Error("Unsupported XML declaration");
+  const products=ndovProducts(ndovParser.parse(xml)),rows=[];
+  for(const product of products){
+    const dvs=product.DynamischeVertrekStaat,station=dvs?.RitStation;
+    if(ndovText(station?.StationCode).toUpperCase()!=="AH")continue;
+    const train=dvs.Trein;if(!train)continue;
+    const number=ndovText(train.TreinNummer),ride=ndovText(dvs.RitId),date=ndovText(dvs.RitDatum);
+    const plannedTimestamp=Date.parse(ndovText(ndovVariant(train.VertrekTijd,"Gepland")));
+    const actualTime=Date.parse(ndovText(ndovVariant(train.VertrekTijd,"Actueel")));
+    const messageTimestamp=Date.parse(product["@_TimeStamp"]);
+    if(!number||!ride||!date||!Number.isFinite(plannedTimestamp)||!Number.isFinite(messageTimestamp))continue;
+    const expectedTimestamp=Number.isFinite(actualTime)?actualTime:plannedTimestamp;
+    const destination=ndovName(ndovCurrent(train.TreinEindBestemming));
+    if(!destination)continue;
+    const trackText=spoor=>[ndovText(spoor?.SpoorNummer),ndovText(spoor?.SpoorFase)].join("");
+    const plannedTrack=trackText(ndovVariant(train.TreinVertrekSpoor,"Gepland"));
+    const currentTrack=trackText(ndovCurrent(train.TreinVertrekSpoor));
+    const changes=ndovList(train.Wijziging).map(x=>ndovText(x.WijzigingType));
+    const cancelled=changes.includes("32"),departed=ndovText(train.TreinStatus)==="5";
+    const notBoardable=[train.NietInstappen,train.RangeerBeweging,train.SpeciaalKaartje].some(x=>ndovText(x)==="J");
+    const category=ndovText(train.TreinSoort?.["@_Code"])||ndovText(train.TreinSoort);
+    const futureRoute=[...new Set([
+      ...ndovList(train.TreinVleugel).flatMap(wing=>ndovList(ndovCurrent(wing.StopStations)?.Station).map(ndovName)),
+      ...ndovList(ndovCurrent(train.VerkorteRoute)?.Station).map(ndovName),destination
+    ].filter(Boolean))];
+    const delay=Math.round((expectedTimestamp-plannedTimestamp)/60000);
+    const status=cancelled?"Geannuleerd":notBoardable?"Niet instappen":delay>0?`+${delay} min`:"Op tijd";
+    const id=`NDOV|AH|${date}|${ride}`;
+    rows.push({id,source:"NDOV",sourceTripId:`${date}|${ride}`,sourceEventId:id,serviceDate:date,trainKey:`${category}|${number}`,number,rideId:ride,train:[category,number].filter(Boolean).join(" "),category,operatorCode:ndovText(train.Vervoerder),operatorName:ndovText(train.Vervoerder),observedAt:"Arnhem Centraal",stationCode:ndovText(station.UICCode)||"AH",countryCode:"NL",eventMode:"departure",plannedTimestamp,expectedTimestamp,plannedTime:ndovClock(plannedTimestamp),time:ndovClock(plannedTimestamp),currentTime:ndovClock(expectedTimestamp),plannedTrack,currentTrack,track:cancelled?"—":currentTrack||plannedTrack||"—",delay,status,type:cancelled?"cancel":delay>30?"major-delay":delay>0?"delay":"ok",cancelled,departed,notBoardable,from:"Arnhem Centraal",to:destination,route:["Arnhem Centraal",...futureRoute],futureRoute,pastRoute:[],hasRealtime:true,hasChangedTrack:Boolean(currentTrack&&plannedTrack&&currentTrack!==plannedTrack),messageTimestamp,rawStop:dvs});
+  }
+  return rows;
+}
+function acceptNdovRow(row){
+  const old=ndovRows.get(row.id);
+  if(old&&old.messageTimestamp>=row.messageTimestamp)return false;
+  if(row.plannedTimestamp<Date.now()-86400000||row.plannedTimestamp>Date.now()+172800000)return false;
+  ndovRows.set(row.id,row);ndovPending.set(row.id,row);
+  ndovState.lastArnhemAt=new Date().toISOString();ndovState.arnhemMessages++;
+  return true;
+}
+function ndovArnhemRows(){
+  const cutoff=Date.now()-10*60000;
+  return [...ndovRows.values()].filter(r=>!r.departed&&!r.notBoardable&&(r.cancelled?r.plannedTimestamp:r.expectedTimestamp)>=cutoff).sort((a,b)=>a.plannedTimestamp-b.plannedTimestamp);
+}
+function ndovStatus(){return {...ndovState,arnhemCount:ndovArnhemRows().length,pendingStorage:ndovPending.size,boardEnabled:process.env.NDOV_ARNHEM_ENABLED==="true",fresh:Boolean(ndovState.lastMessageAt&&Date.now()-Date.parse(ndovState.lastMessageAt)<180000)};}
+async function flushNdov(){
+  if(ndovFlushing||!ndovPending.size)return;
+  ndovFlushing=true;const rows=[...ndovPending.values()];
+  try{
+    await recordObservations(rows,"NDOV");
+    for(const r of rows)if(ndovPending.get(r.id)===r)ndovPending.delete(r.id);
+    ndovState.storageError=null;
+  }catch(e){ndovState.storageError=String(e.message).slice(0,180);}
+  finally{ndovFlushing=false;}
+}
+async function startNdov(){
+  if(process.env.NDOV_ENABLED==="false"){ndovState.status="disabled";return;}
+  try{
+    const [{Subscriber},{XMLParser},{gunzipSync,inflateSync}]=await Promise.all([import("zeromq"),import("fast-xml-parser"),import("node:zlib")]);
+    ndovParser=new XMLParser({ignoreAttributes:false,removeNSPrefix:true,parseTagValue:false,parseAttributeValue:false,processEntities:true});
+    ndovSocket=new Subscriber({linger:0,receiveHighWaterMark:1000,maxMessageSize:4194304,reconnectInterval:5000,reconnectMaxInterval:30000});
+    ndovSocket.connect(ndovState.endpoint);ndovSocket.subscribe("/RIG/InfoPlusDVSInterface4");
+    ndovState.startedAt=new Date().toISOString();ndovState.status="waiting_for_messages";
+    setInterval(()=>{void flushNdov();for(const [id,row]of ndovRows)if(row.plannedTimestamp<Date.now()-86400000&&!ndovPending.has(id))ndovRows.delete(id);},10000).unref();
+    for await(const parts of ndovSocket){
+      if(parts.length<2)continue;
+      ndovState.messages++;ndovState.lastMessageAt=new Date().toISOString();ndovState.status="receiving";
+      try{
+        let payload=Buffer.concat(parts.slice(1));
+        if(payload[0]===0x1f&&payload[1]===0x8b)payload=gunzipSync(payload,{maxOutputLength:8388608});
+        else if(payload[0]===0x78)payload=inflateSync(payload,{maxOutputLength:8388608});
+        for(const row of parseNdovRows(payload.toString("utf8")))acceptNdovRow(row);
+      }catch(e){ndovState.parseErrors++;ndovState.lastParseError=String(e.message).slice(0,160);}
+    }
+  }catch(e){ndovState.status="error";ndovState.error=String(e.message).slice(0,180);ndovSocket?.close();}
+}
+
 const pageRoutes={
   ...Object.fromEntries(Object.keys(config.stationPages||{}).flatMap(id=>[[`/embed/${id}`,"/koeln-embed.html"],[`/embed/${id}/`,"/koeln-embed.html"]])),
   "/mobile":"/mobile.html","/mobile/":"/mobile.html",
@@ -815,7 +909,8 @@ const server=http.createServer(async(req,res)=>{
   try{
     const url=new URL(req.url,`http://${req.headers.host}`);
     if(url.pathname==="/api/health")return sendJson(res,200,{ok:true,credentialsConfigured:Boolean(CLIENT_ID&&API_KEY),api:BASE,storage:getStorageInfo(),config,dbState,collectorState:{lastScanAt:collectorState.lastScanAt,stations:Object.keys(collectorState.byStation)},italyState,nightjetPlanState:{dateKey:nightjetPlanState.dateKey,scanning:nightjetPlanState.scanning,lastUpdatedAt:nightjetPlanState.lastUpdatedAt,count:nightjetPlanState.rows.length,warnings:nightjetPlanState.warnings}});
-    if(url.pathname==="/api/ndov/status")return sendJson(res,200,ndovAccessProbe);
+    if(url.pathname==="/api/ndov/status")return sendJson(res,200,{access:ndovAccessProbe,receiver:ndovStatus()});
+    if(url.pathname==="/api/ndov/arnhem")return sendJson(res,200,{...ndovStatus(),trains:ndovArnhemRows().map(({rawStop,...row})=>row)});
     if(url.pathname==="/api/storage")return sendJson(res,200,getStorageInfo());
 
     // V4 bron-onafhankelijke Data Hub API. Het bestaande board blijft de
@@ -891,6 +986,7 @@ const server=http.createServer(async(req,res)=>{
 await initStorage();
 server.listen(PORT,async()=>{
   void checkNdovAccess();
+  void startNdov();
   const storage=getStorageInfo();console.log("");console.log("Treinrondreis Multi-source Data Hub + Live Board v4.2.0");console.log(`Open: http://localhost:${PORT}`);console.log(`DB credentials: ${CLIENT_ID&&API_KEY?"ingesteld":"ONTBREKEN"}`);console.log(`Historie: ${storage.backend} (${storage.retention})`);console.log("");
   await Promise.allSettled([performScan(),performItalyScan()]);
   scheduleNext();scheduleNextItaly();scheduleNightjetDayCheck();setTimeout(()=>performNightjetDayPlan(),30000);
