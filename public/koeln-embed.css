@@ -69,3 +69,18 @@ h2{margin:0;color:var(--red);font-size:22px;line-height:1.2;font-weight:700;lett
 }
 
 h1,h2,h3,.where,.primary{font-family:Montserrat,"Open Sans",sans-serif}
+
+.mobile-track-label{display:none}
+@media(max-width:720px){
+  .board-head{flex-wrap:wrap}
+  .where-line{flex-wrap:wrap}
+  .columns{display:none}
+  .full-row{grid-template-columns:58px minmax(0,1fr) 85px;grid-template-areas:"time train track" "dest dest dest" "status status status";gap:4px 8px;padding:10px 11px;text-align:left}
+  .full-row>*{min-width:0;justify-self:stretch}
+  .full-row .time{grid-area:time}
+  .full-row .train{grid-area:train;overflow-wrap:anywhere}
+  .full-row .destination{grid-area:dest;white-space:normal;overflow:visible;font-size:14px}
+  .full-row .track{grid-area:track;text-align:right}
+  .full-row .status{grid-area:status;display:block;text-align:left;font-size:12px}
+  .mobile-track-label{display:inline}
+}
