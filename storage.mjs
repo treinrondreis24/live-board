@@ -1,3 +1,4 @@
+import {initJourneys} from "./journeys.mjs";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
@@ -113,6 +114,7 @@ export async function initStorage(){
     `);
     backend="postgresql";
     await initDataHub({backend,pool,sqlite:null});
+    await initJourneys({backend,pool,sqlite:null});
     return {backend};
   }
 
@@ -177,6 +179,7 @@ export async function initStorage(){
   backend="sqlite";
   loadLegacyStateCache();
   await initDataHub({backend,pool:null,sqlite});
+  await initJourneys({backend,pool:null,sqlite});
   return {backend};
 }
 
