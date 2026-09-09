@@ -11,6 +11,8 @@
     "node": ">=22.13.0"
   },
   "dependencies": {
-    "pg": "^8.16.3"
+    "fast-xml-parser": "5.11.1",
+    "pg": "^8.16.3",
+    "zeromq": "6.7.0"
   }
 }
