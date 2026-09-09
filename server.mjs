@@ -1,3 +1,4 @@
+import {swissStations,swissState,startSwiss,swissPayload} from './swiss.mjs';
 import {norwegianStations,enturState,startEntur,norwegianPayload} from './entur.mjs';
 import {belgianStations,belgiumState,startBelgium,belgianPayload} from './belgium.mjs';
 import {startJourneyPlanning,parseRitJourneys,recordJourneySnapshot,getJourney,listJourneys,getJourneyRevisions,journeyImportState,journeyPage} from "./journeys.mjs";
@@ -933,6 +934,7 @@ async function startNdov(){
 }
 
 const pageRoutes={
+  ...Object.fromEntries(Object.keys(swissStations).flatMap(id=>[[`/embed/${id}`,"/koeln-embed.html"],[`/embed/${id}/`,"/koeln-embed.html"]])),
   ...Object.fromEntries(Object.keys(norwegianStations).flatMap(id=>[[`/embed/${id}`,"/koeln-embed.html"],[`/embed/${id}/`,"/koeln-embed.html"]])),
   ...Object.fromEntries(Object.keys(belgianStations).flatMap(id=>[[`/embed/${id}`,"/koeln-embed.html"],[`/embed/${id}/`,"/koeln-embed.html"]])),
   ...Object.fromEntries(Object.keys(config.stationPages||{}).flatMap(id=>[[`/embed/${id}`,"/koeln-embed.html"],[`/embed/${id}/`,"/koeln-embed.html"]])),
@@ -1027,6 +1029,8 @@ const server=http.createServer(async(req,res)=>{
     if(belgianPage&&belgianStations[belgianPage])return sendJson(res,200,belgianPayload(belgianPage));
     if(url.pathname==="/api/entur/status")return sendJson(res,200,enturState);
     if(belgianPage&&norwegianStations[belgianPage])return sendJson(res,200,norwegianPayload(belgianPage));
+    if(url.pathname==="/api/swiss/status")return sendJson(res,200,swissState);
+    if(belgianPage&&Object.hasOwn(swissStations,belgianPage))return sendJson(res,200,swissPayload(belgianPage));
     const stationViewMatch=url.pathname.match(/^\/api\/views\/([a-z0-9-]+)\/?$/);
     const stationPageId=stationViewMatch?.[1];
     if(stationPageId&&Object.hasOwn(config.stationPages||{},stationPageId)){
@@ -1056,6 +1060,7 @@ server.listen(PORT,async()=>{
   void startNdov();
   startBelgium();
   startEntur();
+  startSwiss();
   startJourneyPlanning(config.journeyArchive?.trainNumbers||[]);
   const storage=getStorageInfo();console.log("");console.log("Treinrondreis Multi-source Data Hub + Live Board v4.2.0");console.log(`Open: http://localhost:${PORT}`);console.log(`DB credentials: ${CLIENT_ID&&API_KEY?"ingesteld":"ONTBREKEN"}`);console.log(`Historie: ${storage.backend} (${storage.retention})`);console.log("");
   await Promise.allSettled([performScan(),performItalyScan()]);
