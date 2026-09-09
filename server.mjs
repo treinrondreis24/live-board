@@ -478,11 +478,23 @@ function currentCollectorRows(station){
     .sort((a,b)=>(a.expectedTimestamp||a.plannedTimestamp||0)-(b.expectedTimestamp||b.plannedTimestamp||0));
 }
 
+
+function withNdovDepartures(station,dbRows){
+  if(station!=="Arnhem Centraal"||!ndovStatus().boardEnabled||!ndovStatus().fresh)return dbRows;
+  const known=[...ndovRows.values()];
+  // Replace the same service across sources even if NDOV changes its platform or destination.
+  // Departed/non-boardable messages are retained in known so DB cannot reintroduce them.
+  const remaining=dbRows.filter(db=>!known.some(n=>
+    [n.number,n.rideId].includes(String(db.number))&&Math.abs(n.plannedTimestamp-Number(db.plannedTimestamp||0))<3*3600000
+  ));
+  return [...remaining,...ndovArnhemRows()];
+}
+
 function stationUpcomingDepartures(station){
   const now=Date.now(),graceMs=10*60*1000;
 
   const stations=Array.isArray(station)?station:[station];
-  const rows=stations.flatMap(name=>collectorState.byStation[name]||[])
+  const rows=stations.flatMap(name=>withNdovDepartures(name,collectorState.byStation[name]||[]))
     .map(row=>stations.length>1?{...row,observedAt:stations[0]}:row)
     .filter(isPassengerBoardTrain)
     .filter(r=>r.eventMode==="departure")
@@ -538,12 +550,12 @@ function stationPagePayload(pageId){
   const rows=stationUpcomingDepartures(pageCfg.stations||pageCfg.station);
 
   return {
-    source:"DB Timetables",
+    source:pageId==="arnhem"&&ndovStatus().boardEnabled&&ndovStatus().fresh&&ndovRows.size?"NDOV + DB Timetables":"DB Timetables",
     page:pageId,
     station:pageCfg.station,
     title:pageCfg.title,
     country:pageCfg.country,
-    lastScanAt:collectorState.lastScanAt,
+    lastScanAt:pageId==="arnhem"&&ndovStatus().boardEnabled&&ndovState.lastArnhemAt?[collectorState.lastScanAt,ndovState.lastArnhemAt].filter(Boolean).sort().at(-1):collectorState.lastScanAt,
     quick:stationQuickDirections(pageCfg,rows),
     departures:{
       all:rows,
@@ -828,7 +840,9 @@ function parseNdovRows(xml){
     const messageTimestamp=Date.parse(product["@_TimeStamp"]);
     if(!number||!ride||!date||!Number.isFinite(plannedTimestamp)||!Number.isFinite(messageTimestamp))continue;
     const expectedTimestamp=Number.isFinite(actualTime)?actualTime:plannedTimestamp;
-    const destination=ndovName(ndovCurrent(train.TreinEindBestemming));
+    const isCancelled=ndovList(train.Wijziging).some(x=>ndovText(x.WijzigingType)==="32");
+    const routeVersion=value=>isCancelled?(ndovVariant(value,"Gepland")??ndovCurrent(value)):ndovCurrent(value);
+    const destination=ndovName(routeVersion(train.TreinEindBestemming));
     if(!destination)continue;
     const trackText=spoor=>[ndovText(spoor?.SpoorNummer),ndovText(spoor?.SpoorFase)].join("");
     const plannedTrack=trackText(ndovVariant(train.TreinVertrekSpoor,"Gepland"));
@@ -837,10 +851,8 @@ function parseNdovRows(xml){
     const cancelled=changes.includes("32"),departed=ndovText(train.TreinStatus)==="5";
     const notBoardable=[train.NietInstappen,train.RangeerBeweging,train.SpeciaalKaartje].some(x=>ndovText(x)==="J");
     const category=ndovText(train.TreinSoort?.["@_Code"])||ndovText(train.TreinSoort);
-    const futureRoute=[...new Set([
-      ...ndovList(train.TreinVleugel).flatMap(wing=>ndovList(ndovCurrent(wing.StopStations)?.Station).map(ndovName)),
-      ...ndovList(ndovCurrent(train.VerkorteRoute)?.Station).map(ndovName),destination
-    ].filter(Boolean))];
+    const wingStops=ndovList(train.TreinVleugel).flatMap(wing=>ndovList(routeVersion(wing.StopStations)?.Station).map(ndovName));
+    const futureRoute=[...new Set([...(wingStops.length?wingStops:ndovList(routeVersion(train.VerkorteRoute)?.Station).map(ndovName)),destination].filter(name=>name&&name!=="Arnhem Centraal"))];
     const delay=Math.round((expectedTimestamp-plannedTimestamp)/60000);
     const status=cancelled?"Geannuleerd":notBoardable?"Niet instappen":delay>0?`+${delay} min`:"Op tijd";
     const id=`NDOV|AH|${date}|${ride}`;
@@ -860,7 +872,7 @@ function ndovArnhemRows(){
   const cutoff=Date.now()-10*60000;
   return [...ndovRows.values()].filter(r=>!r.departed&&!r.notBoardable&&(r.cancelled?r.plannedTimestamp:r.expectedTimestamp)>=cutoff).sort((a,b)=>a.plannedTimestamp-b.plannedTimestamp);
 }
-function ndovStatus(){return {...ndovState,arnhemCount:ndovArnhemRows().length,pendingStorage:ndovPending.size,boardEnabled:process.env.NDOV_ARNHEM_ENABLED==="true",fresh:Boolean(ndovState.lastMessageAt&&Date.now()-Date.parse(ndovState.lastMessageAt)<180000)};}
+function ndovStatus(){return {...ndovState,arnhemCount:ndovArnhemRows().length,pendingStorage:ndovPending.size,boardEnabled:process.env.NDOV_ARNHEM_ENABLED!=="false",fresh:Boolean(ndovState.lastMessageAt&&Date.now()-Date.parse(ndovState.lastMessageAt)<180000)};}
 async function flushNdov(){
   if(ndovFlushing||!ndovPending.size)return;
   ndovFlushing=true;const rows=[...ndovPending.values()];
