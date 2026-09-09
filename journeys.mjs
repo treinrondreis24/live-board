@@ -184,7 +184,7 @@ export function parseRitJourneys(parsed,selected){
    }
   }
   const sourceTimestamp=stamp(product['@_TimeStamp']);
-  if(stops.length&&sourceTimestamp)out.push({trainNumber:text(rit.TreinNummer),serviceDate:text(rit.TreinDatum),category:text(rit.TreinSoort?.['@_Code']),source:'NDOV_RIT',sourceTimestamp,completePlan:false,stops});
+  if(stops.length&&sourceTimestamp)out.push({trainNumber:text(rit.TreinNummer),serviceDate:text(rit.TreinDatum),category:text(rit.TreinSoort?.['@_Code']),source:'NDOV_RIT',sourceTimestamp,completePlan:true,stops});
  }
  return out;
 }
