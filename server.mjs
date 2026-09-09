@@ -1,3 +1,4 @@
+import {norwegianStations,enturState,startEntur,norwegianPayload} from './entur.mjs';
 import {belgianStations,belgiumState,startBelgium,belgianPayload} from './belgium.mjs';
 import {startJourneyPlanning,parseRitJourneys,recordJourneySnapshot,getJourney,listJourneys,getJourneyRevisions,journeyImportState,journeyPage} from "./journeys.mjs";
 import http from "node:http";
@@ -932,6 +933,7 @@ async function startNdov(){
 }
 
 const pageRoutes={
+  ...Object.fromEntries(Object.keys(norwegianStations).flatMap(id=>[[`/embed/${id}`,"/koeln-embed.html"],[`/embed/${id}/`,"/koeln-embed.html"]])),
   ...Object.fromEntries(Object.keys(belgianStations).flatMap(id=>[[`/embed/${id}`,"/koeln-embed.html"],[`/embed/${id}/`,"/koeln-embed.html"]])),
   ...Object.fromEntries(Object.keys(config.stationPages||{}).flatMap(id=>[[`/embed/${id}`,"/koeln-embed.html"],[`/embed/${id}/`,"/koeln-embed.html"]])),
   "/mobile":"/mobile.html","/mobile/":"/mobile.html",
@@ -1023,6 +1025,8 @@ const server=http.createServer(async(req,res)=>{
     if(url.pathname==="/api/belgium/status")return sendJson(res,200,belgiumState);
     const belgianPage=url.pathname.match(/^\/api\/views\/([a-z0-9-]+)\/?$/)?.[1];
     if(belgianPage&&belgianStations[belgianPage])return sendJson(res,200,belgianPayload(belgianPage));
+    if(url.pathname==="/api/entur/status")return sendJson(res,200,enturState);
+    if(belgianPage&&norwegianStations[belgianPage])return sendJson(res,200,norwegianPayload(belgianPage));
     const stationViewMatch=url.pathname.match(/^\/api\/views\/([a-z0-9-]+)\/?$/);
     const stationPageId=stationViewMatch?.[1];
     if(stationPageId&&Object.hasOwn(config.stationPages||{},stationPageId)){
@@ -1051,6 +1055,7 @@ server.listen(PORT,async()=>{
   void checkNdovAccess();
   void startNdov();
   startBelgium();
+  startEntur();
   startJourneyPlanning(config.journeyArchive?.trainNumbers||[]);
   const storage=getStorageInfo();console.log("");console.log("Treinrondreis Multi-source Data Hub + Live Board v4.2.0");console.log(`Open: http://localhost:${PORT}`);console.log(`DB credentials: ${CLIENT_ID&&API_KEY?"ingesteld":"ONTBREKEN"}`);console.log(`Historie: ${storage.backend} (${storage.retention})`);console.log("");
   await Promise.allSettled([performScan(),performItalyScan()]);
