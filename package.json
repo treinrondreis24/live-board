@@ -13,6 +13,7 @@
   "dependencies": {
     "fast-xml-parser": "5.11.1",
     "pg": "^8.16.3",
-    "zeromq": "6.7.0"
+    "zeromq": "6.7.0",
+    "fflate": "0.8.3"
   }
 }
