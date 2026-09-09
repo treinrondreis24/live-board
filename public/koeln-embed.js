@@ -18,6 +18,7 @@ function statusClass(t){
   return "";
 }
 function statusText(t){
+  if(t.source==="ENTUR"&&!t.hasRealtime&&!t.cancelled)return "";
   if(t.source==="NMBS"&&!t.hasRealtime&&!t.cancelled)return "Volgens dienstregeling";
   if(t.partialCancellation)return t.status||"Deels geannuleerd";
   if(t.cancelled)return "Geannuleerd";
@@ -105,18 +106,19 @@ async function refresh(){
     document.querySelector(".board-head h2").textContent=document.title;
     if(!data){
       const allTab=document.querySelector('[data-tab="all"]');
-      allTab.hidden=!["NL","BE"].includes(p.country);
-      if(["NL","BE"].includes(p.country))activeTab="all";
+      allTab.hidden=!["NL","BE","NO"].includes(p.country);
+      if(["NL","BE","NO"].includes(p.country))activeTab="all";
       if(!p.quick?.length){fullEl.hidden=false;toggleFull.textContent="Verberg compleet vertrekbord";}
       document.querySelectorAll(".tab").forEach(btn=>btn.classList.toggle("active",btn.dataset.tab===activeTab));
     }
     if(p.country==="BE"&&!document.getElementById("belgium-source")){const a=document.createElement("a");a.id="belgium-source";a.href="https://data.belgianmobility.io/";a.textContent="Bron: NMBS — Belgian Mobility Company";document.querySelector(".board-footer").appendChild(a);}
+    if(p.country==="NO"&&!document.getElementById("entur-source")){const a=document.createElement("a");a.id="entur-source";a.href="https://entur.no/";a.textContent="Bron: Entur (NLOD)";document.querySelector(".board-footer").appendChild(a);}
     data=p;renderQuick();if(!fullEl.hidden)renderFull();
     const d=p.lastScanAt?new Date(p.lastScanAt):null;
     scanStatus.textContent=d&&!Number.isNaN(d.getTime())
       ?`bijgewerkt ${new Intl.DateTimeFormat("nl-NL",{hour:"2-digit",minute:"2-digit"}).format(d)}`
       :"actueel";
-    if(p.country==="BE"&&p.status!=="ready")scanStatus.textContent=p.status==="starting"?"dienstregeling laden…":"realtime tijdelijk niet beschikbaar";
+    if(["BE","NO"].includes(p.country)&&p.status!=="ready")scanStatus.textContent=p.status==="starting"?"dienstregeling laden…":"realtime tijdelijk niet beschikbaar";
   }catch(e){
     scanStatus.textContent="tijdelijk niet beschikbaar";
     if(!data)quickEl.innerHTML=`<div class="empty">${esc(e.message)}</div>`;
