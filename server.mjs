@@ -1,3 +1,4 @@
+import {startJourneyPlanning,parseRitJourneys,recordJourneySnapshot,getJourney,listJourneys,getJourneyRevisions,journeyImportState,journeyPage} from "./journeys.mjs";
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
@@ -907,6 +908,7 @@ async function startNdov(){
     ndovParser=new XMLParser({ignoreAttributes:false,removeNSPrefix:true,parseTagValue:false,parseAttributeValue:false,processEntities:true});
     ndovSocket=new Subscriber({linger:0,receiveHighWaterMark:1000,maxMessageSize:4194304,reconnectInterval:5000,reconnectMaxInterval:30000});
     ndovSocket.connect(ndovState.endpoint);ndovSocket.subscribe("/RIG/InfoPlusDVSInterface4");
+    if(config.journeyArchive?.trainNumbers?.length)ndovSocket.subscribe("/RIG/InfoPlusRITInterface5");
     ndovState.startedAt=new Date().toISOString();ndovState.status="waiting_for_messages";
     setInterval(()=>{void flushNdov();for(const [id,row]of ndovRows)if(row.plannedTimestamp<Date.now()-86400000&&!ndovPending.has(id))ndovRows.delete(id);},10000).unref();
     for await(const parts of ndovSocket){
@@ -916,7 +918,13 @@ async function startNdov(){
         let payload=Buffer.concat(parts.slice(1));
         if(payload[0]===0x1f&&payload[1]===0x8b)payload=gunzipSync(payload,{maxOutputLength:8388608});
         else if(payload[0]===0x78)payload=inflateSync(payload,{maxOutputLength:8388608});
-        for(const row of parseNdovRows(payload.toString("utf8")))acceptNdovRow(row);
+        const xml=payload.toString("utf8");
+        if(parts[0].toString().startsWith("/RIG/InfoPlusRITInterface")){
+          journeyImportState.receivedRitMessages=(journeyImportState.receivedRitMessages||0)+1;
+          if(/<!DOCTYPE|<!ENTITY/i.test(xml))throw Error("Unsupported XML declaration");
+          const journeys=parseRitJourneys(ndovParser.parse(xml),config.journeyArchive?.trainNumbers||[]);
+          for(const journey of journeys){await recordJourneySnapshot(journey);journeyImportState.ritMessages++;journeyImportState.lastRitAt=new Date().toISOString();}
+        }else{for(const row of parseNdovRows(xml))acceptNdovRow(row);}
       }catch(e){ndovState.parseErrors++;ndovState.lastParseError=String(e.message).slice(0,160);}
     }
   }catch(e){ndovState.status="error";ndovState.error=String(e.message).slice(0,180);ndovSocket?.close();}
@@ -937,6 +945,17 @@ const pageRoutes={
 const server=http.createServer(async(req,res)=>{
   try{
     const url=new URL(req.url,`http://${req.headers.host}`);
+    if(url.pathname==="/ritarchief"){res.writeHead(200,{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store"});return res.end(journeyPage);}
+    if(url.pathname==="/api/journeys/status")return sendJson(res,200,{...journeyImportState,selected:config.journeyArchive?.trainNumbers||[]});
+    const journeyMatch=url.pathname.match(/^\/api\/journeys\/(\d+)(\/revisions)?$/);
+    if(journeyMatch){
+      const train=journeyMatch[1],date=url.searchParams.get("date");
+      if(!date)return sendJson(res,200,{trainNumber:train,journeys:await listJourneys(train)});
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return sendJson(res,400,{error:"Gebruik datum jjjj-mm-dd"});
+      if(journeyMatch[2])return sendJson(res,200,{trainNumber:train,serviceDate:date,revisions:await getJourneyRevisions(train,date)});
+      const journey=await getJourney(train,date);
+      return sendJson(res,journey?200:404,journey||{error:"Nog geen rit opgeslagen voor deze trein en datum"});
+    }
     if(url.pathname==="/api/health")return sendJson(res,200,{ok:true,credentialsConfigured:Boolean(CLIENT_ID&&API_KEY),api:BASE,storage:getStorageInfo(),config,dbState,collectorState:{lastScanAt:collectorState.lastScanAt,stations:Object.keys(collectorState.byStation)},italyState,nightjetPlanState:{dateKey:nightjetPlanState.dateKey,scanning:nightjetPlanState.scanning,lastUpdatedAt:nightjetPlanState.lastUpdatedAt,count:nightjetPlanState.rows.length,warnings:nightjetPlanState.warnings}});
     if(url.pathname==="/api/ndov/status")return sendJson(res,200,{access:ndovAccessProbe,receiver:ndovStatus()});
     const ndovPage=url.pathname.match(/^\/api\/ndov\/([a-z0-9-]+)\/?$/)?.[1];
@@ -1021,6 +1040,7 @@ await initStorage();
 server.listen(PORT,async()=>{
   void checkNdovAccess();
   void startNdov();
+  startJourneyPlanning(config.journeyArchive?.trainNumbers||[]);
   const storage=getStorageInfo();console.log("");console.log("Treinrondreis Multi-source Data Hub + Live Board v4.2.0");console.log(`Open: http://localhost:${PORT}`);console.log(`DB credentials: ${CLIENT_ID&&API_KEY?"ingesteld":"ONTBREKEN"}`);console.log(`Historie: ${storage.backend} (${storage.retention})`);console.log("");
   await Promise.allSettled([performScan(),performItalyScan()]);
   scheduleNext();scheduleNextItaly();scheduleNightjetDayCheck();setTimeout(()=>performNightjetDayPlan(),30000);
