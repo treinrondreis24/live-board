@@ -115,6 +115,7 @@ export async function initStorage(){
     backend="postgresql";
     await initDataHub({backend,pool,sqlite:null});
     await initJourneys({backend,pool,sqlite:null});
+    await initStationPlatformLayouts();
     return {backend};
   }
 
@@ -179,7 +180,8 @@ export async function initStorage(){
   backend="sqlite";
   loadLegacyStateCache();
   await initDataHub({backend,pool:null,sqlite});
-  await initJourneys({backend,pool,sqlite:null}); await initStationPlatformLayouts();
+  await initJourneys({backend,pool:null,sqlite});
+  await initStationPlatformLayouts();
   return {backend};
 }
 
