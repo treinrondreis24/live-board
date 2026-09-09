@@ -115,6 +115,7 @@ export async function initStorage(){
     backend="postgresql";
     await initDataHub({backend,pool,sqlite:null});
     await initJourneys({backend,pool,sqlite:null});
+    await initStationPlatformLayouts();
     return {backend};
   }
 
@@ -180,6 +181,7 @@ export async function initStorage(){
   loadLegacyStateCache();
   await initDataHub({backend,pool:null,sqlite});
   await initJourneys({backend,pool:null,sqlite});
+  await initStationPlatformLayouts();
   return {backend};
 }
 
@@ -519,4 +521,27 @@ export async function getCanonicalEvents(args={}){return getHubCanonicalEvents(a
 export async function getCombinedTrain(args={}){return getHubCombinedTrain(args);}
 export async function ingestCanonicalObservations(trains,source,observedAt=Date.now(),options={}){
   return recordCanonicalObservations(trains,source,observedAt,options);
+}
+
+// User-supplied island-platform grouping; not inferred from adjacent track numbers.
+async function initStationPlatformLayouts(){
+  const schema=`CREATE TABLE IF NOT EXISTS station_platform_layouts (
+    station_key TEXT PRIMARY KEY,station_name TEXT NOT NULL,platform_groups TEXT NOT NULL,
+    source TEXT NOT NULL,verification_status TEXT NOT NULL,recorded_at BIGINT NOT NULL
+  )`;
+  const groups=[['4','5'],['6','7'],['9','10'],['11','12'],['13','14'],['15','16'],['17','18'],['19','20']];
+  const values=['duesseldorf','Düsseldorf Hbf',JSON.stringify(groups),'Opgegeven door gebruiker in projectgesprek','user_supplied',Date.now()];
+  if(backend==='postgresql'){
+    await pool.query(schema);
+    await pool.query('INSERT INTO station_platform_layouts(station_key,station_name,platform_groups,source,verification_status,recorded_at) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(station_key) DO NOTHING',values);
+  }else{
+    sqlite.exec(schema);
+    sqlite.prepare('INSERT INTO station_platform_layouts(station_key,station_name,platform_groups,source,verification_status,recorded_at) VALUES(?,?,?,?,?,?) ON CONFLICT(station_key) DO NOTHING').run(...values);
+  }
+}
+export async function getStationPlatformLayout(stationKey){
+  const sql='SELECT * FROM station_platform_layouts WHERE station_key=$1';
+  const row=backend==='postgresql'?(await pool.query(sql,[stationKey])).rows[0]:sqlite.prepare(sql.replace('$1','?')).get(stationKey);
+  if(!row)return null;
+  return {stationKey:row.station_key,station:row.station_name,platformGroups:JSON.parse(row.platform_groups),source:row.source,verificationStatus:row.verification_status,recordedAt:new Date(Number(row.recorded_at)).toISOString()};
 }

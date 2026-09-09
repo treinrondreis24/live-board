@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  initStorage,getStorageInfo,recordObservations,findTrendObservation,
+  initStorage,getStorageInfo,recordObservations,findTrendObservation,getStationPlatformLayout,
   getHistory,getLatestByStation,getLatestForPlannedWindow,
   startLegacyMigration,getDataHubMigrationState,getDataSources,getDataHubStats,
   getServiceRuns,getCanonicalEvents,getCombinedTrain
@@ -955,6 +955,11 @@ const server=http.createServer(async(req,res)=>{
       if(journeyMatch[2])return sendJson(res,200,{trainNumber:train,serviceDate:date,revisions:await getJourneyRevisions(train,date)});
       const journey=await getJourney(train,date);
       return sendJson(res,journey?200:404,journey||{error:"Nog geen rit opgeslagen voor deze trein en datum"});
+    }
+    const platformLayoutMatch=url.pathname.match(/^\/api\/stations\/([a-z0-9-]+)\/platforms\/?$/);
+    if(platformLayoutMatch){
+      const layout=await getStationPlatformLayout(platformLayoutMatch[1]);
+      return sendJson(res,layout?200:404,layout||{error:"Geen perronindeling opgeslagen voor dit station"});
     }
     if(url.pathname==="/api/health")return sendJson(res,200,{ok:true,credentialsConfigured:Boolean(CLIENT_ID&&API_KEY),api:BASE,storage:getStorageInfo(),config,dbState,collectorState:{lastScanAt:collectorState.lastScanAt,stations:Object.keys(collectorState.byStation)},italyState,nightjetPlanState:{dateKey:nightjetPlanState.dateKey,scanning:nightjetPlanState.scanning,lastUpdatedAt:nightjetPlanState.lastUpdatedAt,count:nightjetPlanState.rows.length,warnings:nightjetPlanState.warnings}});
     if(url.pathname==="/api/ndov/status")return sendJson(res,200,{access:ndovAccessProbe,receiver:ndovStatus()});
