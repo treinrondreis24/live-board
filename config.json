@@ -395,7 +395,8 @@
       "allDepartures": true,
       "categories": [],
       "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day",
-      "planHoursAfter": 8
+      "planHoursAfter": 8,
+      "eva": "8098160"
     },
     {
       "id": "basel-bad-all",
@@ -528,6 +529,13 @@
           "futureStops": [
             "Köln Messe/Deutz"
           ]
+        },
+        {
+          "id": "mannheim",
+          "label": "Mannheim Hbf",
+          "futureStops": [
+            "Mannheim Hbf"
+          ]
         }
       ]
     },
@@ -580,6 +588,13 @@
           "label": "Frankfurt Hbf",
           "futureStops": [
             "Frankfurt(Main)Hbf"
+          ]
+        },
+        {
+          "id": "mannheim",
+          "label": "Mannheim Hbf",
+          "futureStops": [
+            "Mannheim Hbf"
           ]
         }
       ]
@@ -756,6 +771,18 @@
           "label": "Frankfurt Hbf",
           "futureStops": [
             "Frankfurt(Main)Hbf"
+          ],
+          "categories": [
+            "ICE",
+            "IC",
+            "EC",
+            "ECE",
+            "TGV",
+            "RJ",
+            "RJX",
+            "NJ",
+            "EN",
+            "D"
           ]
         },
         {
@@ -1003,14 +1030,6 @@
           ]
         },
         {
-          "id": "en-nj",
-          "label": "EuroNight en Nightjet",
-          "categories": [
-            "EN",
-            "NJ"
-          ]
-        },
-        {
           "id": "boedapest",
           "label": "Boedapest en verder",
           "futureStops": [
@@ -1025,13 +1044,142 @@
           ]
         },
         {
-          "id": "railjet",
-          "label": "Railjet",
+          "id": "nuernberg",
+          "label": "Nürnberg Hbf",
+          "futureStops": [
+            "Nürnberg Hbf"
+          ]
+        },
+        {
+          "id": "muenchen",
+          "label": "München en verder",
+          "futureStops": [
+            "München Hbf"
+          ]
+        },
+        {
+          "id": "regiojet",
+          "label": "RegioJet",
+          "serviceBrand": "regiojet"
+        }
+      ]
+    },
+    "nuernberg": {
+      "station": "Nürnberg Hbf",
+      "title": "Vertrektijden Nürnberg Hbf",
+      "country": "DE",
+      "quickDirections": [
+        {
+          "id": "wenen",
+          "label": "Wenen",
+          "futureStops": [
+            "Wien Hbf",
+            "Wien Meidling"
+          ]
+        },
+        {
+          "id": "koeln-duesseldorf",
+          "label": "Köln / Düsseldorf en verder",
+          "futureStops": [
+            "Köln Hbf",
+            "Düsseldorf Hbf"
+          ]
+        },
+        {
+          "id": "muenchen",
+          "label": "München Hbf (ICE en RE)",
+          "futureStops": [
+            "München Hbf"
+          ],
           "categories": [
-            "RJ",
-            "RJX",
-            "RAILJET",
-            "RAILJET XPRESS"
+            "ICE",
+            "RE"
+          ]
+        }
+      ]
+    },
+    "arnhem": {
+      "station": "Arnhem Centraal",
+      "title": "Vertrektijden Arnhem Centraal",
+      "country": "NL",
+      "quickDirections": [
+        {
+          "id": "ice",
+          "label": "ICE",
+          "categories": [
+            "ICE"
+          ]
+        },
+        {
+          "id": "nightjet",
+          "label": "Nightjet",
+          "categories": [
+            "NJ"
+          ]
+        },
+        {
+          "id": "duesseldorf",
+          "label": "Regionaal naar Düsseldorf",
+          "futureStops": [
+            "Düsseldorf Hbf"
+          ],
+          "regionalOnly": true
+        },
+        {
+          "id": "zwolle",
+          "label": "Zwolle",
+          "futureStops": [
+            "Zwolle"
+          ]
+        },
+        {
+          "id": "nijmegen",
+          "label": "Nijmegen en verder",
+          "futureStops": [
+            "Nijmegen"
+          ]
+        },
+        {
+          "id": "doetinchem",
+          "label": "Doetinchem",
+          "futureStops": [
+            "Doetinchem"
+          ]
+        }
+      ]
+    },
+    "deventer": {
+      "station": "Deventer",
+      "title": "Vertrektijden Deventer",
+      "country": "NL",
+      "quickDirections": [
+        {
+          "id": "internationaal",
+          "label": "Internationale treinen",
+          "categories": [
+            "ICE",
+            "EC",
+            "ECE",
+            "NJ",
+            "EN",
+            "INT",
+            "ICD",
+            "IC INTERNATIONAL"
+          ],
+          "internationalIC": true
+        },
+        {
+          "id": "zwolle",
+          "label": "Zwolle",
+          "futureStops": [
+            "Zwolle"
+          ]
+        },
+        {
+          "id": "arnhem",
+          "label": "Arnhem en verder",
+          "futureStops": [
+            "Arnhem Centraal"
           ]
         }
       ]
