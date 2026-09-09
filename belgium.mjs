@@ -13,7 +13,8 @@ export const belgiumState={status:'starting',lastPlanAt:null,lastRealtimeAt:null
 let plan=null,live=null,busy=false,planDay='';
 const zone='Europe/Brussels';
 export function dayKey(ms){return new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit'}).format(ms).replaceAll('-','');}
-const clock=ms=>new Intl.DateTimeFormat('nl-NL',{timeZone:zone,hour:'2-digit',minute:'2-digit'}).format(ms);
+const clockFormatter=new Intl.DateTimeFormat('nl-NL',{timeZone:zone,hour:'2-digit',minute:'2-digit'});
+const clock=ms=>clockFormatter.format(ms);
 // GTFS times are measured from local noon minus 12 hours, including on DST days.
 export function gtfsTime(date,time){
   if(!/^\d{8}$/.test(date)||!/^\d+:\d{2}:\d{2}$/.test(time))return null;
