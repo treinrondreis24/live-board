@@ -533,9 +533,11 @@ async function initStationPlatformLayouts(){
   const values=['duesseldorf','Düsseldorf Hbf',JSON.stringify(groups),'Opgegeven door gebruiker in projectgesprek','user_supplied',Date.now()];
   if(backend==='postgresql'){
     await pool.query(schema);
+    await pool.query("ALTER TABLE station_platform_layouts ADD COLUMN IF NOT EXISTS notes TEXT NOT NULL DEFAULT ''");
     await pool.query('INSERT INTO station_platform_layouts(station_key,station_name,platform_groups,source,verification_status,recorded_at) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(station_key) DO NOTHING',values);
   }else{
     sqlite.exec(schema);
+    ensureSqliteColumn('station_platform_layouts','notes',"TEXT NOT NULL DEFAULT ''");
     sqlite.prepare('INSERT INTO station_platform_layouts(station_key,station_name,platform_groups,source,verification_status,recorded_at) VALUES(?,?,?,?,?,?) ON CONFLICT(station_key) DO NOTHING').run(...values);
   }
 }
@@ -543,5 +545,5 @@ export async function getStationPlatformLayout(stationKey){
   const sql='SELECT * FROM station_platform_layouts WHERE station_key=$1';
   const row=backend==='postgresql'?(await pool.query(sql,[stationKey])).rows[0]:sqlite.prepare(sql.replace('$1','?')).get(stationKey);
   if(!row)return null;
-  return {stationKey:row.station_key,station:row.station_name,platformGroups:JSON.parse(row.platform_groups),source:row.source,verificationStatus:row.verification_status,recordedAt:new Date(Number(row.recorded_at)).toISOString()};
+  return {stationKey:row.station_key,station:row.station_name,platformGroups:JSON.parse(row.platform_groups),notes:row.notes,source:row.source,verificationStatus:row.verification_status,recordedAt:new Date(Number(row.recorded_at)).toISOString()};
 }
