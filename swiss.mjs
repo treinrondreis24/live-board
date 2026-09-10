@@ -48,7 +48,8 @@ export function swissRows(page,xml,now=Date.now()){
     const e=result.StopEvent,c=e?.ThisCall?.CallAtStop,service=e?.Service;
     if(!c||!['rail','water'].includes(service?.Mode?.PtMode))return [];
     // A platform may change, so identity uses the station and call order, not the quay.
-    const stopId=[s.id,...s.extraStopIds||[],s.boatId].filter(Boolean).find(id=>c.StopPointRef===id||String(c.StopPointRef||'').startsWith(id+':'));
+    const stopRef=String(c.StopPointRef||'');
+    const stopId=[s.id,...s.extraStopIds||[],s.boatId].filter(Boolean).find(id=>stopRef===id||stopRef.startsWith(id+':')||stopRef.startsWith(id+'_gen:'+id+':'));
     if(!stopId)return [];
     const category=text(service.ProductCategory?.ShortName)||text(service.Mode?.ShortName)||'Trein';
     const label=text(service.PublicCode)||text(service.PublishedServiceName)||category;
