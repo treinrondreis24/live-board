@@ -9,6 +9,12 @@ export async function readBoardSettings(){
  const rows=db.pool?(await db.pool.query('SELECT * FROM board_settings')).rows:db.sqlite.prepare('SELECT * FROM board_settings').all();
  return rows.map(r=>({page:r.page,revision:Number(r.revision),updatedAt:Number(r.updated_at),settings:JSON.parse(r.payload)}));
 }
+export async function insertBoardSettings(page,settings){
+ const now=Date.now(),sql='INSERT INTO board_settings(page,revision,updated_at,payload) VALUES($1,1,$2,$3) ON CONFLICT(page) DO NOTHING RETURNING revision';
+ const args=[page,now,JSON.stringify(settings)];
+ const row=db.pool?(await db.pool.query(sql,args)).rows[0]:db.sqlite.prepare(sql.replace(/\$\d/g,'?')).get(...args);
+ return row?{revision:1,updatedAt:now}:null;
+}
 export async function writeBoardSettings(page,settings,revision){
  const now=Date.now(),payload=JSON.stringify(settings);
  const sql='INSERT INTO board_settings(page,revision,updated_at,payload) VALUES($1,1,$2,$3) ON CONFLICT(page) DO UPDATE SET revision=board_settings.revision+1,updated_at=excluded.updated_at,payload=excluded.payload WHERE board_settings.revision=$4 RETURNING revision';

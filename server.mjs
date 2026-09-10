@@ -1,4 +1,4 @@
-import {initBoardAdmin,handleBoardAdmin,applyBoardSettings} from './board-admin.mjs';
+import {initBoardAdmin,handleBoardAdmin,applyBoardSettings,boardSource,duplicatePayload} from './board-admin.mjs';
 import {restoreDutchPlan,startDutchPlan,dutchPlannedRows,combineDutchRows,nlPlanningState} from './nl-planning.mjs';
 import {loadBoardCache,saveBoardCache} from './board-cache.mjs';
 import {swissStations,swissState,startSwiss,restoreSwiss,swissPayload} from './swiss.mjs';
@@ -1034,6 +1034,8 @@ const server=http.createServer(async(req,res)=>{
       const observations=await getLatestByStation({station,source,hours,limit});return sendJson(res,200,{source,station,count:observations.length,observations});
     }
     if(url.pathname==="/api/belgium/status")return sendJson(res,200,belgiumState);
+    const copyPage=url.pathname.match(/^\/api\/views\/([a-z0-9-]+)\/?$/)?.[1];
+    if(copyPage&&boardSource(copyPage)&&boardSource(copyPage)!==copyPage)return sendJson(res,200,duplicatePayload(copyPage));
     const belgianPage=url.pathname.match(/^\/api\/views\/([a-z0-9-]+)\/?$/)?.[1];
     if(belgianPage&&belgianStations[belgianPage])return sendJson(res,200,applyBoardSettings(belgianPage,belgianPayload(belgianPage)));
     if(url.pathname==="/api/entur/status")return sendJson(res,200,enturState);
@@ -1059,6 +1061,8 @@ const server=http.createServer(async(req,res)=>{
       if(!dbState.lastScanAt&&!dbState.scanning)await performScan();if(!dbState.lastScanAt&&dbState.warnings.length)return sendJson(res,503,{error:dbState.warnings.join(" | ")});
       return sendJson(res,200,{source:"DB Timetables",updatedAt:dbState.lastScanAt,lastScanAt:dbState.lastScanAt,nextScanAt:dbState.nextScanAt,currentIntervalMinutes:dbState.currentIntervalMinutes,warnings:dbState.warnings,stations:dbState.stations,trains:dbState.trains});
     }
+    const embedPage=url.pathname.match(/^\/embed\/([a-z0-9-]+)\/?$/)?.[1];
+    if(embedPage&&boardSource(embedPage))return sendFile(res,path.join(publicDir,'koeln-embed.html'));
     let requested=pageRoutes[url.pathname]||(url.pathname==="/"?"/index.html":url.pathname);requested=path.normalize(requested).replace(/^(\.\.[/\\])+/,'');const filename=path.join(publicDir,requested);if(!filename.startsWith(publicDir)){res.writeHead(403);return res.end("Forbidden");}sendFile(res,filename);
   }catch(e){sendJson(res,500,{error:e.message});}
 });
