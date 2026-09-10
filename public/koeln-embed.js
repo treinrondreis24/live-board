@@ -1,7 +1,7 @@
 const stationPageId=location.pathname.match(/^\/embed\/([a-z0-9-]+)\/?$/)?.[1]||"koeln";
 document.title="Vertrektijden";
 document.querySelector(".board-head h2").textContent="Vertrektijden";
-let data=null,activeTab="fernverkehr";
+let data=null,activeTab="fernverkehr",previewPayload=null,appearanceKey=null;
 const expandedDirections=new Set();
 const quickEl=document.getElementById("quick");
 const fullEl=document.getElementById("full-board");
@@ -100,7 +100,7 @@ document.querySelectorAll(".tab").forEach(btn=>btn.addEventListener("click",()=>
 async function refresh(){
   try{
     const r=await fetch(`/api/views/${stationPageId}`,{cache:"no-store"});
-    const p=await r.json();
+    const p=previewPayload||await r.json();
     if(!r.ok)throw new Error(p.error||`HTTP ${r.status}`);
     document.title=p.title||"Vertrektijden";
     document.querySelector(".board-head h2").textContent=document.title;
@@ -114,8 +114,8 @@ async function refresh(){
     if(p.country==="BE"&&!document.getElementById("belgium-source")){const a=document.createElement("a");a.id="belgium-source";a.href="https://data.belgianmobility.io/";a.textContent="Bron: NMBS — Belgian Mobility Company";document.querySelector(".board-footer").appendChild(a);}
     if(p.country==="NO"&&!document.getElementById("entur-source")){const a=document.createElement("a");a.id="entur-source";a.href="https://entur.no/";a.textContent="Bron: Entur (NLOD)";document.querySelector(".board-footer").appendChild(a);}
     if(p.source==="OJP"&&!document.getElementById("swiss-source")){const a=document.createElement("a");a.id="swiss-source";a.href="https://opentransportdata.swiss/";a.textContent="Bron: opentransportdata.swiss (OJP)";document.querySelector(".board-footer").appendChild(a);}
-    if(p.notice&&!document.getElementById("station-notice")){const note=document.createElement("p");note.id="station-notice";note.textContent=p.notice;document.querySelector(".board").appendChild(note);}
-    data=p;renderQuick();if(!fullEl.hidden)renderFull();
+    let notice=document.getElementById('station-notice');if(p.notice&&!notice){notice=document.createElement('p');notice.id='station-notice';document.querySelector('.board').appendChild(notice);}if(notice){notice.textContent=p.notice||'';notice.hidden=!p.notice;}
+    applyAppearance(p);data=p;renderQuick();if(!fullEl.hidden)renderFull();
     const d=p.lastScanAt?new Date(p.lastScanAt):null;
     scanStatus.textContent=d&&!Number.isNaN(d.getTime())
       ?`bijgewerkt ${new Intl.DateTimeFormat("nl-NL",{hour:"2-digit",minute:"2-digit"}).format(d)}`
@@ -146,3 +146,19 @@ window.addEventListener('load',()=>reportEmbedHeight(true));
 window.addEventListener('message',event=>{if(event.source===window.parent&&event.data?.type==='treinbord:meet')reportEmbedHeight(true);});
 document.fonts?.ready.then(()=>reportEmbedHeight(true));
 reportEmbedHeight(true);
+
+function applyAppearance(p){
+ const settings=p.boardSettings;if(!settings)return;const a=settings.appearance||{},root=document.documentElement;
+ const variables={accent:'--red',text:'--text',alternate:'--soft',buttonStart:'--blue',buttonEnd:'--button-green'};
+ for(const [key,name] of Object.entries(variables))if(/^#[a-f0-9]{6}$/i.test(a[key]||''))root.style.setProperty(name,a[key]);
+ const board=document.querySelector('.board');if(/^#[a-f0-9]{6}$/i.test(a.background||''))board.style.background=a.background;
+ board.style.maxWidth=Math.max(600,Math.min(1800,Number(a.width)||1050))+'px';
+ document.body.dataset.customBoard='true';
+ const fonts={treinrondreis:['"Open Sans",Arial,sans-serif','Montserrat,"Open Sans",sans-serif'],system:['system-ui,sans-serif','system-ui,sans-serif'],arial:['Arial,sans-serif','Arial,sans-serif'],verdana:['Verdana,sans-serif','Verdana,sans-serif']},font=fonts[a.font]||fonts.treinrondreis;
+ root.style.setProperty('--board-font',font[0]);root.style.setProperty('--board-heading-font',font[1]);root.style.setProperty('--board-row-padding',({compact:3,normal:6,roomy:12}[a.density]||6)+'px');
+ document.querySelector('.live').hidden=a.showUpdated===false;
+ let foot=document.getElementById('custom-footer');if(!foot){foot=document.createElement('p');foot.id='custom-footer';board.appendChild(foot);}foot.textContent=settings.footer||'';foot.hidden=!settings.footer;
+ const key=JSON.stringify([a.defaultTab,a.fullOpen,settings.enabled,!p.quick?.length]);if(key!==appearanceKey){appearanceKey=key;activeTab=a.defaultTab||'all';fullEl.hidden=settings.enabled===false||!(a.fullOpen||!p.quick?.length);document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===activeTab));}
+ document.querySelector('[data-tab="all"]').hidden=false;toggleFull.hidden=settings.enabled===false;toggleFull.textContent=fullEl.hidden?'Toon compleet vertrekbord':'Verberg compleet vertrekbord';
+}
+window.addEventListener('message',event=>{if(event.source===window.parent&&event.origin===location.origin&&event.data?.type==='treinbord:preview'&&event.data.payload){previewPayload=event.data.payload;void refresh();}});
