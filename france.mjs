@@ -1,5 +1,6 @@
 import {unzipSync,strFromU8} from 'fflate';
 import GTFS from 'gtfs-realtime-bindings';
+import {XMLParser,XMLValidator} from 'fast-xml-parser';
 import {Worker,isMainThread,parentPort,workerData} from 'node:worker_threads';
 import {csv,gtfsTime,dayKey} from './belgium.mjs';
 import {saveBoardCache,loadBoardCache} from './board-cache.mjs';
@@ -16,10 +17,36 @@ export const frenchStations=Object.fromEntries([
 ].map(([id,name,uic])=>[id,{name,uic}]));
 const PLAN_URL='https://eu.ftp.opendatasoft.com/sncf/plandata/Export_OpenData_SNCF_GTFS_NewTripId.zip';
 const LIVE_URL='https://proxy.transport.data.gouv.fr/resource/sncf-gtfs-rt-trip-updates';
+const TRACK_URL='https://proxy.transport.data.gouv.fr/resource/sncf-siri-lite-estimated-timetable';
 const clockFormatter=new Intl.DateTimeFormat('nl-NL',{timeZone:'Europe/Paris',hour:'2-digit',minute:'2-digit'});
 const clock=t=>clockFormatter.format(t);
 export const franceState={status:'starting',lastPlanAt:null,lastRealtimeAt:null,error:null,stations:{}};
-let plan=null,live=null,planDay='',busy=false,retryPlanAt=0;
+let plan=null,live=null,tracks=null,planDay='',busy=false,retryPlanAt=0;
+const array=v=>v==null?[]:Array.isArray(v)?v:[v];
+const trackKey=(station,number,time)=>[station,String(number).trim().replace(/^0+(?=\d)/,''),time].join('|');
+export function parseFrenchTracks(xml){
+ if(XMLValidator.validate(xml)!==true)throw Error('SNCF-sporen: ongeldige XML');
+ const doc=new XMLParser({removeNSPrefix:true,parseTagValue:false,processEntities:true}).parse(xml);
+ const delivery=doc.Siri?.ServiceDelivery,at=Date.parse(delivery?.ResponseTimestamp);
+ if(!Number.isFinite(at)||!delivery?.EstimatedTimetableDelivery)throw Error('SNCF-sporen: ongeldige levering');
+ const rows=new Map(),wanted=new Set(Object.values(frenchStations).map(s=>s.uic));
+ for(const d of array(delivery.EstimatedTimetableDelivery)){
+  if(d.Status==='false')throw Error('SNCF-sporen: bron meldt een fout');
+  for(const f of array(d.EstimatedJourneyVersionFrame))for(const j of array(f.EstimatedVehicleJourney)){
+   if(j.Cancellation==='true')continue;
+   const numbers=array(j.TrainNumbers?.TrainNumberRef);
+   for(const c of [...array(j.RecordedCalls?.RecordedCall),...array(j.EstimatedCalls?.EstimatedCall)]){
+    const station=String(c.StopPointRef||'').match(/(\d{8}):?$/)?.[1],time=Date.parse(c.AimedDepartureTime);
+    const platform=typeof c.DeparturePlatformName==='string'?c.DeparturePlatformName.trim():'';
+    if(!wanted.has(station)||!Number.isFinite(time)||!platform||platform.length>20||c.DepartureStatus==='cancelled')continue;
+    for(const number of numbers){if(!/^\d+$/.test(String(number)))continue;const key=trackKey(station,number,time);
+     rows.set(key,rows.has(key)&&rows.get(key)!==platform?null:platform);
+    }
+   }
+  }
+ }
+ return {at,rows:Object.fromEntries(rows)};
+}
 export function parseFrenchPlan(bytes,now=Date.now()){
  const zip=unzipSync(bytes,{filter:f=>['stops.txt','routes.txt','trips.txt','stop_times.txt','calendar.txt','calendar_dates.txt'].includes(f.name)});
  const read=n=>csv(zip[n]?strFromU8(zip[n]):'');
@@ -44,7 +71,7 @@ export function parseFrenchPlan(bytes,now=Date.now()){
  return {rows,generatedAt:now};
 }
 export function decodeFrenchLive(bytes){return GTFS.transit_realtime.FeedMessage.toObject(GTFS.transit_realtime.FeedMessage.decode(bytes),{longs:Number,enums:Number});}
-export function frenchRows(schedule,feed,now=Date.now()){
+export function frenchRows(schedule,feed,now=Date.now(),trackFeed=tracks){
  const at=Number(feed?.header?.timestamp)*1000,fresh=Number.isFinite(at)&&now-at<=300000&&at<=now+60000;
  const updates=new Map();if(fresh)for(const e of feed.entity||[]){const t=e.tripUpdate;if(t?.trip?.tripId&&!e.isDeleted)updates.set(t.trip.tripId+'|'+(t.trip.startDate||''),t);}
  return schedule.rows.filter(p=>p.plannedTimestamp>=now-6*3600000&&p.plannedTimestamp<now+86400000).map(p=>{
@@ -53,7 +80,8 @@ export function frenchRows(schedule,feed,now=Date.now()){
   const event=stop?.scheduleRelationship===2?null:stop?.departure,hasRealtime=Boolean(event&&(Number.isFinite(event.time)||Number.isFinite(event.delay)));
   const expected=hasRealtime?(Number.isFinite(event.time)?event.time*1000:p.plannedTimestamp+event.delay*1000):p.plannedTimestamp;
   const delay=hasRealtime?Math.round((expected-p.plannedTimestamp)/60000):0,s=frenchStations[p.page],id=['SNCF',p.date,p.tripId,p.sequence].join('|');
-  return {id,page:p.page,source:'SNCF',sourceTripId:p.tripId,sourceEventId:id,serviceDate:p.date.slice(0,4)+'-'+p.date.slice(4,6)+'-'+p.date.slice(6),trainKey:p.date+'|'+p.number,number:p.number,train:p.category+' '+p.number,category:p.category,transportMode:'rail',countryCode:'FR',observedAt:s.name,stationCode:s.uic,eventMode:'departure',plannedTimestamp:p.plannedTimestamp,expectedTimestamp:expected,plannedTime:clock(p.plannedTimestamp),time:clock(p.plannedTimestamp),currentTime:clock(expected),plannedTrack:p.plannedTrack,currentTrack:'',track:p.plannedTrack||'—',delay,hasRealtime,cancelled,status:cancelled?'Geannuleerd':hasRealtime&&delay?(delay>0?'+':'')+delay+' min':'',from:s.name,to:p.to,route:p.futureRoute,futureRoute:p.futureRoute,routeComplete:true,messageTimestamp:fresh?at:null};
+  const currentTrack=!cancelled&&trackFeed?.at<=now+60000&&now-trackFeed.at<=300000?trackFeed.rows?.[trackKey(s.uic,p.number,p.plannedTimestamp)]||'':'';
+  return {id,page:p.page,source:'SNCF',sourceTripId:p.tripId,sourceEventId:id,serviceDate:p.date.slice(0,4)+'-'+p.date.slice(4,6)+'-'+p.date.slice(6),trainKey:p.date+'|'+p.number,number:p.number,train:p.category+' '+p.number,category:p.category,transportMode:'rail',countryCode:'FR',observedAt:s.name,stationCode:s.uic,eventMode:'departure',plannedTimestamp:p.plannedTimestamp,expectedTimestamp:expected,plannedTime:clock(p.plannedTimestamp),time:clock(p.plannedTimestamp),currentTime:clock(expected),plannedTrack:p.plannedTrack,currentTrack,track:cancelled?'—':currentTrack||p.plannedTrack||'—',delay,hasRealtime,cancelled,status:cancelled?'Geannuleerd':hasRealtime&&delay?(delay>0?'+':'')+delay+' min':'',from:s.name,to:p.to,route:p.futureRoute,futureRoute:p.futureRoute,routeComplete:true,messageTimestamp:fresh?at:null};
  });
 }
 async function download(url){const r=await fetch(url,{signal:AbortSignal.timeout(60000)});if(!r.ok)throw Error('SNCF HTTP '+r.status);return new Uint8Array(await r.arrayBuffer());}
@@ -67,6 +95,7 @@ export async function scanFrance(){
    plan=next;planDay=dayKey(now);await saveBoardCache('SNCF:plan',{plan,planDay});franceState.lastPlanAt=new Date(now).toISOString();
   }catch(e){retryPlanAt=now+900000;franceState.error=e.message;if(!plan)throw e;}}
   if(!plan)throw Error('SNCF-dienstregeling nog niet beschikbaar');
+  try{tracks=parseFrenchTracks(new TextDecoder().decode(await download(TRACK_URL)));await saveBoardCache('SNCF:tracks',tracks);franceState.lastTracksAt=new Date(tracks.at).toISOString();franceState.trackCount=Object.values(tracks.rows).filter(Boolean).length;franceState.trackError=null;}catch(e){franceState.trackError=String(e.message).slice(0,200);}
   const next=decodeFrenchLive(await download(LIVE_URL));if(next.header?.incrementality===1)throw Error('SNCF-differentiële feed niet ondersteund');
   const keys=new Set(plan.rows.map(r=>r.tripId));live={header:next.header,entity:(next.entity||[]).filter(e=>keys.has(e.tripUpdate?.trip?.tripId))};
   await saveBoardCache('SNCF:live',live);const rows=frenchRows(plan,live,Date.now());await recordObservations(rows,'SNCF',Date.now());
@@ -75,7 +104,7 @@ export async function scanFrance(){
   franceState.stations=Object.fromEntries(Object.entries(frenchStations).map(([p,s])=>[p,{name:s.name,count:rows.filter(r=>r.page===p).length}]));
  }catch(e){franceState.status='error';franceState.error=String(e.message).slice(0,200);}finally{busy=false;}
 }
-export async function restoreFrance(){const saved=await loadBoardCache('SNCF:plan');if(saved?.plan?.rows){plan=saved.plan;planDay=Object.keys(frenchStations).every(page=>plan.rows.some(r=>r.page===page))?saved.planDay:"";franceState.lastPlanAt=new Date(plan.generatedAt).toISOString();}live=await loadBoardCache('SNCF:live');}
+export async function restoreFrance(){const saved=await loadBoardCache('SNCF:plan');if(saved?.plan?.rows){plan=saved.plan;planDay=Object.keys(frenchStations).every(page=>plan.rows.some(r=>r.page===page))?saved.planDay:"";franceState.lastPlanAt=new Date(plan.generatedAt).toISOString();}live=await loadBoardCache('SNCF:live');tracks=await loadBoardCache('SNCF:tracks');}
 export function startFrance(){void scanFrance();setInterval(()=>void scanFrance(),120000).unref();}
 export function frenchPayload(page,now=Date.now()){
  const rows=plan?frenchRows(plan,live,now).filter(r=>r.page===page&&r.expectedTimestamp>=now-60000).sort((a,b)=>a.plannedTimestamp-b.plannedTimestamp):[];
