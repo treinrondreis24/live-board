@@ -183,7 +183,7 @@ function canonicalRow(t,sourceId,defaultObservedAt){
     serviceDate,trainNumber,category,stationName,eventMode,sourceEventId,
     plannedTimestamp:plannedTs,expectedTimestamp:expectedTs,actualTimestamp:actualTs,
     plannedPlatform,currentPlatform,delayMinutes:Number(t.delay||t.delayMinutes||0),
-    status:clean(t.status),cancelled:Boolean(t.cancelled),origin,destination,
+    status:clean(t.status),hasRealtime:Boolean(t.hasRealtime),departed:Boolean(t.departed),notBoardable:Boolean(t.notBoardable),cancelled:Boolean(t.cancelled),origin,destination,
     route,pastRoute,futureRoute
   };
   const eventKey=sha([sourceId,serviceUid,stationName,eventMode,sourceEventId].join("|"));
@@ -543,7 +543,7 @@ async function recordPg(rows,sourceId,observedAt,{migration=false}={}){
         [r.serviceUid,r.sourceId,r.sourceTripId,r.serviceDate,r.trainNumber,r.category,r.operator,r.operatorCode,r.origin,r.destination,r.observedAt,JSON.stringify({})]);
       const prev=stateMap.get(r.eventKey)||null,stateChanged=!prev||prev.state_hash!==r.stateHash,rawChanged=!prev||prev.raw_hash!==r.rawHash;
       const lastObs=Number(prev?.last_observation_at||0),heartbeat=Boolean(prev)&&r.observedAt-lastObs>=DATAHUB_HEARTBEAT_MS;
-      const persist=stateChanged||rawChanged||heartbeat;
+      const persist=stateChanged;
       let kind=!prev?"initial":stateChanged?"change":rawChanged?"raw-change":heartbeat?"heartbeat":"suppressed";
       let observationUid=prev?.last_observation_uid||null;
       if(persist){
@@ -579,7 +579,7 @@ async function recordPg(rows,sourceId,observedAt,{migration=false}={}){
     }
     await client.query(`INSERT INTO ingest_batches(batch_uid,source_id,observed_at,item_count,metadata) VALUES($1,$2,$3,$4,$5::jsonb)
       ON CONFLICT(batch_uid) DO UPDATE SET item_count=GREATEST(ingest_batches.item_count,EXCLUDED.item_count),metadata=ingest_batches.metadata||EXCLUDED.metadata`,
-      [batchUid,sourceId,observedAt,rows.length,JSON.stringify({...(migration?{migrated:true}:{}),persistedCount,suppressedCount,changeCount,rawCount,heartbeatCount,heartbeatMinutes:DATAHUB_HEARTBEAT_MINUTES})]);
+      [batchUid,sourceId,observedAt,rows.length,JSON.stringify({...(migration?{migrated:true}:{}),persistedCount,suppressedCount,changeCount,rawCount,heartbeatCount,heartbeatMinutes:0})]);
     await client.query("COMMIT");return {seen:rows.length,persisted:persistedCount,suppressed:suppressedCount};
   }catch(e){await client.query("ROLLBACK");throw e;}finally{client.release();}
 }
@@ -607,7 +607,7 @@ function recordSqlite(rows,sourceId,observedAt,{migration=false}={}){
       const prev=migration?sqlite.prepare("SELECT * FROM migration_event_state WHERE migration_name=? AND event_key=?").get(migrationState.name,r.eventKey):
         sqlite.prepare("SELECT * FROM event_current_state WHERE event_key=?").get(r.eventKey);
       const stateChanged=!prev||prev.state_hash!==r.stateHash,rawChanged=!prev||prev.raw_hash!==r.rawHash,lastObs=Number(prev?.last_observation_at||0);
-      const heartbeat=Boolean(prev)&&r.observedAt-lastObs>=DATAHUB_HEARTBEAT_MS,persist=stateChanged||rawChanged||heartbeat;
+      const heartbeat=Boolean(prev)&&r.observedAt-lastObs>=DATAHUB_HEARTBEAT_MS,persist=stateChanged;
       const kind=!prev?"initial":stateChanged?"change":rawChanged?"raw-change":heartbeat?"heartbeat":"suppressed";
       let observationUid=prev?.last_observation_uid||null;
       if(persist){observationUid=sha([r.eventKey,r.observedAt,r.stateHash,r.rawHash,kind].join("|"));
@@ -631,7 +631,7 @@ function recordSqlite(rows,sourceId,observedAt,{migration=false}={}){
     }
     sqlite.prepare(`INSERT INTO ingest_batches(batch_uid,source_id,observed_at,item_count,metadata) VALUES(?,?,?,?,?)
       ON CONFLICT(batch_uid) DO UPDATE SET item_count=MAX(ingest_batches.item_count,excluded.item_count),metadata=excluded.metadata`)
-      .run(batchUid,sourceId,observedAt,rows.length,JSON.stringify({...(migration?{migrated:true}:{}),persistedCount,suppressedCount,changeCount,rawCount,heartbeatCount,heartbeatMinutes:DATAHUB_HEARTBEAT_MINUTES}));
+      .run(batchUid,sourceId,observedAt,rows.length,JSON.stringify({...(migration?{migrated:true}:{}),persistedCount,suppressedCount,changeCount,rawCount,heartbeatCount,heartbeatMinutes:0}));
     sqlite.exec("COMMIT");return {seen:rows.length,persisted:persistedCount,suppressed:suppressedCount};
   }catch(e){sqlite.exec("ROLLBACK");throw e;}
 }
@@ -864,11 +864,11 @@ export async function getDataHubStats(){
       serviceRuns:Number(services.rows[0].n),eventObservations:Number(events.rows[0].n),currentStates:Number(currentStates.rows[0].n),
       ingestBatches:Number(batches.rows[0].n),lastObservationAt:last.rows[0].n?Number(last.rows[0].n):null,
       storagePolicy:{
-        mode:"changes-plus-heartbeat",
-        heartbeatMinutes:DATAHUB_HEARTBEAT_MINUTES,
+        mode:"changes-only",
+        heartbeatMinutes:0,
         rawPayload:"only-when-changed",
-        dbFernverkehr:"permanent",
-        dbRegional:"current-and-previous-service-day",
+        dbFernverkehr:"ICE/NJ/RJ 30 days; others 3 days",
+        dbRegional:"3 days",
         fernverkehrCategories:FERNVERKEHR_CATEGORIES
       },migration:getMigrationState()
     };
@@ -879,11 +879,11 @@ export async function getDataHubStats(){
     currentStates:Number(sqlite.prepare("SELECT COUNT(*) AS n FROM event_current_state").get().n),ingestBatches:Number(sqlite.prepare("SELECT COUNT(*) AS n FROM ingest_batches").get().n),
     lastObservationAt:sqlite.prepare("SELECT MAX(observed_at) AS n FROM event_observations").get().n||null,
     storagePolicy:{
-        mode:"changes-plus-heartbeat",
-        heartbeatMinutes:DATAHUB_HEARTBEAT_MINUTES,
+        mode:"changes-only",
+        heartbeatMinutes:0,
         rawPayload:"only-when-changed",
-        dbFernverkehr:"permanent",
-        dbRegional:"current-and-previous-service-day",
+        dbFernverkehr:"ICE/NJ/RJ 30 days; others 3 days",
+        dbRegional:"3 days",
         fernverkehrCategories:FERNVERKEHR_CATEGORIES
       },migration:getMigrationState()
   };

@@ -1,6 +1,8 @@
-import {swissStations,swissState,startSwiss,swissPayload} from './swiss.mjs';
-import {norwegianStations,enturState,startEntur,norwegianPayload} from './entur.mjs';
-import {belgianStations,belgiumState,startBelgium,belgianPayload} from './belgium.mjs';
+import {restoreDutchPlan,startDutchPlan,dutchPlannedRows,combineDutchRows,nlPlanningState} from './nl-planning.mjs';
+import {loadBoardCache,saveBoardCache} from './board-cache.mjs';
+import {swissStations,swissState,startSwiss,restoreSwiss,swissPayload} from './swiss.mjs';
+import {norwegianStations,enturState,startEntur,restoreEntur,norwegianPayload} from './entur.mjs';
+import {belgianStations,belgiumState,startBelgium,restoreBelgium,belgianPayload} from './belgium.mjs';
 import {startJourneyPlanning,parseRitJourneys,recordJourneySnapshot,getJourney,listJourneys,getJourneyRevisions,journeyImportState,journeyPage} from "./journeys.mjs";
 import http from "node:http";
 import fs from "node:fs";
@@ -484,11 +486,12 @@ function currentCollectorRows(station){
 
 
 function withNdovDepartures(station,dbRows){
-  if(!ndovBoardEnabled(station)||!ndovStatus().fresh)return dbRows;
+  if(!ndovBoardEnabled(station))return dbRows;
   const known=[...ndovRows.values()].filter(row=>row.observedAt===station);
+  const planning=dutchPlannedRows(station);
   // Replace the same service across sources even if NDOV changes its platform or destination.
   // Departed/non-boardable messages are retained in known so DB cannot reintroduce them.
-  const remaining=dbRows.filter(db=>!known.some(n=>
+  const remaining=dbRows.filter(db=>![...known,...planning].some(n=>
     [n.number,n.rideId].includes(String(db.number))&&Math.abs(n.plannedTimestamp-Number(db.plannedTimestamp||0))<3*3600000
   ));
   return [...remaining,...ndovStationRows(station)];
@@ -521,6 +524,7 @@ function stationUpcomingDepartures(station){
 function stationDirectionMatches(row,direction){
   if(row.mergedServices)return row.mergedServices.some(service=>stationDirectionMatches(service,direction));
   const normalizeCategory=value=>String(value||"").toUpperCase().replace(/[\s_-]+/g,"");
+  if(direction.via&&!futureRouteContains(row,[direction.via]))return false;
   const categories=direction.categories||[];
   const stops=direction.futureStops||[];
   const category=normalizeCategory(row.category);
@@ -563,7 +567,7 @@ function stationPagePayload(pageId){
   const ndovActive=ndovBoardEnabled(pageCfg.station)&&ndovStatus().fresh&&[...ndovRows.values()].some(row=>row.observedAt===pageCfg.station);
 
   return {
-    source:ndovActive?(rows.some(row=>row.source!=="NDOV")?"NDOV + DB Timetables":"NDOV"):pageCfg.country==="NL"&&!collectorState.byStation[pageCfg.station]?"NDOV":"DB Timetables",
+    source:pageCfg.country==="NL"?"NDOV dienstregeling + actuele berichten":ndovActive?(rows.some(row=>row.source!=="NDOV")?"NDOV + DB Timetables":"NDOV"):pageCfg.country==="NL"&&!collectorState.byStation[pageCfg.station]?"NDOV":"DB Timetables",
     page:pageId,
     station:pageCfg.station,
     title:pageCfg.title,
@@ -873,7 +877,7 @@ function parseNdovRows(xml){
     const delay=Math.round((expectedTimestamp-plannedTimestamp)/60000);
     const status=cancelled?"Geannuleerd":notBoardable?"Niet instappen":delay>0?`+${delay} min`:"Op tijd";
     const id=`NDOV|${stationShortCode}|${date}|${ride}`;
-    rows.push({id,source:"NDOV",sourceTripId:`${date}|${ride}`,sourceEventId:id,serviceDate:date,trainKey:`${category}|${number}`,number,rideId:ride,train:[category,number].filter(Boolean).join(" "),category,categoryName:ndovText(train.TreinSoort),specialTicket:ndovText(train.SpeciaalKaartje)==="J",operatorCode:ndovText(train.Vervoerder),operatorName:ndovText(train.Vervoerder),observedAt:stationName,stationShortCode,stationCode:ndovText(station.UICCode)||stationShortCode,countryCode:"NL",eventMode:"departure",plannedTimestamp,expectedTimestamp,plannedTime:ndovClock(plannedTimestamp),time:ndovClock(plannedTimestamp),currentTime:ndovClock(expectedTimestamp),plannedTrack,currentTrack,track:cancelled?"—":currentTrack||plannedTrack||"—",delay,status,type:cancelled?"cancel":delay>30?"major-delay":delay>0?"delay":"ok",cancelled,departed,notBoardable,from:stationName,to:destination,route:[stationName,...futureRoute],futureRoute,pastRoute:[],hasRealtime:true,hasChangedTrack:Boolean(currentTrack&&plannedTrack&&currentTrack!==plannedTrack),messageTimestamp,rawStop:dvs});
+    rows.push({id,source:"NDOV",sourceTripId:`${date}|${ride}`,sourceEventId:id,serviceDate:date,trainKey:`${category}|${number}`,number,rideId:ride,train:[category,number].filter(Boolean).join(" "),category,categoryName:ndovText(train.TreinSoort),specialTicket:ndovText(train.SpeciaalKaartje)==="J",operatorCode:ndovText(train.Vervoerder),operatorName:ndovText(train.Vervoerder),observedAt:stationName,stationShortCode,stationCode:ndovText(station.UICCode)||stationShortCode,countryCode:"NL",eventMode:"departure",plannedTimestamp,expectedTimestamp,plannedTime:ndovClock(plannedTimestamp),time:ndovClock(plannedTimestamp),currentTime:ndovClock(expectedTimestamp),plannedTrack,currentTrack,track:cancelled?"—":currentTrack||plannedTrack||"—",delay,status,type:cancelled?"cancel":delay>30?"major-delay":delay>0?"delay":"ok",cancelled,departed,notBoardable,from:stationName,to:destination,route:[stationName,...futureRoute],futureRoute,pastRoute:[],hasRealtime:Number.isFinite(actualTime),hasChangedTrack:Boolean(currentTrack&&plannedTrack&&currentTrack!==plannedTrack),messageTimestamp,rawStop:dvs});
   }
   return rows;
 }
@@ -891,13 +895,16 @@ function acceptNdovRow(row){
 function ndovArnhemRows(){return ndovStationRows("Arnhem Centraal");}
 function ndovStationRows(station){
   const cutoff=Date.now()-10*60000;
-  return [...ndovRows.values()].filter(r=>r.observedAt===station&&!r.departed&&!r.notBoardable&&(r.cancelled?r.plannedTimestamp:r.expectedTimestamp)>=cutoff).sort((a,b)=>a.plannedTimestamp-b.plannedTimestamp);
+  const fresh=Boolean(ndovState.lastMessageAt&&Date.now()-Date.parse(ndovState.lastMessageAt)<180000);
+  const realtime=[...ndovRows.values()].filter(r=>r.observedAt===station).map(r=>fresh?r:{...r,hasRealtime:false,status:r.cancelled?'Geannuleerd':'',delay:0,expectedTimestamp:r.plannedTimestamp,currentTime:r.plannedTime});
+  return combineDutchRows(dutchPlannedRows(station),realtime).sort((a,b)=>a.plannedTimestamp-b.plannedTimestamp);
 }
 function ndovStatus(){return {...ndovState,monitoredStations:[...ndovStations.values()].map(s=>({...s,...ndovState.stations[s.name],count:ndovStationRows(s.name).length})),arnhemCount:ndovArnhemRows().length,pendingStorage:ndovPending.size,boardEnabled:process.env.NDOV_BOARD_ENABLED!=="false",fresh:Boolean(ndovState.lastMessageAt&&Date.now()-Date.parse(ndovState.lastMessageAt)<180000)};}
 async function flushNdov(){
   if(ndovFlushing||!ndovPending.size)return;
   ndovFlushing=true;const rows=[...ndovPending.values()];
   try{
+    await saveBoardCache('NDOV:rows',[...ndovRows.values()].filter(r=>r.plannedTimestamp>Date.now()-86400000));
     await recordObservations(rows,"NDOV");
     for(const r of rows)if(ndovPending.get(r.id)===r)ndovPending.delete(r.id);
     ndovState.storageError=null;
@@ -968,7 +975,7 @@ const server=http.createServer(async(req,res)=>{
       return sendJson(res,layout?200:404,layout||{error:"Geen perronindeling opgeslagen voor dit station"});
     }
     if(url.pathname==="/api/health")return sendJson(res,200,{ok:true,credentialsConfigured:Boolean(CLIENT_ID&&API_KEY),api:BASE,storage:getStorageInfo(),config,dbState,collectorState:{lastScanAt:collectorState.lastScanAt,stations:Object.keys(collectorState.byStation)},italyState,nightjetPlanState:{dateKey:nightjetPlanState.dateKey,scanning:nightjetPlanState.scanning,lastUpdatedAt:nightjetPlanState.lastUpdatedAt,count:nightjetPlanState.rows.length,warnings:nightjetPlanState.warnings}});
-    if(url.pathname==="/api/ndov/status")return sendJson(res,200,{access:ndovAccessProbe,receiver:ndovStatus()});
+    if(url.pathname==="/api/ndov/status")return sendJson(res,200,{access:ndovAccessProbe,receiver:ndovStatus(),planning:nlPlanningState});
     const ndovPage=url.pathname.match(/^\/api\/ndov\/([a-z0-9-]+)\/?$/)?.[1];
     if(ndovPage){
       const station=[...ndovStations.values()].find(s=>s.page===ndovPage);
@@ -1055,12 +1062,15 @@ const server=http.createServer(async(req,res)=>{
 });
 
 await initStorage();
+await Promise.all([restoreSwiss(),restoreEntur(),restoreBelgium(),restoreDutchPlan()]);
+for(const row of await loadBoardCache('NDOV:rows')||[])if(row.plannedTimestamp>Date.now()-86400000)ndovRows.set(row.id,row);
 server.listen(PORT,async()=>{
   void checkNdovAccess();
   void startNdov();
   startBelgium();
   startEntur();
   startSwiss();
+  startDutchPlan(config.ndov.stations);
   startJourneyPlanning(config.journeyArchive?.trainNumbers||[]);
   const storage=getStorageInfo();console.log("");console.log("Treinrondreis Multi-source Data Hub + Live Board v4.2.0");console.log(`Open: http://localhost:${PORT}`);console.log(`DB credentials: ${CLIENT_ID&&API_KEY?"ingesteld":"ONTBREKEN"}`);console.log(`Historie: ${storage.backend} (${storage.retention})`);console.log("");
   await Promise.allSettled([performScan(),performItalyScan()]);

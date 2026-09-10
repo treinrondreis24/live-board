@@ -485,7 +485,8 @@
     "ES",
     "EU",
     "THA",
-    "EUROSTAR"
+    "EUROSTAR",
+    "ECC"
   ],
   "stationPages": {
     "koeln": {
@@ -1321,7 +1322,8 @@
           ],
           "categories": [
             "IC"
-          ]
+          ],
+          "via": "Gouda"
         },
         {
           "id": "den-haag",
@@ -1649,7 +1651,7 @@
         "page": "den-haag"
       },
       {
-        "code": "LED",
+        "code": "LEDN",
         "name": "Leiden Centraal",
         "page": "leiden"
       },

@@ -1,3 +1,4 @@
+import {saveBoardCache,loadBoardCache} from './board-cache.mjs';
 import {recordObservations} from './storage.mjs';
 export const norwegianStations={oslo:{name:'Oslo S',id:'NSR:StopPlace:59872'},bergen:{name:'Bergen',id:'NSR:StopPlace:59983'},voss:{name:'Voss',id:'NSR:StopPlace:59958'},myrdal:{name:'Myrdal',id:'NSR:StopPlace:222'},trondheim:{name:'Trondheim S',id:'NSR:StopPlace:59977'},stavanger:{name:'Stavanger',id:'NSR:StopPlace:61291'}};
 export const enturState={source:'Entur',stations:Object.fromEntries(Object.entries(norwegianStations).map(([key,s])=>[key,{...s,status:'starting',lastSuccessAt:null,error:null}]))};
@@ -30,10 +31,11 @@ async function scan(){
       const key=Object.keys(norwegianStations)[i],state=enturState.stations[key],result=results[i];
       if(result.status==='rejected'){state.status='error';state.error=String(result.reason.message).slice(0,160);continue;}
       const {at,rows}=result.value;cache.set(key,{at,rows});state.lastSuccessAt=new Date(at).toISOString();state.count=rows.length;
-      try{await recordObservations(rows,'ENTUR',at);state.status='ready';state.error=null;}catch(e){state.status='storage-error';state.error='Opslag Entur mislukt';}
+      try{await saveBoardCache('ENTUR:'+key,{at,rows});await recordObservations(rows,'ENTUR',at);state.status='ready';state.error=null;}catch(e){state.status='storage-error';state.error='Opslag Entur mislukt';}
     }
   }finally{busy=false;}
 }
+export async function restoreEntur(){for(const page of Object.keys(norwegianStations)){const saved=await loadBoardCache('ENTUR:'+page);if(saved){cache.set(page,saved);enturState.stations[page].lastSuccessAt=new Date(saved.at).toISOString();}}}
 export function startEntur(){void scan();setInterval(()=>void scan(),60000).unref();}
 export function norwegianPayload(page,now=Date.now()){
   if(!norwegianStations[page])return null;
