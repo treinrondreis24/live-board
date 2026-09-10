@@ -33,7 +33,7 @@ export async function scanSweden(){
  try{
   if(!stations.length){const result=await request('<QUERY objecttype="TrainStation" schemaversion="1.4"><INCLUDE>LocationSignature</INCLUDE><INCLUDE>AdvertisedLocationName</INCLUDE><INCLUDE>LocationInformationText</INCLUDE></QUERY>');stations=result[0].TrainStation;if(!Array.isArray(stations))throw Error('Geen stations ontvangen');}
   const resolved=resolveSwedishStations(stations),codes=Object.values(resolved).filter(Boolean);if(!codes.length)throw Error('Stations niet gevonden');
-  const result=await request(`<QUERY objecttype="TrainAnnouncement" schemaversion="1.9" orderby="AdvertisedTimeAtLocation" limit="10000"><FILTER><AND><EQ name="ActivityType" value="Avgang"/><EQ name="Advertised" value="true"/><IN name="LocationSignature" value="${xml(codes.join(','))}"/><GT name="AdvertisedTimeAtLocation" value="$dateadd(-06:00:00)"/><LT name="AdvertisedTimeAtLocation" value="$dateadd(24:00:00)"/></AND></FILTER></QUERY>`);
+  const result=await request(`<QUERY objecttype="TrainAnnouncement" schemaversion="1.9" orderby="AdvertisedTimeAtLocation" limit="10000"><FILTER><AND><EQ name="ActivityType" value="Avgang"/><EQ name="Advertised" value="true"/><IN name="LocationSignature" value="${xml(codes.join(','))}"/><GT name="AdvertisedTimeAtLocation" value="$dateadd(-06:00:00)"/><LT name="AdvertisedTimeAtLocation" value="$dateadd(1.00:00:00)"/></AND></FILTER></QUERY>`);
   const items=result[0].TrainAnnouncement;if(!Array.isArray(items)||items.length>=10000)throw Error('Onvolledige vertrekgegevens');
   const at=Date.now();
   for(const [page,code] of Object.entries(resolved)){
