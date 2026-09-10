@@ -1,3 +1,4 @@
+import {saveBoardCache,loadBoardCache} from './board-cache.mjs';
 import {unzipSync,strFromU8} from 'fflate';
 import {recordObservations} from './storage.mjs';
 import {Worker,isMainThread,parentPort,workerData} from 'node:worker_threads';
@@ -81,17 +82,18 @@ async function tick(){
     if(!plan||planDay!==dayKey(now)){
       const bytes=new Uint8Array(await(await download('static')).arrayBuffer());
       const next=await new Promise((resolve,reject)=>{const w=new Worker(new URL(import.meta.url),{workerData:{bytes,now},transferList:[bytes.buffer]});w.once('message',resolve);w.once('error',reject);w.once('exit',code=>{if(code)reject(new Error('NMBS dienstregeling verwerken mislukt'));});});
-      plan=next;planDay=dayKey(now);belgiumState.lastPlanAt=new Date().toISOString();
+      plan=next;planDay=dayKey(now);await saveBoardCache('NMBS:plan',{plan,planDay});belgiumState.lastPlanAt=new Date().toISOString();
       await recordObservations(rowsWithRealtime(plan,null,now).filter(r=>r.plannedTimestamp>=now-3600000&&r.plannedTimestamp<now+86400000),'NMBS',now);
     }
     const next=await(await download('rt/trip-update?format=json')).json();
     if(!next.header||!Array.isArray(next.entity))throw new Error('Ongeldige NMBS realtimefeed');
-    live=next;belgiumState.lastRealtimeAt=new Date(Number(next.header.timestamp)*1000).toISOString();
+    live=next;await saveBoardCache('NMBS:live',live);belgiumState.lastRealtimeAt=new Date(Number(next.header.timestamp)*1000).toISOString();
     const rows=rowsWithRealtime(plan,live).filter(r=>r.plannedTimestamp>=now-3600000&&r.plannedTimestamp<now+86400000);
     await recordObservations(rows,'NMBS',Date.now());
     belgiumState.status=Date.now()-Number(next.header.timestamp)*1000>180000?'stale':'ready';belgiumState.error=null;
   }catch(e){belgiumState.status='error';belgiumState.error=String(e.message).slice(0,160);}finally{busy=false;}
 }
+export async function restoreBelgium(){const saved=await loadBoardCache('NMBS:plan');if(saved){plan=saved.plan;planDay=saved.planDay;live=await loadBoardCache('NMBS:live');if(live)belgiumState.lastRealtimeAt=new Date(Number(live.header.timestamp)*1000).toISOString();}}
 export function startBelgium(){void tick();setInterval(()=>void tick(),30000).unref();}
 export function belgianPayload(page){
   if(!belgianStations[page])return null;

@@ -1,3 +1,4 @@
+import {initBoardCache,cleanupHistory,retentionPolicy} from './board-cache.mjs';
 import {initJourneys} from "./journeys.mjs";
 import path from "node:path";
 import { createHash } from "node:crypto";
@@ -116,6 +117,7 @@ export async function initStorage(){
     await initDataHub({backend,pool,sqlite:null});
     await initJourneys({backend,pool,sqlite:null});
     await initStationPlatformLayouts();
+  await initBoardCache({backend,pool,sqlite});
     return {backend};
   }
 
@@ -182,6 +184,7 @@ export async function initStorage(){
   await initDataHub({backend,pool:null,sqlite});
   await initJourneys({backend,pool:null,sqlite});
   await initStationPlatformLayouts();
+  await initBoardCache({backend,pool,sqlite});
   return {backend};
 }
 
@@ -189,12 +192,12 @@ export function getStorageInfo(){
   const days=historyDays();
   return {
     backend,
-    historyDays:days||null,
-    retention:days?`${days} days`:"unlimited",
-    legacyHeartbeatMinutes:LEGACY_HEARTBEAT_MINUTES,
+    historyDays:3,
+    retention:"3 days; ICE/NJ/RJ 30 days",retentionPolicy,
+    legacyHeartbeatMinutes:0,
     dbRetention:{
-      fernverkehr:"permanent",
-      regional:"current-and-previous-service-day",
+      fernverkehr:"ICE/NJ/RJ 30 days; others 3 days",
+      regional:"3 days",
       fernverkehrCategories:FERNVERKEHR_CATEGORIES
     },
     retentionCleanupIntervalMinutes:Math.round(RETENTION_CLEANUP_INTERVAL_MS/60000),
@@ -212,7 +215,7 @@ function rowForStorage(t,source,observedAt){
         futureRoute=Array.isArray(t.futureRoute)?t.futureRoute:[];
   const rawPayload=legacyRawPayload(t);
   const stateHash=legacyHash({plannedTimestamp:plannedTs,expectedTimestamp:expectedTs,plannedTime:String(t.plannedTime||t.time||""),currentTime:String(t.currentTime||t.time||""),
-    delayMinutes:Number(t.delay||0),status:String(t.status||""),cancelled:Boolean(t.cancelled),origin:String(t.from||""),destination:String(t.to||""),
+    delayMinutes:Number(t.delay||0),status:String(t.status||""),hasRealtime:Boolean(t.hasRealtime),departed:Boolean(t.departed),notBoardable:Boolean(t.notBoardable),cancelled:Boolean(t.cancelled),origin:String(t.from||""),destination:String(t.to||""),
     track:String(t.track||""),plannedTrack:String(t.plannedTrack||""),currentTrack:String(t.currentTrack||t.track||""),route,pastRoute,futureRoute});
   const rawHash=legacyHash(rawPayload);
   return {
@@ -251,7 +254,7 @@ export async function recordObservations(trains,source,observedAt=Date.now()){
         delay_minutes,status,cancelled,origin,destination,track,planned_track,current_track,route,past_route,future_route,payload)
         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)`;
       for(const r of rows){const key=legacyStateKey(r),prev=states.get(key)||null,stateChanged=!prev||prev.state_hash!==r.stateHash,rawChanged=!prev||prev.raw_hash!==r.rawHash;
-        const lastObs=Number(prev?.last_observation_at||0),heartbeat=Boolean(prev)&&r.observedAt-lastObs>=LEGACY_HEARTBEAT_MS,persist=stateChanged||rawChanged||heartbeat;
+        const lastObs=Number(prev?.last_observation_at||0),heartbeat=Boolean(prev)&&r.observedAt-lastObs>=LEGACY_HEARTBEAT_MS,persist=stateChanged;
         if(persist)await client.query(sql,[r.source,r.trainKey,r.trainNumber,r.category,r.station,r.eventMode,r.observedAt,r.plannedTimestamp,r.expectedTimestamp,r.plannedTime,r.currentTime,
           r.delayMinutes,r.status,r.cancelled,r.origin,r.destination,r.track,r.plannedTrack,r.currentTrack,JSON.stringify(r.route),JSON.stringify(r.pastRoute),JSON.stringify(r.futureRoute),rawChanged?JSON.stringify(r.payload):null]);
         await client.query(`INSERT INTO train_observation_state(state_key,source,train_key,station,event_mode,state_hash,raw_hash,last_seen_at,last_observation_at,last_payload_at)
@@ -266,7 +269,7 @@ export async function recordObservations(trains,source,observedAt=Date.now()){
       VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(state_key) DO UPDATE SET state_hash=excluded.state_hash,raw_hash=excluded.raw_hash,last_seen_at=MAX(train_observation_state.last_seen_at,excluded.last_seen_at),
       last_observation_at=CASE WHEN ? THEN excluded.last_observation_at ELSE train_observation_state.last_observation_at END,last_payload_at=CASE WHEN ? THEN excluded.last_payload_at ELSE train_observation_state.last_payload_at END`);
       for(const r of rows){const key=legacyStateKey(r),prev=legacyStateCache.get(key)||null,stateChanged=!prev||prev.state_hash!==r.stateHash,rawChanged=!prev||prev.raw_hash!==r.rawHash;
-        const lastObs=Number(prev?.last_observation_at||0),heartbeat=Boolean(prev)&&r.observedAt-lastObs>=LEGACY_HEARTBEAT_MS,persist=stateChanged||rawChanged||heartbeat;
+        const lastObs=Number(prev?.last_observation_at||0),heartbeat=Boolean(prev)&&r.observedAt-lastObs>=LEGACY_HEARTBEAT_MS,persist=stateChanged;
         if(persist)sqliteInsert.run(r.source,r.trainKey,r.trainNumber,r.category,r.station,r.eventMode,r.observedAt,r.plannedTimestamp,r.expectedTimestamp,r.plannedTime,r.currentTime,r.delayMinutes,r.status,
           r.cancelled?1:0,r.origin,r.destination,r.track,r.plannedTrack,r.currentTrack,JSON.stringify(r.route),JSON.stringify(r.pastRoute),JSON.stringify(r.futureRoute),rawChanged?JSON.stringify(r.payload):null);
         stateStmt.run(key,r.source,r.trainKey,r.station,r.eventMode,r.stateHash,r.rawHash,r.observedAt,persist?r.observedAt:lastObs,rawChanged?r.observedAt:Number(prev?.last_payload_at||0)||null,persist?1:0,rawChanged?1:0);
@@ -274,7 +277,7 @@ export async function recordObservations(trains,source,observedAt=Date.now()){
       sqlite.exec("COMMIT");}catch(e){sqlite.exec("ROLLBACK");throw e;}
   }
   await recordCanonicalObservations(trains,source,observedAt);
-  await cleanupOldObservations(observedAt);
+  void cleanupOldObservations(observedAt).catch(e=>console.error('Retention:',e.message));
 }
 
 export async function findTrendObservation({source,trainKey,station,eventMode,min,max,target}){
@@ -317,50 +320,8 @@ function startOfDateInZone(dateKey,timeZone="Europe/Berlin"){
 }
 
 export async function cleanupOldObservations(now=Date.now(),{force=false}={}){
-  now=Number(now);
-  if(!force&&lastRetentionCleanupAt&&now-lastRetentionCleanupAt<RETENTION_CLEANUP_INTERVAL_MS)return null;
-  lastRetentionCleanupAt=now;
-
-  const today=dateKeyInZone(now,"Europe/Berlin"),keepFromDate=previousDateKey(today),regionalCutoff=startOfDateInZone(keepFromDate,"Europe/Berlin");
-  let legacyRegionalDeleted=0,globalDeleted=0;
-
-  // DB: Fernverkehr blijft onbeperkt; alle andere categorieën alleen de
-  // huidige + vorige verkeersdag. De Data Hub doet dezelfde cleanup op
-  // service_date, zodat nachtovergangen daar correct behandeld worden.
-  if(backend==="postgresql"){
-    const regional=await pool.query(`
-      DELETE FROM train_observations
-      WHERE source=ANY($1::text[])
-        AND COALESCE(planned_timestamp,observed_at)<$2
-        AND NOT (UPPER(COALESCE(category,''))=ANY($3::text[]))
-    `,[DB_RETENTION_SOURCES,regionalCutoff,FERNVERKEHR_CATEGORIES]);
-    legacyRegionalDeleted=regional.rowCount||0;
-  }else if(backend==="sqlite"){
-    const src=DB_RETENTION_SOURCES.map(()=>"?").join(","),cats=FERNVERKEHR_CATEGORIES.map(()=>"?").join(",");
-    const regional=sqlite.prepare(`
-      DELETE FROM train_observations
-      WHERE source IN (${src})
-        AND COALESCE(planned_timestamp,observed_at)<?
-        AND UPPER(COALESCE(category,'')) NOT IN (${cats})
-    `).run(...DB_RETENTION_SOURCES,regionalCutoff,...FERNVERKEHR_CATEGORIES);
-    legacyRegionalDeleted=Number(regional.changes||0);
-  }
-
-  const hub=await cleanupDbRegionalData(now);
-
-  // HISTORY_DAYS blijft een optionele globale noodrem. Zolang deze variable
-  // niet is gezet (huidige productieconfiguratie), blijft Fernverkehr permanent.
-  const days=historyDays();
-  if(days){
-    const cutoff=now-days*24*60*60*1000;
-    if(backend==="postgresql")globalDeleted=(await pool.query("DELETE FROM train_observations WHERE observed_at < $1",[cutoff])).rowCount||0;
-    else if(backend==="sqlite")globalDeleted=Number(sqlite.prepare("DELETE FROM train_observations WHERE observed_at < ?").run(cutoff).changes||0);
-  }
-
-  const result={keepFromDate,legacyRegionalDeleted,globalDeleted,hub};
-  const total=legacyRegionalDeleted+globalDeleted+Number(hub?.deletedEvents||0)+Number(hub?.deletedServices||0)+Number(hub?.deletedStates||0);
-  if(total>0)console.log(`Retentie-cleanup: ${total} regionale/oude records verwijderd; DB regionaal vanaf ${keepFromDate} bewaard`);
-  return result;
+ if(!force&&lastRetentionCleanupAt&&now-lastRetentionCleanupAt<RETENTION_CLEANUP_INTERVAL_MS)return;
+ lastRetentionCleanupAt=now;await cleanupHistory(now);
 }
 
 function clampLimit(v,def=250,max=5000){
