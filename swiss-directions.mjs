@@ -33,7 +33,7 @@ export function matchesSwissDirection(row,direction){
  const identity=[row.category,row.line,row.serviceName].join(' ').toUpperCase();
  const brand=b=>b==='VAE'?/\bVAE\b|VORALPEN|\bIR\s*13\b/.test(identity):b==='GEX'?/\bGEX\b|GLACIER EXPRESS/.test(identity):/\bBEX\b|BERNINA EXPRESS/.test(identity);
  if(direction.brand&&!brand(direction.brand)||direction.excludeBrand&&brand(direction.excludeBrand))return false;
- if(direction.categories&&!direction.categories.includes(row.category))return false;
+ if(direction.categories?.length&&!direction.categories.includes(row.category))return false;
  const stops=[...(row.futureRoute||row.route||[]),row.to];
  const has=t=>stops.some(s=>matchesStop(typeof s==='string'?s:s.name,t));
  // OJP ends the shared RE1 section at Spiez before the train divides.
@@ -41,6 +41,10 @@ export function matchesSwissDirection(row,direction){
  // https://www.bls.ch/de/fahren/fahrplan/bls-linien
  if(direction.target==='Kandersteg'&&row.observedAt==='Thun'&&row.line==='RE1'&&row.to==='Brig/Zweisimmen'&&has('Spiez')&&!has('Visp'))return true;
  if(direction.via&&!has(direction.via)||direction.avoid&&(!row.routeComplete||has(direction.avoid)))return false;
- return !direction.target||[direction.target,...direction.also||[]].some(has);
+ // OJP sometimes truncates this GEX service at Disentis. The published
+ // Glacier Express timetable confirms the onward Brig stop toward Zermatt:
+ // https://www.glacierexpress.ch/en/timetable
+ const onwardBrig=t=>matchesStop('Brig Bahnhofplatz',t)&&row.observedAt==='Chur'&&brand('GEX')&&has('Disentis')&&matchesStop(row.to,'Zermatt');
+ return !direction.target||[direction.target,...direction.also||[]].some(t=>has(t)||onwardBrig(t));
 }
 export function swissQuick(page,rows){return (swissDirections[page]||[]).map((d,i)=>{const trains=rows.filter(r=>matchesSwissDirection(r,d)).slice(0,8);return {id:page+'-'+i,label:d.label,count:trains.length,trains};});}
