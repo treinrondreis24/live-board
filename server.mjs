@@ -1,4 +1,5 @@
 import {initBoardAdmin,handleBoardAdmin,applyBoardSettings,boardSource,duplicatePayload} from './board-admin.mjs';
+import {rfiStations,rfiState,rfiPayload,restoreRfi,startRfi} from './rfi.mjs';
 import {restoreDutchPlan,startDutchPlan,dutchPlannedRows,combineDutchRows,nlPlanningState} from './nl-planning.mjs';
 import {loadBoardCache,saveBoardCache} from './board-cache.mjs';
 import {swissStations,swissState,startSwiss,restoreSwiss,swissPayload} from './swiss.mjs';
@@ -1034,9 +1035,11 @@ const server=http.createServer(async(req,res)=>{
       const observations=await getLatestByStation({station,source,hours,limit});return sendJson(res,200,{source,station,count:observations.length,observations});
     }
     if(url.pathname==="/api/belgium/status")return sendJson(res,200,belgiumState);
+    if(url.pathname==="/api/rfi/status")return sendJson(res,200,rfiState);
     const copyPage=url.pathname.match(/^\/api\/views\/([a-z0-9-]+)\/?$/)?.[1];
     if(copyPage&&boardSource(copyPage)&&boardSource(copyPage)!==copyPage)return sendJson(res,200,duplicatePayload(copyPage));
     const belgianPage=url.pathname.match(/^\/api\/views\/([a-z0-9-]+)\/?$/)?.[1];
+    if(belgianPage&&Object.hasOwn(rfiStations,belgianPage))return sendJson(res,200,applyBoardSettings(belgianPage,rfiPayload(belgianPage,belgianPage==='tirano'?swissPayload('tirano'):null)));
     if(belgianPage&&belgianStations[belgianPage])return sendJson(res,200,applyBoardSettings(belgianPage,belgianPayload(belgianPage)));
     if(url.pathname==="/api/entur/status")return sendJson(res,200,enturState);
     if(belgianPage&&norwegianStations[belgianPage])return sendJson(res,200,applyBoardSettings(belgianPage,norwegianPayload(belgianPage)));
@@ -1068,15 +1071,16 @@ const server=http.createServer(async(req,res)=>{
 });
 
 await initStorage();
-await initBoardAdmin({config,swissStations,norwegianStations,belgianStations,matchDirection:stationDirectionMatches,getPayload:page=>
- Object.hasOwn(swissStations,page)?swissPayload(page):Object.hasOwn(norwegianStations,page)?norwegianPayload(page):Object.hasOwn(belgianStations,page)?belgianPayload(page):stationPagePayload(page)});
-await Promise.all([restoreSwiss(),restoreEntur(),restoreBelgium(),restoreDutchPlan()]);
+await initBoardAdmin({config,swissStations,norwegianStations,belgianStations,rfiStations,matchDirection:stationDirectionMatches,getPayload:page=>
+ Object.hasOwn(rfiStations,page)?rfiPayload(page,page==='tirano'?swissPayload('tirano'):null):Object.hasOwn(swissStations,page)?swissPayload(page):Object.hasOwn(norwegianStations,page)?norwegianPayload(page):Object.hasOwn(belgianStations,page)?belgianPayload(page):stationPagePayload(page)});
+await Promise.all([restoreSwiss(),restoreEntur(),restoreBelgium(),restoreDutchPlan(),restoreRfi()]);
 for(const row of await loadBoardCache('NDOV:rows')||[])if(row.plannedTimestamp>Date.now()-86400000)ndovRows.set(row.id,row);
 server.listen(PORT,async()=>{
   void checkNdovAccess();
   void startNdov();
   startBelgium();
   startEntur();
+  startRfi();
   startSwiss();
   startDutchPlan(config.ndov.stations);
   startJourneyPlanning(config.journeyArchive?.trainNumbers||[]);
