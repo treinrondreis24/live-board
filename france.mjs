@@ -6,6 +6,7 @@ import {saveBoardCache,loadBoardCache} from './board-cache.mjs';
 import {recordObservations} from './storage.mjs';
 
 export const frenchStations=Object.fromEntries([
+ ['barcelona','Barcelona Sants','71718010'],
  ['paris-nord','Paris Gare du Nord','87271007'],['paris-lyon','Paris Gare de Lyon','87686006'],
  ['lille-europe','Lille Europe','87223263'],['lille-flandres','Lille Flandres','87286005'],
  ['montpellier','Montpellier Saint-Roch','87773002'],['montpellier-sud','Montpellier Sud de France','87688887'],
@@ -74,7 +75,7 @@ export async function scanFrance(){
   franceState.stations=Object.fromEntries(Object.entries(frenchStations).map(([p,s])=>[p,{name:s.name,count:rows.filter(r=>r.page===p).length}]));
  }catch(e){franceState.status='error';franceState.error=String(e.message).slice(0,200);}finally{busy=false;}
 }
-export async function restoreFrance(){const saved=await loadBoardCache('SNCF:plan');if(saved?.plan?.rows){plan=saved.plan;planDay=saved.planDay;franceState.lastPlanAt=new Date(plan.generatedAt).toISOString();}live=await loadBoardCache('SNCF:live');}
+export async function restoreFrance(){const saved=await loadBoardCache('SNCF:plan');if(saved?.plan?.rows){plan=saved.plan;planDay=Object.keys(frenchStations).every(page=>plan.rows.some(r=>r.page===page))?saved.planDay:"";franceState.lastPlanAt=new Date(plan.generatedAt).toISOString();}live=await loadBoardCache('SNCF:live');}
 export function startFrance(){void scanFrance();setInterval(()=>void scanFrance(),120000).unref();}
 export function frenchPayload(page,now=Date.now()){
  const rows=plan?frenchRows(plan,live,now).filter(r=>r.page===page&&r.expectedTimestamp>=now-60000).sort((a,b)=>a.plannedTimestamp-b.plannedTimestamp):[];

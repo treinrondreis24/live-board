@@ -18,7 +18,7 @@ function statusClass(t){
   return "";
 }
 function statusText(t){
-  if(t.source==='SNCF'&&!t.cancelled&&(!t.hasRealtime||!Number(t.delay)))return '';
+  if(['SNCF','RENFE','EUROSTAR'].includes(t.source)&&!t.cancelled&&(!t.hasRealtime||!Number(t.delay)))return '';
   if(t.source==='RFI'&&!t.cancelled&&(!t.hasRealtime||!Number(t.delay)))return t.hasRealtime?(t.status||''):'';
   if(["ENTUR","OJP","NDOV_IFF","NDOV"].includes(t.source)&&!t.hasRealtime&&!t.cancelled)return "";
   if(t.source==="NMBS"&&!t.hasRealtime&&!t.cancelled)return "";
@@ -108,8 +108,8 @@ async function refresh(){
     document.querySelector(".board-head h2").textContent=document.title;
     if(!data){
       const allTab=document.querySelector('[data-tab="all"]');
-      allTab.hidden=!(["NL","BE","NO","IT","FR"].includes(p.country)||p.source?.includes("OJP"));
-      if((["NL","BE","NO","IT","FR"].includes(p.country)||p.source?.includes("OJP")))activeTab="all";
+      allTab.hidden=!(["NL","BE","NO","IT","FR","ES"].includes(p.country)||p.source?.includes("OJP"));
+      if((["NL","BE","NO","IT","FR","ES"].includes(p.country)||p.source?.includes("OJP")))activeTab="all";
       if(!p.quick?.length){fullEl.hidden=false;toggleFull.textContent="Verberg compleet vertrekbord";}
       document.querySelectorAll(".tab").forEach(btn=>btn.classList.toggle("active",btn.dataset.tab===activeTab));
     }
@@ -117,14 +117,15 @@ async function refresh(){
     if(p.country==="NO"&&!document.getElementById("entur-source")){const a=document.createElement("a");a.id="entur-source";a.href="https://entur.no/";a.textContent="Bron: Entur (NLOD)";document.querySelector(".board-footer").appendChild(a);}
     if(p.source?.includes("OJP")&&!document.getElementById("swiss-source")){const a=document.createElement("a");a.id="swiss-source";a.href="https://opentransportdata.swiss/";a.textContent="Bron: opentransportdata.swiss (OJP)";document.querySelector(".board-footer").appendChild(a);}
     if(p.source?.includes('RFI')&&!document.getElementById('rfi-source')){const a=document.createElement('a');a.id='rfi-source';a.href='https://iechub.rfi.it/ArriviPartenze/ArrivalsDepartures/Home';a.textContent='Bron: RFI Monitor Arrivi/Partenze';document.querySelector('.board-footer').appendChild(a);}
-    if(p.source==='SNCF'&&!document.getElementById('sncf-source')){const a=document.createElement('a');a.id='sncf-source';a.href='https://transport.data.gouv.fr/datasets/horaires-sncf';a.textContent='Bron: SNCF Voyageurs (ODbL)';document.querySelector('.board-footer').appendChild(a);}
+    if(p.source?.includes('SNCF')&&!document.getElementById('sncf-source')){const a=document.createElement('a');a.id='sncf-source';a.href='https://transport.data.gouv.fr/datasets/horaires-sncf';a.textContent='Bron: SNCF Voyageurs (ODbL)';document.querySelector('.board-footer').appendChild(a);}
+    for(const [source,label,url] of [['RENFE','Renfe (CC BY 4.0)','https://data.renfe.com/'],['EUROSTAR','Eurostar (Licence Ouverte 2.0)','https://www.data.gouv.fr/datasets/eurostar-gtfs-plan-de-transport-et-temps-reel']]){if(p.source?.includes(source)&&!document.getElementById(source+'-source')){const a=document.createElement('a');a.id=source+'-source';a.href=url;a.textContent='Bron: '+label;document.querySelector('.board-footer').appendChild(a);}}
     let notice=document.getElementById('station-notice');if(p.notice&&!notice){notice=document.createElement('p');notice.id='station-notice';document.querySelector('.board').appendChild(notice);}if(notice){notice.textContent=p.notice||'';notice.hidden=!p.notice;}
     applyAppearance(p);data=p;renderQuick();if(!fullEl.hidden)renderFull();
     const d=p.lastScanAt?new Date(p.lastScanAt):null;
     scanStatus.textContent=d&&!Number.isNaN(d.getTime())
       ?`bijgewerkt ${new Intl.DateTimeFormat("nl-NL",{hour:"2-digit",minute:"2-digit"}).format(d)}`
       :"actueel";
-    if((["BE","NO","IT","FR"].includes(p.country)||p.source?.includes("OJP"))&&p.status!=="ready")scanStatus.textContent=p.status==="starting"?"dienstregeling laden…":"realtime tijdelijk niet beschikbaar";
+    if((["BE","NO","IT","FR","ES"].includes(p.country)||p.source?.includes("OJP"))&&p.status!=="ready")scanStatus.textContent=p.status==="starting"?"dienstregeling laden…":"realtime tijdelijk niet beschikbaar";
   }catch(e){
     scanStatus.textContent="tijdelijk niet beschikbaar";
     if(!data)quickEl.innerHTML=`<div class="empty">${esc(e.message)}</div>`;
