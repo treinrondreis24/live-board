@@ -1,5 +1,5 @@
 import {createHmac,timingSafeEqual,randomBytes} from 'node:crypto';
-import {readBoardSettings,writeBoardSettings,readBoardLayouts,createBoardLayout} from './board-cache.mjs';
+import {readBoardSettings,writeBoardSettings,insertBoardSettings,readBoardLayouts,createBoardLayout} from './board-cache.mjs';
 import {swissDirections,matchesSwissDirection} from './swiss-directions.mjs';
 let catalog={},saved=new Map(),provider,legacyMatch;
 const attempts=new Map(),cookieName='treinbord_beheer';
@@ -9,6 +9,7 @@ export async function initBoardAdmin({config,swissStations,norwegianStations,bel
  catalog={...Object.fromEntries(Object.entries(config.stationPages||{}).map(([id,p])=>[id,{id,name:p.station||p.title,country:p.country||'DE',engine:'standard',title:p.title,directions:p.quickDirections||[]}]))};
  for(const [stations,country,engine] of [[belgianStations,'BE','standard'],[norwegianStations,'NO','standard'],[swissStations,'CH','swiss']])for(const [id,s] of Object.entries(stations))catalog[id]={id,name:s.name,country:s.country||country,engine,title:'Vertrektijden '+s.name,directions:engine==='swiss'?swissDirections[id]||[]:[]};
  saved=new Map((await readBoardSettings()).map(r=>[r.page,r]));
+ for(const [page,r] of saved)if(r.settings.sourcePage&&Object.hasOwn(catalog,r.settings.sourcePage)&&!Object.hasOwn(catalog,page))catalog[page]={...catalog[r.settings.sourcePage],id:page,sourcePage:r.settings.sourcePage};
 }
 export function defaultBoardSettings(page){if(!Object.hasOwn(catalog,page))throw Error('Onbekend station');const s=catalog[page];return {title:s.title,footer:'',enabled:true,directions:structuredClone(s.directions).map((d,i)=>({...d,id:d.id||'richting-'+i,enabled:true,limit:8})),appearance:{...defaultAppearance}};}
 export const standardLayouts=[
@@ -20,10 +21,23 @@ export const standardLayouts=[
  {id:'compact',name:'Compact',appearance:{...defaultAppearance,width:900,density:'compact',fullOpen:true}},
  {id:'quiet',name:'Rustig',appearance:{...defaultAppearance,accent:'#24546a',alternate:'#f2f5f6',buttonStart:'#24546a',buttonEnd:'#467b87',font:'system',density:'roomy'}}
 ];
+export function boardSource(page){return Object.hasOwn(catalog,page)?catalog[page].sourcePage||page:null;}
+export function duplicatePayload(page){return applyBoardSettings(page,provider(boardSource(page)));}
+function boardInfo(c){return {...c,directions:undefined,revision:saved.get(c.id)?.revision||0,updatedAt:saved.get(c.id)?.updatedAt||null,settings:saved.get(c.id)?.settings||defaultBoardSettings(c.id),defaults:defaultBoardSettings(c.id)};}
+export async function duplicateBoard(page,input){
+ const source=boardSource(page);if(!source)throw Error('Onbekend bord');
+ const settings=validateBoardSettings(page,input||saved.get(page)?.settings||defaultBoardSettings(page));settings.sourcePage=source;
+ for(let n=1;n<10000;n++){
+  const id=source+'-'+n;if(Object.hasOwn(catalog,id))continue;
+  const state=await insertBoardSettings(id,settings);if(!state)continue;
+  catalog[id]={...catalog[source],id,sourcePage:source};saved.set(id,{...state,settings});return boardInfo(catalog[id]);
+ }
+ throw Error('Geen vrij bordnummer beschikbaar.');
+}
 function cleanText(v,max=200){return String(v??'').trim().slice(0,max);}
 export function validateBoardSettings(page,input){
  if(!Object.hasOwn(catalog,page)||!input||typeof input!=='object'||Array.isArray(input))throw Error('Ongeldige instellingen');
- const result=defaultBoardSettings(page);result.title=cleanText(input.title,120)||result.title;result.footer=cleanText(input.footer,1500);result.enabled=input.enabled!==false;
+ const result=defaultBoardSettings(page);result.title=cleanText(input.title,120)||result.title;result.footer=cleanText(input.footer,1500);result.enabled=input.enabled!==false;result.name=cleanText(input.name,80);if(catalog[page].sourcePage)result.sourcePage=catalog[page].sourcePage;
  if(!Array.isArray(input.directions)||input.directions.length>40)throw Error('Gebruik maximaal 40 richtingsfilters.');
  const allowed=['id','label','target','also','futureStops','categories','excludedCategories','mode','brand','excludeBrand','serviceBrand','via','avoid','internationalIC','regionalOnly','enabled','limit'];
  result.directions=input.directions.map((v,i)=>{
@@ -36,6 +50,7 @@ export function validateBoardSettings(page,input){
  });
  if(new Set(result.directions.map(d=>d.id)).size!==result.directions.length)throw Error('Filters moeten een unieke identificatie hebben.');
  const a=input.appearance||{};
+ result.appearance.layout=['standard','db','trenitalia','uk','sncf','compact','quiet'].includes(a.layout)?a.layout:'standard';
  result.appearance.design=['standard','db','trenitalia','uk','sncf'].includes(a.design)?a.design:'standard';
  for(const key of ['accent','text','background','alternate','buttonStart','buttonEnd'])if(/^#[a-f\d]{6}$/i.test(a[key]||''))result.appearance[key]=a[key];
  result.appearance.font=['treinrondreis','system','arial','verdana'].includes(a.font)?a.font:'treinrondreis';
@@ -98,10 +113,11 @@ export async function handleBoardAdmin(req,res,url){
    const page=Object.keys(catalog)[0],appearance=validateBoardSettings(page,{directions:[],appearance:input.appearance}).appearance;
    reply(res,200,{layout:await createBoardLayout('custom-'+randomBytes(12).toString('hex'),name,appearance)});return true;
   }
-  if(req.method==='GET'&&action==='boards'){reply(res,200,{boards:Object.values(catalog).map(c=>({...c,directions:undefined,revision:saved.get(c.id)?.revision||0,updatedAt:saved.get(c.id)?.updatedAt||null,settings:saved.get(c.id)?.settings||defaultBoardSettings(c.id),defaults:defaultBoardSettings(c.id)}))});return true;}
+  if(req.method==='GET'&&action==='boards'){reply(res,200,{boards:Object.values(catalog).map(boardInfo)});return true;}
+  if(req.method==='POST'&&action==='duplicate'){const input=await body(req);reply(res,200,{board:await duplicateBoard(String(input.page||''),input.settings)});return true;}
   if(req.method==='POST'&&['save','preview'].includes(action)){
    const input=await body(req),page=String(input.page||''),settings=validateBoardSettings(page,input.settings);
-   if(action==='preview'){reply(res,200,applyBoardSettings(page,provider(page),settings));return true;}
+   if(action==='preview'){reply(res,200,applyBoardSettings(page,provider(boardSource(page)),settings));return true;}
    if(Number(input.revision)!==(saved.get(page)?.revision||0)){reply(res,409,{error:'Dit bord is ondertussen gewijzigd. Laad het opnieuw.'});return true;}
    const state=await writeBoardSettings(page,settings,Number(input.revision));saved.set(page,{...state,settings});reply(res,200,{ok:true,...state,settings});return true;
   }
