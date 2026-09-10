@@ -3,7 +3,7 @@ import {readBoardSettings,writeBoardSettings,readBoardLayouts,createBoardLayout}
 import {swissDirections,matchesSwissDirection} from './swiss-directions.mjs';
 let catalog={},saved=new Map(),provider,legacyMatch;
 const attempts=new Map(),cookieName='treinbord_beheer';
-export const defaultAppearance={accent:'#e5303c',text:'#252525',background:'#ffffff',alternate:'#faf8f5',buttonStart:'#1c6e92',buttonEnd:'#669620',font:'treinrondreis',width:1050,density:'normal',fullOpen:false,defaultTab:'all',showUpdated:true};
+export const defaultAppearance={design:'standard',accent:'#e5303c',text:'#252525',background:'#ffffff',alternate:'#faf8f5',buttonStart:'#1c6e92',buttonEnd:'#669620',font:'treinrondreis',width:1050,density:'normal',fullOpen:false,defaultTab:'all',showUpdated:true};
 export async function initBoardAdmin({config,swissStations,norwegianStations,belgianStations,getPayload,matchDirection}){
  provider=getPayload;legacyMatch=matchDirection;
  catalog={...Object.fromEntries(Object.entries(config.stationPages||{}).map(([id,p])=>[id,{id,name:p.station||p.title,country:p.country||'DE',engine:'standard',title:p.title,directions:p.quickDirections||[]}]))};
@@ -12,6 +12,10 @@ export async function initBoardAdmin({config,swissStations,norwegianStations,bel
 }
 export function defaultBoardSettings(page){if(!Object.hasOwn(catalog,page))throw Error('Onbekend station');const s=catalog[page];return {title:s.title,footer:'',enabled:true,directions:structuredClone(s.directions).map((d,i)=>({...d,id:d.id||'richting-'+i,enabled:true,limit:8})),appearance:{...defaultAppearance}};}
 export const standardLayouts=[
+ {id:'db',name:'DB-bord',appearance:{...defaultAppearance,design:'db',accent:'#003082',text:'#003082',alternate:'#f7fbfd',buttonStart:'#003082',buttonEnd:'#003082',width:760,density:'roomy',fullOpen:true}},
+ {id:'trenitalia',name:'Trenitalia-bord',appearance:{...defaultAppearance,design:'trenitalia',accent:'#f3b548',text:'#f3b548',background:'#111111',alternate:'#191919',buttonStart:'#343434',buttonEnd:'#343434',width:760,density:'roomy',fullOpen:true}},
+ {id:'uk',name:'UK-bord',appearance:{...defaultAppearance,design:'uk',accent:'#ffda44',text:'#ffda44',background:'#101010',alternate:'#191919',buttonStart:'#333333',buttonEnd:'#333333',font:'system',width:1050,fullOpen:true}},
+ {id:'sncf',name:'SNCF-bord',appearance:{...defaultAppearance,design:'sncf',accent:'#ffffff',text:'#ffffff',background:'#123a82',alternate:'#194990',buttonStart:'#702d91',buttonEnd:'#702d91',font:'system',width:1050,density:'roomy',fullOpen:true}},
  {id:'standard',name:'Treinrondreis',appearance:{...defaultAppearance}},
  {id:'compact',name:'Compact',appearance:{...defaultAppearance,width:900,density:'compact',fullOpen:true}},
  {id:'quiet',name:'Rustig',appearance:{...defaultAppearance,accent:'#24546a',alternate:'#f2f5f6',buttonStart:'#24546a',buttonEnd:'#467b87',font:'system',density:'roomy'}}
@@ -32,6 +36,7 @@ export function validateBoardSettings(page,input){
  });
  if(new Set(result.directions.map(d=>d.id)).size!==result.directions.length)throw Error('Filters moeten een unieke identificatie hebben.');
  const a=input.appearance||{};
+ result.appearance.design=['standard','db','trenitalia','uk','sncf'].includes(a.design)?a.design:'standard';
  for(const key of ['accent','text','background','alternate','buttonStart','buttonEnd'])if(/^#[a-f\d]{6}$/i.test(a[key]||''))result.appearance[key]=a[key];
  result.appearance.font=['treinrondreis','system','arial','verdana'].includes(a.font)?a.font:'treinrondreis';
  result.appearance.width=Math.min(1800,Math.max(600,Number(a.width)||1050));result.appearance.density=['compact','normal','roomy'].includes(a.density)?a.density:'normal';
