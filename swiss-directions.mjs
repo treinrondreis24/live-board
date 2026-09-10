@@ -36,6 +36,10 @@ export function matchesSwissDirection(row,direction){
  if(direction.categories&&!direction.categories.includes(row.category))return false;
  const stops=[...(row.futureRoute||row.route||[]),row.to];
  const has=t=>stops.some(s=>matchesStop(typeof s==='string'?s:s.name,t));
+ // OJP ends the shared RE1 section at Spiez before the train divides.
+ // BLS confirms the Brig portion continues via Kandersteg:
+ // https://www.bls.ch/de/fahren/fahrplan/bls-linien
+ if(direction.target==='Kandersteg'&&row.observedAt==='Thun'&&row.line==='RE1'&&row.to==='Brig/Zweisimmen'&&has('Spiez')&&!has('Visp'))return true;
  if(direction.via&&!has(direction.via)||direction.avoid&&(!row.routeComplete||has(direction.avoid)))return false;
  return !direction.target||[direction.target,...direction.also||[]].some(has);
 }
