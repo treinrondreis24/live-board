@@ -61,6 +61,11 @@ export function recordJourneySnapshot(snapshot){
  // Serialise all writers, including IFF and streaming RitInfo, within this service.
  const job=writes.then(()=>saveSnapshot(snapshot));writes=job.catch(()=>{});return job;
 }
+function journeyValues(value){
+ if(Array.isArray(value))return value.map(journeyValues);
+ if(value&&typeof value==='object')return Object.fromEntries(Object.keys(value).sort().filter(k=>!['sourceTimestamp','recordedAt','firstSeenAt','lastSeenAt','planningTimestamp','planningSource','source'].includes(k)).map(k=>[k,journeyValues(value[k])]));
+ return value;
+}
 async function saveSnapshot(snapshot){
  if(!/^\d+$/.test(snapshot.trainNumber)||!/^\d{4}-\d{2}-\d{2}$/.test(snapshot.serviceDate)||!snapshot.stops.length)throw Error('Invalid journey');
  const id=key(snapshot.trainNumber,snapshot.serviceDate),now=Date.now(),revisionId=hash([id,snapshot]);
@@ -70,9 +75,10 @@ async function saveSnapshot(snapshot){
    const exists=sqlite.prepare('SELECT revision_id FROM journey_archive_revisions WHERE revision_id=?').get(revisionId);
    if(!exists){
     const row=sqlite.prepare('SELECT state_json FROM journey_archive WHERE journey_id=?').get(id);
-    const state=applyJourneySnapshot(row?JSON.parse(row.state_json):null,snapshot,now);
+    const previous=row?JSON.parse(row.state_json):null;
+    const state=applyJourneySnapshot(previous?structuredClone(previous):null,snapshot,now),changed=!previous||hash(journeyValues(previous))!==hash(journeyValues(state));
     sqlite.prepare('INSERT INTO journey_archive(journey_id,train_number,service_date,first_seen_at,last_seen_at,state_json) VALUES(?,?,?,?,?,?) ON CONFLICT(journey_id) DO UPDATE SET last_seen_at=excluded.last_seen_at,state_json=excluded.state_json').run(id,snapshot.trainNumber,snapshot.serviceDate,state.firstSeenAt,now,JSON.stringify(state));
-    sqlite.prepare('INSERT INTO journey_archive_revisions(revision_id,journey_id,observed_at,source,source_timestamp,snapshot_json) VALUES(?,?,?,?,?,?)').run(revisionId,id,now,snapshot.source,snapshot.sourceTimestamp,JSON.stringify(snapshot));
+    if(changed)sqlite.prepare('INSERT INTO journey_archive_revisions(revision_id,journey_id,observed_at,source,source_timestamp,snapshot_json) VALUES(?,?,?,?,?,?)').run(revisionId,id,now,snapshot.source,snapshot.sourceTimestamp,JSON.stringify(snapshot));
    }
    sqlite.exec('COMMIT');
   }catch(e){sqlite.exec('ROLLBACK');throw e;}
@@ -87,9 +93,10 @@ async function saveSnapshot(snapshot){
    const [row]=await query('SELECT state_json FROM journey_archive WHERE journey_id=$1'+(client?' FOR UPDATE':''),[id]);
    const exists=await query('SELECT revision_id FROM journey_archive_revisions WHERE revision_id=$1',[revisionId]);
    if(!exists.length){
-     const state=applyJourneySnapshot(JSON.parse(row.state_json),snapshot,now);
+     const previous=JSON.parse(row.state_json);
+     const state=applyJourneySnapshot(previous?structuredClone(previous):null,snapshot,now),changed=!previous||hash(journeyValues(previous))!==hash(journeyValues(state));
      await exec('UPDATE journey_archive SET last_seen_at=$1,state_json=$2 WHERE journey_id=$3',[now,JSON.stringify(state),id]);
-     await exec('INSERT INTO journey_archive_revisions(revision_id,journey_id,observed_at,source,source_timestamp,snapshot_json) VALUES($1,$2,$3,$4,$5,$6)',[revisionId,id,now,snapshot.source,snapshot.sourceTimestamp,JSON.stringify(snapshot)]);
+     if(changed)await exec('INSERT INTO journey_archive_revisions(revision_id,journey_id,observed_at,source,source_timestamp,snapshot_json) VALUES($1,$2,$3,$4,$5,$6)',[revisionId,id,now,snapshot.source,snapshot.sourceTimestamp,JSON.stringify(snapshot)]);
    }
    if(client)await client.query('COMMIT');else sqlite.exec('COMMIT');
  }catch(e){if(client)await client.query('ROLLBACK');else sqlite.exec('ROLLBACK');throw e;}finally{client?.release();}

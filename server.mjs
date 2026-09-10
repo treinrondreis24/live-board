@@ -533,7 +533,7 @@ function stationDirectionMatches(row,direction){
   if(["eurocity","eurocity-direct","eurostar"].includes(direction.serviceBrand)){
     const name=normalizeCategory(row.categoryName||""),brand=direction.serviceBrand;
     const direct=category==="ECD"||name.includes("EUROCITYDIRECT");
-    const ec=category==="EC"||name==="EUROCITY";
+    const ec=["EC","ECC"].includes(category)||name==="EUROCITY";
     const eurostar=["EST","ES","EU","THA","EUROSTAR"].includes(category)||name.includes("EUROSTAR");
     const matches=brand==="eurostar"?eurostar:brand==="eurocity-direct"?direct:(ec&&!direct);
     return matches&&(!stops.length||futureRouteContains(row,stops));
