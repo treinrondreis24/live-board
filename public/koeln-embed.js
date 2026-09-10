@@ -60,7 +60,7 @@ function renderQuick(){
       <div class="time">${esc(first.plannedTime||first.time||"--:--")}</div>
       <div class="train">${esc(first.train||"—")}</div>
       <div class="destination">${esc(first.to||"—")}</div>
-      <div class="track">${t.transportMode==='water'?'steiger':'spoor'} <strong>${esc(first.track||"—")}</strong></div>
+      <div class="track">${first.transportMode==='water'?'steiger':'spoor'} <strong>${esc(first.track||"—")}</strong></div>
       <div class="status ${statusClass(first)}">${esc(statusText(first))}</div>
     </div>
     ${rest.map(t=>`<div class="extra" ${expanded?"":"hidden"}>${compactRow(t)}</div>`).join("")}`;
