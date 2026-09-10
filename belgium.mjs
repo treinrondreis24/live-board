@@ -52,6 +52,13 @@ export function parsePlan(bytes,now=Date.now()){
   if(!rows.length)throw new Error('Geen vertrekken voor de gekozen stations in de dienstregeling');
   return {rows,stops};
 }
+// JSON does not preserve Maps. Store entries and rebuild the lookup after restart.
+export function serializePlan(schedule){return {...schedule,stops:[...schedule.stops.entries()]};}
+export function restorePlan(schedule){
+  if(!schedule||!Array.isArray(schedule.rows))return null;
+  const valid=schedule.stops instanceof Map||Array.isArray(schedule.stops);
+  return {schedule:{...schedule,stops:schedule.stops instanceof Map?schedule.stops:new Map(valid?schedule.stops:[])},needsRefresh:!valid};
+}
 export function rowsWithRealtime(schedule,feed,now=Date.now()){
   const updates=new Map(),stamp=Number(feed?.header?.timestamp)*1000;
   const fresh=Number.isFinite(stamp)&&now-stamp<=180000&&stamp<=now+60000;
@@ -82,7 +89,7 @@ async function tick(){
     if(!plan||planDay!==dayKey(now)){
       const bytes=new Uint8Array(await(await download('static')).arrayBuffer());
       const next=await new Promise((resolve,reject)=>{const w=new Worker(new URL(import.meta.url),{workerData:{bytes,now},transferList:[bytes.buffer]});w.once('message',resolve);w.once('error',reject);w.once('exit',code=>{if(code)reject(new Error('NMBS dienstregeling verwerken mislukt'));});});
-      plan=next;planDay=dayKey(now);await saveBoardCache('NMBS:plan',{plan,planDay});belgiumState.lastPlanAt=new Date().toISOString();
+      plan=next;planDay=dayKey(now);await saveBoardCache('NMBS:plan',{plan:serializePlan(plan),planDay});belgiumState.lastPlanAt=new Date().toISOString();
       await recordObservations(rowsWithRealtime(plan,null,now).filter(r=>r.plannedTimestamp>=now-3600000&&r.plannedTimestamp<now+86400000),'NMBS',now);
     }
     const next=await(await download('rt/trip-update?format=json')).json();
@@ -93,7 +100,7 @@ async function tick(){
     belgiumState.status=Date.now()-Number(next.header.timestamp)*1000>180000?'stale':'ready';belgiumState.error=null;
   }catch(e){belgiumState.status='error';belgiumState.error=String(e.message).slice(0,160);}finally{busy=false;}
 }
-export async function restoreBelgium(){const saved=await loadBoardCache('NMBS:plan');if(saved){plan=saved.plan;planDay=saved.planDay;live=await loadBoardCache('NMBS:live');if(live)belgiumState.lastRealtimeAt=new Date(Number(live.header.timestamp)*1000).toISOString();}}
+export async function restoreBelgium(){const saved=await loadBoardCache('NMBS:plan'),restored=restorePlan(saved?.plan);if(restored){plan=restored.schedule;planDay=restored.needsRefresh?'':saved.planDay;live=await loadBoardCache('NMBS:live');if(live)belgiumState.lastRealtimeAt=new Date(Number(live.header.timestamp)*1000).toISOString();}}
 export function startBelgium(){void tick();setInterval(()=>void tick(),30000).unref();}
 export function belgianPayload(page){
   if(!belgianStations[page])return null;
