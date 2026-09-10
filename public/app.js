@@ -4,9 +4,9 @@ const CONFIG = {
   apiRefreshMs: 20000,
 
   // Weergavetijden
-  dbMinScreenMs: 15000,
-  dbTargetMsPerPage: 7000,
-  italyScreenMs: 7000
+  dbMinScreenMs: 10000,
+  dbTargetMsPerPage: 10000,
+  italyScreenMs: 10000
 };
 
 let dbTrains = [];
@@ -19,8 +19,7 @@ let dbPageTimer = null;
 
 const screens = [
   document.getElementById("db-screen"),
-  document.getElementById("italy-milano-split"),
-  document.getElementById("italy-roma-dep")
+  document.getElementById("italy-milano-split")
 ];
 
 const dbRowsEl = document.getElementById("db-rows");
@@ -111,8 +110,7 @@ function dbPageCount(){
 function dbScreenDuration(){
   const pages = dbPageCount();
 
-  // Minimaal 15 sec. Bij 3+ pagina's automatisch langer zodat
-  // iedere DB-pagina ongeveer 7 sec zichtbaar blijft.
+  // Iedere pagina blijft tien seconden zichtbaar.
   return Math.max(
     CONFIG.dbMinScreenMs,
     pages * CONFIG.dbTargetMsPerPage
