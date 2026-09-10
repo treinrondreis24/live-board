@@ -1,6 +1,6 @@
 import {saveBoardCache,loadBoardCache} from './board-cache.mjs';
 import {recordObservations} from './storage.mjs';
-export const norwegianStations={oslo:{name:'Oslo S',id:'NSR:StopPlace:59872'},bergen:{name:'Bergen',id:'NSR:StopPlace:59983'},voss:{name:'Voss',id:'NSR:StopPlace:59958'},myrdal:{name:'Myrdal',id:'NSR:StopPlace:222'},trondheim:{name:'Trondheim S',id:'NSR:StopPlace:59977'},stavanger:{name:'Stavanger',id:'NSR:StopPlace:61291'}};
+export const norwegianStations={narvik:{name:'Narvik',id:'NSR:StopPlace:62318'},oslo:{name:'Oslo S',id:'NSR:StopPlace:59872'},bergen:{name:'Bergen',id:'NSR:StopPlace:59983'},voss:{name:'Voss',id:'NSR:StopPlace:59958'},myrdal:{name:'Myrdal',id:'NSR:StopPlace:222'},trondheim:{name:'Trondheim S',id:'NSR:StopPlace:59977'},stavanger:{name:'Stavanger',id:'NSR:StopPlace:61291'}};
 export const enturState={source:'Entur',stations:Object.fromEntries(Object.entries(norwegianStations).map(([key,s])=>[key,{...s,status:'starting',lastSuccessAt:null,error:null}]))};
 const cache=new Map(),timeFormat=new Intl.DateTimeFormat('nl-NL',{timeZone:'Europe/Oslo',hour:'2-digit',minute:'2-digit'});
 const clock=t=>timeFormat.format(t);

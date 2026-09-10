@@ -4,12 +4,13 @@ import {swissDirections,matchesSwissDirection} from './swiss-directions.mjs';
 let catalog={},saved=new Map(),provider,legacyMatch;
 const attempts=new Map(),cookieName='treinbord_beheer';
 export const defaultAppearance={design:'standard',accent:'#e5303c',text:'#252525',background:'#ffffff',alternate:'#faf8f5',buttonStart:'#1c6e92',buttonEnd:'#669620',font:'treinrondreis',width:1050,density:'normal',fullOpen:false,defaultTab:'all',showUpdated:true};
-export async function initBoardAdmin({config,swissStations,norwegianStations,belgianStations,rfiStations={},frenchStations={},spanishStations={},getPayload,matchDirection}){
+export async function initBoardAdmin({config,swissStations,norwegianStations,belgianStations,rfiStations={},frenchStations={},spanishStations={},swedishStations={},getPayload,matchDirection}){
  provider=getPayload;legacyMatch=matchDirection;
  catalog={...Object.fromEntries(Object.entries(config.stationPages||{}).map(([id,p])=>[id,{id,name:p.station||p.title,country:p.country||'DE',engine:'standard',title:p.title,directions:p.quickDirections||[]}]))};
  for(const [stations,country,engine] of [[belgianStations,'BE','standard'],[norwegianStations,'NO','standard'],[swissStations,'CH','swiss']])for(const [id,s] of Object.entries(stations))catalog[id]={id,name:s.name,country:s.country||country,engine,title:'Vertrektijden '+s.name,directions:engine==='swiss'?swissDirections[id]||[]:[]};
  for(const [id,s] of Object.entries(rfiStations))if(!catalog[id])catalog[id]={id,name:s.name,country:'IT',engine:'standard',title:'Vertrektijden '+s.name,directions:[]};
  for(const [id,s] of Object.entries(frenchStations))catalog[id]={id,name:s.name,country:'FR',engine:'standard',title:'Vertrektijden '+s.name,directions:[]};
+ for(const [id,s] of Object.entries(swedishStations))catalog[id]={id,name:s.name,country:'SE',engine:'standard',title:'Vertrektijden '+s.name,directions:[]};
  for(const [id,s] of Object.entries(spanishStations))catalog[id]={id,name:s.name,country:'ES',engine:'standard',title:'Vertrektijden '+s.name,directions:[]};
  saved=new Map((await readBoardSettings()).map(r=>[r.page,r]));
  for(const [page,r] of saved)if(r.settings.sourcePage&&Object.hasOwn(catalog,r.settings.sourcePage)&&!Object.hasOwn(catalog,page))catalog[page]={...catalog[r.settings.sourcePage],id:page,sourcePage:r.settings.sourcePage};
