@@ -1,7 +1,13 @@
 import {loadBoardCache,saveBoardCache} from './board-cache.mjs';
 import {recordObservations} from './storage.mjs';
 
-export const rfiStations={milano:{name:'Milano Centrale',id:1728},monza:{name:'Monza',id:1841},tirano:{name:'Tirano',id:2850}};
+export const rfiStations={
+ milano:{name:'Milano Centrale',id:1728},monza:{name:'Monza',id:1841},tirano:{name:'Tirano',id:2850},
+ verona:{name:'Verona Porta Nuova',id:3025},levanto:{name:'Levanto',id:278},roma:{name:'Roma Termini',id:2416},
+ venezia:{name:'Venezia Santa Lucia',monitorName:'Venezia S.Lucia',id:3009},'venezia-mestre':{name:'Venezia Mestre',id:3002},
+ bolzano:{name:'Bolzano',id:685},napoli:{name:'Napoli Centrale',id:1888},bologna:{name:'Bologna Centrale',id:683},rimini:{name:'Rimini',id:2358},
+ monterosso:{name:'Monterosso',id:286},vernazza:{name:'Vernazza',id:341},corniglia:{name:'Corniglia',id:233},manarola:{name:'Manarola',id:280},riomaggiore:{name:'Riomaggiore',id:309}
+};
 export const rfiState={source:'RFI',stations:Object.fromEntries(Object.entries(rfiStations).map(([k,s])=>[k,{...s,status:'starting',lastSuccessAt:null}]))};
 const cache=new Map(),zone='Europe/Rome',maxAge=300000;
 const fmt=new Intl.DateTimeFormat('nl-NL',{timeZone:zone,hour:'2-digit',minute:'2-digit'});
@@ -15,12 +21,13 @@ function localTimestamp(y,m,d,h,minute,second=0){
 export function parseRfi(page,html){
  const station=rfiStations[page];if(!station)throw Error('Onbekend RFI-station');
  const title=clean(html.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i)?.[1]||'');
- if(title.toUpperCase()!==station.name.toUpperCase())throw Error('RFI-station komt niet overeen');
+ if(title.toUpperCase()!==(station.monitorName||station.name).toUpperCase())throw Error('RFI-station komt niet overeen');
  const date=clean(html).match(/aggiornato il (\d{2})\/(\d{2})\/(\d{4}) alle ore (\d{2}):(\d{2}):(\d{2})/i);
  if(!date||!html.includes('RTreno')&&!html.includes('HTreno'))throw Error('RFI-monitor niet herkend');
  const [,dd,mm,yy,hh,mi,ss]=date.map(Number),at=localTimestamp(yy,mm,dd,hh,mi,ss),rows=[];
  for(const match of html.matchAll(/<tr\b[^>]*name="treno"[^>]*>([\s\S]*?)<\/tr>/gi)){
   const block=match[1],cell=id=>block.match(new RegExp('<td\\b[^>]*id="'+id+'"[^>]*>([\\s\\S]*?)<\\/td>','i'))?.[1]||'';
+  if(/alt="Categoria\s+BUS"/i.test(cell('RCategoria')))continue;
   const number=clean(cell('RTreno')),time=clean(cell('ROrario')),to=clean(cell('RStazione'));if(!number&&!time&&!to)continue;if(!/^\d+$/.test(number)||!/^\d{2}:\d{2}$/.test(time)||!to)throw Error('Onvolledige RFI-trein');
   const [hour,minute]=time.split(':').map(Number);let planned=localTimestamp(yy,mm,dd,hour,minute);
   // A monitor spans midnight; large positive gaps are yesterday's delayed trains.
