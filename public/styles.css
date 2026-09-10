@@ -115,7 +115,7 @@ html,body{
 
 .db-row,.db-train-row{
   display:grid;
-  grid-template-columns:13% 11% 21% 23% 17% 15%;
+  grid-template-columns:17% 14% 25% 27% 17%;
   align-items:center;
   padding:0 2.2vw;
 }
@@ -147,7 +147,7 @@ html,body{
   overflow:hidden;
   white-space:nowrap;
   text-overflow:ellipsis;
-  font-size:clamp(19px,1.67vw,39px);
+  font-size:clamp(23.75px,2.0875vw,48.75px);
   line-height:1;
 }
 
@@ -155,7 +155,7 @@ html,body{
   display:flex;
   align-items:baseline;
   gap:.38vw;
-  font-size:clamp(22px,1.8vw,43px);
+  font-size:clamp(27.5px,2.25vw,53.75px);
   font-weight:700;
   letter-spacing:-.04em;
   font-variant-numeric:tabular-nums;
@@ -326,14 +326,14 @@ html,body{
   overflow:hidden;
   white-space:nowrap;
   text-overflow:ellipsis;
-  font-size:clamp(15px,1.32vw,31px);
+  font-size:clamp(18.75px,1.65vw,38.75px);
   line-height:1;
   font-weight:700;
   letter-spacing:.025em;
 }
 
 .italy-time{
-  font-size:clamp(17px,1.55vw,35px);
+  font-size:clamp(21.25px,1.9375vw,43.75px);
   font-variant-numeric:tabular-nums;
 }
 
@@ -343,7 +343,7 @@ html,body{
 }
 
 .italy-track{
-  font-size:clamp(18px,1.55vw,35px);
+  font-size:clamp(22.5px,1.9375vw,43.75px);
   font-weight:900;
   text-align:left;
 }
@@ -458,3 +458,8 @@ html,body{
 .error-text{font-size:clamp(13px,.95vw,22px);line-height:1.35}
 
 .logo-fallback,.brand-name,.title,.italy-title,.italy-subtitle,.italy-panel-title,.error-title{font-family:Montserrat,"Open Sans",sans-serif}
+
+/* Scanpunt onder de tijd laat meer ruimte voor de grotere reisgegevens. */
+.db-time-cell{overflow:hidden;line-height:1.15}
+.db-time-cell .db-time{white-space:nowrap}
+.db-time-cell .db-scanpoint{margin-top:.65vh;font-size:clamp(12px,1vw,24px);line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

@@ -133,17 +133,15 @@ function renderDb(){
         <div class="db-cell db-train">—</div>
         <div class="db-cell db-from">Geen data</div>
         <div class="db-cell db-to">DB Timetables</div>
-        <div class="db-cell db-scanpoint">—</div>
         <div class="db-cell db-status">Wachten…</div>
       </div>`;
   }else{
     dbRowsEl.innerHTML = items.map(t=>`
       <div class="db-train-row ${t.type === "cancel" ? "db-cancelled-row" : ""}">
-        <div class="db-cell db-time">${dbTimeHtml(t)}</div>
+        <div class="db-cell db-time-cell"><div class="db-time">${dbTimeHtml(t)}</div><div class="db-scanpoint">${escapeHtml(t.observedAt)}</div></div>
         <div class="db-cell db-train">${escapeHtml(t.train)}</div>
         <div class="db-cell db-from">${escapeHtml(t.from)}</div>
         <div class="db-cell db-to">${escapeHtml(t.to)}</div>
-        <div class="db-cell db-scanpoint">${escapeHtml(t.observedAt)}</div>
         <div class="db-cell db-status ${escapeHtml(t.type)}">
           ${escapeHtml(t.status)}${trendHtml(t)}
         </div>
