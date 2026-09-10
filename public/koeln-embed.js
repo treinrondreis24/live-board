@@ -18,8 +18,8 @@ function statusClass(t){
   return "";
 }
 function statusText(t){
-  if(["ENTUR","OJP"].includes(t.source)&&!t.hasRealtime&&!t.cancelled)return "";
-  if(t.source==="NMBS"&&!t.hasRealtime&&!t.cancelled)return "Volgens dienstregeling";
+  if(["ENTUR","OJP","NDOV_IFF","NDOV"].includes(t.source)&&!t.hasRealtime&&!t.cancelled)return "";
+  if(t.source==="NMBS"&&!t.hasRealtime&&!t.cancelled)return "";
   if(t.partialCancellation)return t.status||"Deels geannuleerd";
   if(t.cancelled)return "Geannuleerd";
   if(Number(t.delay||0)>0)return `+${Number(t.delay)} min`;
@@ -32,7 +32,7 @@ function compactRow(t){
     <div class="time">${esc(t.plannedTime||t.time||"--:--")}</div>
     <div class="train">${esc(t.train||"—")}</div>
     <div class="destination">${esc(t.to||"—")}</div>
-    <div class="track">spoor <strong>${esc(t.track||"—")}</strong></div>
+    <div class="track">${t.transportMode==='water'?'steiger':'spoor'} <strong>${esc(t.track||"—")}</strong></div>
     <div class="status ${statusClass(t)}">${esc(statusText(t))}</div>
   </div>`;
 }
@@ -60,7 +60,7 @@ function renderQuick(){
       <div class="time">${esc(first.plannedTime||first.time||"--:--")}</div>
       <div class="train">${esc(first.train||"—")}</div>
       <div class="destination">${esc(first.to||"—")}</div>
-      <div class="track">spoor <strong>${esc(first.track||"—")}</strong></div>
+      <div class="track">${t.transportMode==='water'?'steiger':'spoor'} <strong>${esc(first.track||"—")}</strong></div>
       <div class="status ${statusClass(first)}">${esc(statusText(first))}</div>
     </div>
     ${rest.map(t=>`<div class="extra" ${expanded?"":"hidden"}>${compactRow(t)}</div>`).join("")}`;
@@ -83,7 +83,7 @@ function renderFull(){
     <div class="time">${esc(t.plannedTime||t.time||"--:--")}</div>
     <div class="train">${esc(t.train||"—")}</div>
     <div class="destination">${esc(t.to||"—")}</div>
-    <div class="track"><span class="mobile-track-label">spoor </span><strong>${esc(t.track||"—")}</strong></div>
+    <div class="track"><span class="mobile-track-label">${t.transportMode==='water'?'steiger':'spoor'} </span><strong>${esc(t.track||"—")}</strong></div>
     <div class="status ${statusClass(t)}">${esc(statusText(t))}</div>
   </div>`).join(""):'<div class="empty">Geen actuele vertrekken gevonden.</div>';
 }
