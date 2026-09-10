@@ -1,9 +1,9 @@
 import {createHmac,timingSafeEqual,randomBytes} from 'node:crypto';
-import {readBoardSettings,writeBoardSettings} from './board-cache.mjs';
+import {readBoardSettings,writeBoardSettings,readBoardLayouts,createBoardLayout} from './board-cache.mjs';
 import {swissDirections,matchesSwissDirection} from './swiss-directions.mjs';
 let catalog={},saved=new Map(),provider,legacyMatch;
 const attempts=new Map(),cookieName='treinbord_beheer';
-export const defaultAppearance={accent:'#e5303c',text:'#252525',background:'#ffffff',alternate:'#faf8f5',buttonStart:'#1c6e92',buttonEnd:'#669620',font:'treinrondreis',width:1050,density:'normal',fullOpen:false,defaultTab:'all',showUpdated:true};
+export const defaultAppearance={design:'standard',accent:'#e5303c',text:'#252525',background:'#ffffff',alternate:'#faf8f5',buttonStart:'#1c6e92',buttonEnd:'#669620',font:'treinrondreis',width:1050,density:'normal',fullOpen:false,defaultTab:'all',showUpdated:true};
 export async function initBoardAdmin({config,swissStations,norwegianStations,belgianStations,getPayload,matchDirection}){
  provider=getPayload;legacyMatch=matchDirection;
  catalog={...Object.fromEntries(Object.entries(config.stationPages||{}).map(([id,p])=>[id,{id,name:p.station||p.title,country:p.country||'DE',engine:'standard',title:p.title,directions:p.quickDirections||[]}]))};
@@ -11,6 +11,15 @@ export async function initBoardAdmin({config,swissStations,norwegianStations,bel
  saved=new Map((await readBoardSettings()).map(r=>[r.page,r]));
 }
 export function defaultBoardSettings(page){if(!Object.hasOwn(catalog,page))throw Error('Onbekend station');const s=catalog[page];return {title:s.title,footer:'',enabled:true,directions:structuredClone(s.directions).map((d,i)=>({...d,id:d.id||'richting-'+i,enabled:true,limit:8})),appearance:{...defaultAppearance}};}
+export const standardLayouts=[
+ {id:'db',name:'DB-bord',appearance:{...defaultAppearance,design:'db',accent:'#003082',text:'#003082',alternate:'#f7fbfd',buttonStart:'#003082',buttonEnd:'#003082',width:760,density:'roomy',fullOpen:true}},
+ {id:'trenitalia',name:'Trenitalia-bord',appearance:{...defaultAppearance,design:'trenitalia',accent:'#f3b548',text:'#f3b548',background:'#111111',alternate:'#191919',buttonStart:'#343434',buttonEnd:'#343434',width:760,density:'roomy',fullOpen:true}},
+ {id:'uk',name:'UK-bord',appearance:{...defaultAppearance,design:'uk',accent:'#ffda44',text:'#ffda44',background:'#101010',alternate:'#191919',buttonStart:'#333333',buttonEnd:'#333333',font:'system',width:1050,fullOpen:true}},
+ {id:'sncf',name:'SNCF-bord',appearance:{...defaultAppearance,design:'sncf',accent:'#ffffff',text:'#ffffff',background:'#123a82',alternate:'#194990',buttonStart:'#702d91',buttonEnd:'#702d91',font:'system',width:1050,density:'roomy',fullOpen:true}},
+ {id:'standard',name:'Treinrondreis',appearance:{...defaultAppearance}},
+ {id:'compact',name:'Compact',appearance:{...defaultAppearance,width:900,density:'compact',fullOpen:true}},
+ {id:'quiet',name:'Rustig',appearance:{...defaultAppearance,accent:'#24546a',alternate:'#f2f5f6',buttonStart:'#24546a',buttonEnd:'#467b87',font:'system',density:'roomy'}}
+];
 function cleanText(v,max=200){return String(v??'').trim().slice(0,max);}
 export function validateBoardSettings(page,input){
  if(!Object.hasOwn(catalog,page)||!input||typeof input!=='object'||Array.isArray(input))throw Error('Ongeldige instellingen');
@@ -27,6 +36,7 @@ export function validateBoardSettings(page,input){
  });
  if(new Set(result.directions.map(d=>d.id)).size!==result.directions.length)throw Error('Filters moeten een unieke identificatie hebben.');
  const a=input.appearance||{};
+ result.appearance.design=['standard','db','trenitalia','uk','sncf'].includes(a.design)?a.design:'standard';
  for(const key of ['accent','text','background','alternate','buttonStart','buttonEnd'])if(/^#[a-f\d]{6}$/i.test(a[key]||''))result.appearance[key]=a[key];
  result.appearance.font=['treinrondreis','system','arial','verdana'].includes(a.font)?a.font:'treinrondreis';
  result.appearance.width=Math.min(1800,Math.max(600,Number(a.width)||1050));result.appearance.density=['compact','normal','roomy'].includes(a.density)?a.density:'normal';
@@ -80,6 +90,14 @@ export async function handleBoardAdmin(req,res,url){
   }
   if(!authenticated(req)){reply(res,401,{error:'Log eerst in.'});return true;}
   if(req.method==='POST'&&action==='logout'){res.setHeader('Set-Cookie',cookieName+'=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0');reply(res,200,{ok:true});return true;}
+  if(req.method==='GET'&&action==='layouts'){reply(res,200,{layouts:[...standardLayouts,...await readBoardLayouts()]});return true;}
+  if(req.method==='POST'&&action==='layout-save'){
+   const input=await body(req),name=cleanText(input.name,80);if(!name)throw Error('Geef de layout een naam.');
+   if(standardLayouts.some(l=>l.name.toLowerCase()===name.toLowerCase()))throw Error('Kies een eigen naam voor je layout.');
+   if((await readBoardLayouts()).length>=100)throw Error('Er zijn maximaal 100 eigen layouts mogelijk.');
+   const page=Object.keys(catalog)[0],appearance=validateBoardSettings(page,{directions:[],appearance:input.appearance}).appearance;
+   reply(res,200,{layout:await createBoardLayout('custom-'+randomBytes(12).toString('hex'),name,appearance)});return true;
+  }
   if(req.method==='GET'&&action==='boards'){reply(res,200,{boards:Object.values(catalog).map(c=>({...c,directions:undefined,revision:saved.get(c.id)?.revision||0,updatedAt:saved.get(c.id)?.updatedAt||null,settings:saved.get(c.id)?.settings||defaultBoardSettings(c.id),defaults:defaultBoardSettings(c.id)}))});return true;}
   if(req.method==='POST'&&['save','preview'].includes(action)){
    const input=await body(req),page=String(input.page||''),settings=validateBoardSettings(page,input.settings);

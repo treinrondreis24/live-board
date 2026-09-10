@@ -154,6 +154,7 @@ function applyAppearance(p){
  const board=document.querySelector('.board');if(/^#[a-f0-9]{6}$/i.test(a.background||''))board.style.background=a.background;
  board.style.maxWidth=Math.max(600,Math.min(1800,Number(a.width)||1050))+'px';
  document.body.dataset.customBoard='true';
+ document.body.dataset.boardDesign=['db','trenitalia','uk','sncf'].includes(a.design)?a.design:'standard';
  const fonts={treinrondreis:['"Open Sans",Arial,sans-serif','Montserrat,"Open Sans",sans-serif'],system:['system-ui,sans-serif','system-ui,sans-serif'],arial:['Arial,sans-serif','Arial,sans-serif'],verdana:['Verdana,sans-serif','Verdana,sans-serif']},font=fonts[a.font]||fonts.treinrondreis;
  root.style.setProperty('--board-font',font[0]);root.style.setProperty('--board-heading-font',font[1]);root.style.setProperty('--board-row-padding',({compact:3,normal:6,roomy:12}[a.density]||6)+'px');
  document.querySelector('.live').hidden=a.showUpdated===false;
