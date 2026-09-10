@@ -18,6 +18,7 @@ function statusClass(t){
   return "";
 }
 function statusText(t){
+  if(t.source==='RFI'&&!t.cancelled&&(!t.hasRealtime||!Number(t.delay)))return t.hasRealtime?(t.status||''):'';
   if(["ENTUR","OJP","NDOV_IFF","NDOV"].includes(t.source)&&!t.hasRealtime&&!t.cancelled)return "";
   if(t.source==="NMBS"&&!t.hasRealtime&&!t.cancelled)return "";
   if(t.partialCancellation)return t.status||"Deels geannuleerd";
