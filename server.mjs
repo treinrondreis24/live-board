@@ -1,3 +1,4 @@
+import {initBoardAdmin,handleBoardAdmin,applyBoardSettings} from './board-admin.mjs';
 import {restoreDutchPlan,startDutchPlan,dutchPlannedRows,combineDutchRows,nlPlanningState} from './nl-planning.mjs';
 import {loadBoardCache,saveBoardCache} from './board-cache.mjs';
 import {swissStations,swissState,startSwiss,restoreSwiss,swissPayload} from './swiss.mjs';
@@ -945,7 +946,7 @@ const pageRoutes={
   ...Object.fromEntries(Object.keys(norwegianStations).flatMap(id=>[[`/embed/${id}`,"/koeln-embed.html"],[`/embed/${id}/`,"/koeln-embed.html"]])),
   ...Object.fromEntries(Object.keys(belgianStations).flatMap(id=>[[`/embed/${id}`,"/koeln-embed.html"],[`/embed/${id}/`,"/koeln-embed.html"]])),
   ...Object.fromEntries(Object.keys(config.stationPages||{}).flatMap(id=>[[`/embed/${id}`,"/koeln-embed.html"],[`/embed/${id}/`,"/koeln-embed.html"]])),
-  "/mobile":"/mobile.html","/mobile/":"/mobile.html",
+  "/beheer":"/board-admin.html","/beheer/":"/board-admin.html","/mobile":"/mobile.html","/mobile/":"/mobile.html",
   "/embed/duesseldorf":"/koeln-embed.html","/embed/duesseldorf/":"/koeln-embed.html",
   "/embed/koeln":"/koeln-embed.html","/embed/koeln/":"/koeln-embed.html",
   "/nightjets":"/nightjets.html","/nightjets/":"/nightjets.html",
@@ -958,6 +959,7 @@ const pageRoutes={
 const server=http.createServer(async(req,res)=>{
   try{
     const url=new URL(req.url,`http://${req.headers.host}`);
+    if(await handleBoardAdmin(req,res,url))return;
     if(url.pathname==="/ritarchief"){res.writeHead(200,{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store"});return res.end(journeyPage);}
     if(url.pathname==="/api/journeys/status")return sendJson(res,200,{...journeyImportState,selected:config.journeyArchive?.trainNumbers||[]});
     const journeyMatch=url.pathname.match(/^\/api\/journeys\/(\d+)(\/revisions)?$/);
@@ -1033,11 +1035,11 @@ const server=http.createServer(async(req,res)=>{
     }
     if(url.pathname==="/api/belgium/status")return sendJson(res,200,belgiumState);
     const belgianPage=url.pathname.match(/^\/api\/views\/([a-z0-9-]+)\/?$/)?.[1];
-    if(belgianPage&&belgianStations[belgianPage])return sendJson(res,200,belgianPayload(belgianPage));
+    if(belgianPage&&belgianStations[belgianPage])return sendJson(res,200,applyBoardSettings(belgianPage,belgianPayload(belgianPage)));
     if(url.pathname==="/api/entur/status")return sendJson(res,200,enturState);
-    if(belgianPage&&norwegianStations[belgianPage])return sendJson(res,200,norwegianPayload(belgianPage));
+    if(belgianPage&&norwegianStations[belgianPage])return sendJson(res,200,applyBoardSettings(belgianPage,norwegianPayload(belgianPage)));
     if(url.pathname==="/api/swiss/status")return sendJson(res,200,swissState);
-    if(belgianPage&&Object.hasOwn(swissStations,belgianPage))return sendJson(res,200,swissPayload(belgianPage));
+    if(belgianPage&&Object.hasOwn(swissStations,belgianPage))return sendJson(res,200,applyBoardSettings(belgianPage,swissPayload(belgianPage)));
     const stationViewMatch=url.pathname.match(/^\/api\/views\/([a-z0-9-]+)\/?$/);
     const stationPageId=stationViewMatch?.[1];
     if(stationPageId&&Object.hasOwn(config.stationPages||{},stationPageId)){
@@ -1046,7 +1048,7 @@ const server=http.createServer(async(req,res)=>{
       const legacy=stationPageId==="duesseldorf"?stationViewPayload("Düsseldorf Hbf","netherlands")
         :stationPageId==="wien"?stationViewPayload("Wien Hbf","fern")
         :stationPageId==="mannheim"?stationViewPayload("Mannheim Hbf","fern"):{};
-      return sendJson(res,200,{...legacy,...payload});
+      return sendJson(res,200,applyBoardSettings(stationPageId,{...legacy,...payload}));
     }
     if(url.pathname==="/api/views/nightjets")return sendJson(res,200,{source:"DB Timetables",...(await getNightjetView())});
     if(url.pathname==="/api/italy"){
@@ -1062,6 +1064,8 @@ const server=http.createServer(async(req,res)=>{
 });
 
 await initStorage();
+await initBoardAdmin({config,swissStations,norwegianStations,belgianStations,matchDirection:stationDirectionMatches,getPayload:page=>
+ Object.hasOwn(swissStations,page)?swissPayload(page):Object.hasOwn(norwegianStations,page)?norwegianPayload(page):Object.hasOwn(belgianStations,page)?belgianPayload(page):stationPagePayload(page)});
 await Promise.all([restoreSwiss(),restoreEntur(),restoreBelgium(),restoreDutchPlan()]);
 for(const row of await loadBoardCache('NDOV:rows')||[])if(row.plannedTimestamp>Date.now()-86400000)ndovRows.set(row.id,row);
 server.listen(PORT,async()=>{

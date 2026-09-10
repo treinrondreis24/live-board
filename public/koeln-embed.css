@@ -84,3 +84,8 @@ h1,h2,h3,.where,.primary{font-family:Montserrat,"Open Sans",sans-serif}
   .full-row .status{grid-area:status;display:block;text-align:left;font-size:12px}
   .mobile-track-label{display:inline}
 }
+
+body[data-custom-board]{font-family:var(--board-font)}
+body[data-custom-board] h2,body[data-custom-board] .where,body[data-custom-board] .primary{font-family:var(--board-heading-font)}
+body[data-custom-board] .direction-main,body[data-custom-board] .extra .direction-main,body[data-custom-board] .full-row{padding-top:var(--board-row-padding);padding-bottom:var(--board-row-padding)}
+#custom-footer,#station-notice{padding:8px 14px;white-space:pre-line;font-size:13px;line-height:1.5}
