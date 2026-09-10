@@ -390,6 +390,36 @@ async function addTrend30(train,now){
 }
 function selectorsForStation(name,list){return (list||[]).filter(x=>x.name===name);}
 function monitoredStationNames(){return [...new Set([...(config.stations||[]),...(config.collectors||[])].map(x=>x.name))];}
+async function restoreDbBoards(){
+  const now=Date.now();
+  const saved=await loadBoardCache('DB:boards');
+  if(saved?.dbState){dbState={...dbState,...saved.dbState,scanning:false,nextScanAt:null};}
+  let latest=saved?.collectorLastScanAt||null;
+  await Promise.all(monitoredStationNames().map(async name=>{
+    const station=await loadBoardCache('DB:station:'+name);
+    if(!Array.isArray(station?.rows))return;
+    collectorState.byStation[name]=station.rows.filter(r=>Number(r.expectedTimestamp||r.plannedTimestamp)>=now-600000);
+    if(station.at&&(!latest||station.at>latest))latest=station.at;
+  }));
+  collectorState.lastScanAt=latest;
+  dbState.trains=dbState.trains.filter(r=>visibleOnBoard(r,now));
+}
+async function restoreDbHistory(){
+  // One-time bridge for deployments predating the board cache. Do not overwrite a saved station.
+  const missing=new Set(monitoredStationNames().filter(name=>!Object.hasOwn(collectorState.byStation,name)));
+  if(!missing.size)return;
+  const now=Date.now(),rows=await getLatestForPlannedWindow({source:'DB',start:now-3600000,end:now+8*3600000,limit:10000});
+  for(const r of rows){if(!missing.has(r.station))continue;
+    const row=historyRowToTrain(r);
+    row.futureRoute=r.future_route||[];row.pastRoute=r.past_route||[];
+    (collectorState.byStation[r.station]??=[]).push(row);
+  }
+  for(const name of missing){if(!collectorState.byStation[name])continue;
+    const at=new Date(Math.max(...rows.filter(r=>r.station===name).map(r=>Number(r.observed_at)))).toISOString();
+    await saveBoardCache('DB:station:'+name,{at,rows:collectorState.byStation[name]});
+    if(!collectorState.lastScanAt||at>collectorState.lastScanAt)collectorState.lastScanAt=at;
+  }
+}
 
 async function performScan(){
   if(dbState.scanning)return;dbState.scanning=true;
@@ -433,6 +463,9 @@ async function performScan(){
           .sort((a,b)=>(a.plannedTimestamp||0)-(b.plannedTimestamp||0));
         collectorRows.push(...collectorByStation[name]);
         collectorState.byStation[name]=collectorByStation[name];
+        const stationAt=new Date().toISOString();
+        collectorState.lastScanAt=stationAt;
+        try{await saveBoardCache('DB:station:'+name,{at:stationAt,rows:collectorByStation[name].map(({rawStop,...row})=>row)});}catch(e){warnings.push(`${name}: bordcache opslaan mislukt`);}
 
         stations.push({
           configuredName:name,
@@ -461,6 +494,7 @@ async function performScan(){
 
     dbState.trains=trains.slice(0,Number(config.maxTrains||60));dbState.warnings=warnings;dbState.stations=stations;dbState.lastScanAt=new Date(now).toISOString();
     collectorState={lastScanAt:dbState.lastScanAt,byStation:collectorByStation,warnings};
+    try{await saveBoardCache('DB:boards',{dbState:{...dbState,scanning:false},collectorLastScanAt:collectorState.lastScanAt});}catch(e){warnings.push('DB-bordcache opslaan mislukt');}
     console.log(`[${new Date().toLocaleTimeString()}] DB-scan: ${dbState.trains.length} op hoofdbord, ${all.length} observaties opgeslagen`);
     if(warnings.length)console.log(warnings.join(" | "));
   }finally{dbState.scanning=false;}
@@ -1081,7 +1115,7 @@ const server=http.createServer(async(req,res)=>{
 await initStorage();
 await initBoardAdmin({config,swissStations,norwegianStations,belgianStations,rfiStations,frenchStations,spanishStations,swedishStations,matchDirection:stationDirectionMatches,getPayload:page=>
  internationalPayload(page,Object.hasOwn(swedishStations,page)?swedishPayload(page):Object.hasOwn(frenchStations,page)?frenchPayload(page):Object.hasOwn(spanishStations,page)?null:Object.hasOwn(rfiStations,page)?rfiPayload(page,page==='tirano'?swissPayload('tirano'):null):Object.hasOwn(swissStations,page)?swissPayload(page):Object.hasOwn(norwegianStations,page)?norwegianPayload(page):Object.hasOwn(belgianStations,page)?belgianPayload(page):stationPagePayload(page))});
-await Promise.all([restoreSwiss(),restoreEntur(),restoreBelgium(),restoreDutchPlan(),restoreRfi(),restoreFrance(),restoreInternational(),restoreSweden()]);
+await Promise.all([restoreSwiss(),restoreEntur(),restoreBelgium(),restoreDutchPlan(),restoreRfi(),restoreFrance(),restoreInternational(),restoreSweden(),restoreDbBoards().catch(e=>console.error('DB-bordcache laden mislukt:',e.message))]);
 for(const row of await loadBoardCache('NDOV:rows')||[])if(row.plannedTimestamp>Date.now()-86400000)ndovRows.set(row.id,row);
 server.listen(PORT,async()=>{
   void checkNdovAccess();
@@ -1096,6 +1130,7 @@ server.listen(PORT,async()=>{
   startDutchPlan(config.ndov.stations);
   startJourneyPlanning(config.journeyArchive?.trainNumbers||[]);
   const storage=getStorageInfo();console.log("");console.log("Treinrondreis Multi-source Data Hub + Live Board v4.2.0");console.log(`Open: http://localhost:${PORT}`);console.log(`DB credentials: ${CLIENT_ID&&API_KEY?"ingesteld":"ONTBREKEN"}`);console.log(`Historie: ${storage.backend} (${storage.retention})`);console.log("");
+  try{await restoreDbHistory();}catch(e){console.error('DB-bordhistorie laden mislukt:',e.message);}
   await Promise.allSettled([performScan(),performItalyScan()]);
   scheduleNext();scheduleNextItaly();scheduleNightjetDayCheck();setTimeout(()=>performNightjetDayPlan(),30000);
 

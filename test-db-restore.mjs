@@ -1,0 +1,16 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const text=fs.readFileSync(new URL('./server.mjs',import.meta.url),'utf8');
+const code=text.slice(text.indexOf('async function restoreDbBoards(){'),text.indexOf('async function performScan(){'));
+const now=Date.now(),future={number:'1',plannedTimestamp:now+60000,eventMode:'departure'},past={number:'2',plannedTimestamp:now-3600000};
+const cache=new Map([['DB:boards',{dbState:{trains:[future,past],lastScanAt:new Date(now-10000).toISOString(),scanning:true},collectorLastScanAt:new Date(now-10000).toISOString()}],['DB:station:Munich',{at:new Date(now-5000).toISOString(),rows:[future,past]}]]);
+let historyCalls=0;
+const c=vm.createContext({Date,console,dbState:{trains:[],scanning:false},collectorState:{byStation:{},lastScanAt:null},monitoredStationNames:()=>['Munich','Cologne'],loadBoardCache:async k=>cache.get(k),saveBoardCache:async(k,v)=>cache.set(k,v),visibleOnBoard:r=>r.plannedTimestamp>=now-600000,getLatestForPlannedWindow:async()=>{historyCalls++;return [{station:'Munich',observed_at:now-30000},{station:'Cologne',observed_at:now-30000,future_route:['Berlin']}];},historyRowToTrain:r=>({number:'history',observedAt:r.station})});
+await vm.runInContext(code+';restoreDbBoards()',c);
+assert.equal(c.dbState.scanning,false);assert.equal(c.dbState.trains.length,1);assert.equal(c.collectorState.byStation.Munich.length,1);
+await vm.runInContext('restoreDbHistory()',c);
+assert.equal(c.collectorState.byStation.Munich[0].number,'1');assert.equal(c.collectorState.byStation.Cologne[0].futureRoute[0],'Berlin');assert(cache.has('DB:station:Cologne'));
+await vm.runInContext('restoreDbHistory()',c);assert.equal(historyCalls,1);
+c.collectorState={byStation:{},lastScanAt:null};await vm.runInContext('restoreDbBoards()',c);assert(c.collectorState.byStation.Cologne);
+console.log('PASS: immediate cache restore, expired rows excluded, first-deployment history fallback, no overwrite, persistence across restart');
