@@ -89,3 +89,42 @@ body[data-custom-board]{font-family:var(--board-font)}
 body[data-custom-board] h2,body[data-custom-board] .where,body[data-custom-board] .primary{font-family:var(--board-heading-font)}
 body[data-custom-board] .direction-main,body[data-custom-board] .extra .direction-main,body[data-custom-board] .full-row{padding-top:var(--board-row-padding);padding-bottom:var(--board-row-padding)}
 #custom-footer,#station-notice{padding:8px 14px;white-space:pre-line;font-size:13px;line-height:1.5}
+
+/* Railway-inspired layouts preserve the same accessible departure data and controls. */
+body[data-board-design]:not([data-board-design=standard]){--muted:var(--text);--green:var(--text);--delay:var(--text);--major:#ff7777;--line:color-mix(in srgb,var(--text) 25%,transparent)}
+body[data-board-design]:not([data-board-design=standard]) .board{border-radius:0}
+body[data-board-design]:not([data-board-design=standard]) .more{color:var(--text)}
+body[data-board-design]:not([data-board-design=standard]) .full-row{border-color:var(--line)}
+body[data-board-design]:not([data-board-design=standard]) .full-row:nth-child(even){background:var(--soft)}
+body[data-board-design]:not([data-board-design=standard]) .tab.active{background:transparent;color:var(--text);box-shadow:inset 0 -3px var(--red)}
+body[data-board-design]:not([data-board-design=standard]) .primary{border:1px solid var(--line);border-radius:4px;color:var(--text)}
+body[data-board-design]:not([data-board-design=standard]) #swiss-source{color:var(--text)}
+body[data-board-design]:not([data-board-design=standard]) .extra{border-color:var(--line)}
+body[data-board-design=db]{--major:#b51f1f!important;--green:#003082;--delay:#914600}
+body[data-board-design=db] .board-head{background:#c8e2f0;border-bottom:2px solid var(--text)}
+body[data-board-design=db] .primary{color:white!important}
+body:is([data-board-design=db],[data-board-design=trenitalia]) .columns{display:none}
+body:is([data-board-design=db],[data-board-design=trenitalia]) .full-row{grid-template-columns:90px minmax(0,1fr) 90px;grid-template-areas:'time train track' 'dest dest dest' 'status status status';gap:7px 10px;padding:14px 18px;text-align:left}
+body:is([data-board-design=db],[data-board-design=trenitalia]) .full-row .time{grid-area:time;font-size:24px;font-weight:900}
+body:is([data-board-design=db],[data-board-design=trenitalia]) .full-row .train{grid-area:train;font-size:20px}
+body:is([data-board-design=db],[data-board-design=trenitalia]) .full-row .track{grid-area:track;text-align:right}
+body:is([data-board-design=db],[data-board-design=trenitalia]) .full-row .track strong{font-size:18px}
+body:is([data-board-design=db],[data-board-design=trenitalia]) .full-row .destination{grid-area:dest;white-space:normal;font-size:15px;font-weight:700}
+body:is([data-board-design=db],[data-board-design=trenitalia]) .full-row .status{grid-area:status;display:block;text-align:left}
+body[data-board-design=uk] .time,body[data-board-design=uk] .destination,body[data-board-design=uk] .train{font-family:ui-monospace,Consolas,monospace;letter-spacing:.02em}
+body[data-board-design=uk] .board-head{border-bottom:3px solid var(--red)}
+body[data-board-design=uk] .full-row{min-height:54px}
+body[data-board-design=sncf] .board-head{background:#702d91}
+body[data-board-design=sncf] .time{font-size:22px}
+body[data-board-design=sncf] .full-row{min-height:62px}
+body[data-board-design=sncf] .track strong{display:inline-block;padding:4px 8px;border:1px solid currentColor;border-radius:5px}
+@media(max-width:720px){
+ body:is([data-board-design=db],[data-board-design=trenitalia]) .full-row{grid-template-columns:70px minmax(0,1fr) 75px;padding-left:11px;padding-right:11px}
+ body:is([data-board-design=db],[data-board-design=trenitalia]) .full-row .time{font-size:21px}
+ body:is([data-board-design=db],[data-board-design=trenitalia]) .full-row .train{font-size:17px;overflow-wrap:anywhere}
+ body[data-board-design]:not([data-board-design=standard]) .direction-main{grid-template-columns:minmax(0,1fr) 58px 70px;grid-template-areas:'where where where' 'time train track' 'dest dest dest' 'status status status';gap:5px 8px}
+ body[data-board-design]:not([data-board-design=standard]) .direction-main .destination{white-space:normal}
+ body[data-board-design]:not([data-board-design=standard]) .direction-main .status{text-align:left}
+}
+body[data-board-design]:not([data-board-design=standard]) .board-footer{flex-wrap:wrap;gap:8px}
+body[data-board-design]:not([data-board-design=standard]) #swiss-source{flex-basis:100%;font-size:11px;overflow-wrap:anywhere}
