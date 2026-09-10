@@ -1,8 +1,22 @@
 let db;
 export async function initBoardCache({backend,pool,sqlite}){
  db={backend,pool,sqlite};
- const sql='CREATE TABLE IF NOT EXISTS board_cache (cache_key TEXT PRIMARY KEY, updated_at BIGINT NOT NULL, payload TEXT NOT NULL)';
+ const sql='CREATE TABLE IF NOT EXISTS board_cache (cache_key TEXT PRIMARY KEY, updated_at BIGINT NOT NULL, payload TEXT NOT NULL); CREATE TABLE IF NOT EXISTS board_settings (page TEXT PRIMARY KEY, revision INTEGER NOT NULL, updated_at BIGINT NOT NULL, payload TEXT NOT NULL)';
  if(pool)await pool.query(sql);else sqlite.exec(sql);
+}
+// Board configuration is reference data and is deliberately outside train retention.
+export async function readBoardSettings(){
+ const rows=db.pool?(await db.pool.query('SELECT * FROM board_settings')).rows:db.sqlite.prepare('SELECT * FROM board_settings').all();
+ return rows.map(r=>({page:r.page,revision:Number(r.revision),updatedAt:Number(r.updated_at),settings:JSON.parse(r.payload)}));
+}
+export async function writeBoardSettings(page,settings,revision){
+ const now=Date.now(),payload=JSON.stringify(settings);
+ const sql='INSERT INTO board_settings(page,revision,updated_at,payload) VALUES($1,1,$2,$3) ON CONFLICT(page) DO UPDATE SET revision=board_settings.revision+1,updated_at=excluded.updated_at,payload=excluded.payload WHERE board_settings.revision=$4 RETURNING revision';
+ let row;
+ if(db.pool)row=(await db.pool.query(sql,[page,now,payload,revision])).rows[0];
+ else row=db.sqlite.prepare(sql.replace(/\$\d/g,'?')).get(page,now,payload,revision);
+ if(!row){const error=Error('Dit bord is ondertussen gewijzigd. Laad het opnieuw voordat je opslaat.');error.status=409;throw error;}
+ return {revision:Number(row.revision),updatedAt:now};
 }
 export async function saveBoardCache(key,value,at=Date.now()){
  if(!db)return;
