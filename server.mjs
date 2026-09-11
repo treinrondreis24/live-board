@@ -972,7 +972,7 @@ async function startNdov(){
     ndovParser=new XMLParser({ignoreAttributes:false,removeNSPrefix:true,parseTagValue:false,parseAttributeValue:false,processEntities:true});
     ndovSocket=new Subscriber({linger:0,receiveHighWaterMark:1000,maxMessageSize:4194304,reconnectInterval:5000,reconnectMaxInterval:30000});
     ndovSocket.connect(ndovState.endpoint);ndovSocket.subscribe("/RIG/InfoPlusDVSInterface4");
-    if(config.journeyArchive?.trainNumbers?.length)ndovSocket.subscribe("/RIG/InfoPlusRITInterface5");
+    ndovSocket.subscribe("/RIG/InfoPlusRITInterface5");
     ndovState.startedAt=new Date().toISOString();ndovState.status="waiting_for_messages";
     setInterval(()=>{void flushNdov();for(const [id,row]of ndovRows)if(row.plannedTimestamp<Date.now()-86400000&&!ndovPending.has(id))ndovRows.delete(id);},10000).unref();
     for await(const parts of ndovSocket){
@@ -1014,14 +1014,14 @@ const server=http.createServer(async(req,res)=>{
     const url=new URL(req.url,`http://${req.headers.host}`);
     if(await handleBoardAdmin(req,res,url))return;
     if(url.pathname==="/ritarchief"){res.writeHead(200,{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store"});return res.end(journeyPage);}
-    if(url.pathname==="/api/journeys/status")return sendJson(res,200,{...journeyImportState,selected:config.journeyArchive?.trainNumbers||[]});
+    if(url.pathname==="/api/journeys/status")return sendJson(res,200,{...journeyImportState,selected:config.journeyArchive?.trainNumbers||[],categories:["ICE","NJ","RJ","RJX","ECD","ECC"],corridors:["Venlo richting Duitsland","Arnhem richting Emmerich"]});
     const journeyMatch=url.pathname.match(/^\/api\/journeys\/(\d+)(\/revisions)?$/);
     if(journeyMatch){
       const train=journeyMatch[1],date=url.searchParams.get("date");
       if(!date)return sendJson(res,200,{trainNumber:train,journeys:await listJourneys(train)});
       if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return sendJson(res,400,{error:"Gebruik datum jjjj-mm-dd"});
       if(journeyMatch[2])return sendJson(res,200,{trainNumber:train,serviceDate:date,revisions:await getJourneyRevisions(train,date)});
-      const journey=await getJourney(train,date);
+      const journey=await getJourney(train,date,url.searchParams.get("journey")||undefined);
       return sendJson(res,journey?200:404,journey||{error:"Nog geen rit opgeslagen voor deze trein en datum"});
     }
     const platformLayoutMatch=url.pathname.match(/^\/api\/stations\/([a-z0-9-]+)\/platforms\/?$/);

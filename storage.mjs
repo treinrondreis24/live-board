@@ -1,5 +1,5 @@
 import {initBoardCache,cleanupHistory,retentionPolicy} from './board-cache.mjs';
-import {initJourneys} from "./journeys.mjs";
+import {initJourneys,recordJourneyMeasurements} from "./journeys.mjs";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
@@ -277,6 +277,7 @@ export async function recordObservations(trains,source,observedAt=Date.now()){
       sqlite.exec("COMMIT");}catch(e){sqlite.exec("ROLLBACK");throw e;}
   }
   await recordCanonicalObservations(trains,source,observedAt);
+  await recordJourneyMeasurements(trains,source,observedAt);
   void cleanupOldObservations(observedAt).catch(e=>console.error('Retention:',e.message));
 }
 
