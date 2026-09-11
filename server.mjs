@@ -848,6 +848,19 @@ async function performItalyScan(){
     italyState.trains=mergeEquivalentBoardTrains(rows.filter(isPassengerBoardTrain));italyState.warnings=warnings;italyState.lastScanAt=new Date(now).toISOString();console.log(`[${new Date().toLocaleTimeString()}] Italia-scan: ${rows.length} geselecteerde trein(en)`);if(warnings.length)console.log("Italia:",warnings.join(" | "));
   }finally{italyState.scanning=false;}
 }
+
+function milanoViaggiaPayload(base,now=Date.now()){
+ const at=Date.parse(italyState.lastScanAt);if(!Number.isFinite(at)||now-at>10*60000)return base;
+ const rows=new Map((base.departures?.all||[]).map(r=>[String(r.number)+'|'+r.plannedTimestamp,r]));
+ for(const t of italyState.trains||[]){if(t.station!=='Milano Centrale'||t.eventMode!=='departure'||t.expectedTimestamp<now-60000)continue;
+ const key=String(t.number)+'|'+t.plannedTimestamp,old=rows.get(key);
+ rows.set(key,{...old,...t,source:'ViaggiaTreno',id:old?.id||t.trainKey+'|'+t.serviceDate,observedAt:t.station,transportMode:'rail',route:old?.route||[t.to],futureRoute:old?.futureRoute||[t.to],currentTrack:old?.currentTrack||t.currentTrack,track:(old?.cancelled||t.cancelled)?'—':old?.currentTrack||t.track,currentTime:old?.hasRealtime?old.currentTime:t.currentTime,status:old?.hasRealtime?old.status:t.status,hasRealtime:old?.hasRealtime||t.hasRealtime,expectedTimestamp:old?.hasRealtime?old.expectedTimestamp:t.expectedTimestamp,delay:old?.hasRealtime?old.delay:t.delay,cancelled:old?.cancelled||t.cancelled});
+ }
+ const all=[...rows.values()].sort((a,b)=>a.plannedTimestamp-b.plannedTimestamp),fern=r=>/^(FR|FA|FB|AV|IC|ICN|EC|ECE|EN|NJ|ITALO)$/i.test(r.category);
+ return {...base,source:'RFI + ViaggiaTreno',notice:base.notice+' ViaggiaTreno vult geselecteerde ritten aan; sporen kunnen gepland zijn.',departures:{all,fernverkehr:all.filter(fern),regional:all.filter(r=>!fern(r))}};
+}
+function italianEmbedPayload(page){const base=rfiPayload(page,page==='tirano'?swissPayload('tirano'):null);return page==='milano'?milanoViaggiaPayload(base):base;}
+
 function scheduleNextItaly(){if(!config.italy?.enabled)return;const {interval,delay}=nextDelay(new Date());italyState.currentIntervalMinutes=interval;italyState.nextScanAt=new Date(Date.now()+delay).toISOString();setTimeout(async()=>{await performItalyScan();scheduleNextItaly();},delay);}
 
 function stationViewPayload(station,kind){
@@ -1096,7 +1109,7 @@ const server=http.createServer(async(req,res)=>{
     const belgianPage=url.pathname.match(/^\/api\/views\/([a-z0-9-]+)\/?$/)?.[1];
     if(belgianPage&&Object.hasOwn(swedishStations,belgianPage))return sendJson(res,200,applyBoardSettings(belgianPage,swedishPayload(belgianPage)));
     if(belgianPage&&(Object.hasOwn(frenchStations,belgianPage)||Object.hasOwn(spanishStations,belgianPage)))return sendJson(res,200,applyBoardSettings(belgianPage,internationalPayload(belgianPage,Object.hasOwn(frenchStations,belgianPage)?frenchPayload(belgianPage):null)));
-    if(belgianPage&&Object.hasOwn(rfiStations,belgianPage))return sendJson(res,200,applyBoardSettings(belgianPage,rfiPayload(belgianPage,belgianPage==='tirano'?swissPayload('tirano'):null)));
+    if(belgianPage&&Object.hasOwn(rfiStations,belgianPage))return sendJson(res,200,applyBoardSettings(belgianPage,italianEmbedPayload(belgianPage)));
     if(belgianPage&&belgianStations[belgianPage])return sendJson(res,200,applyBoardSettings(belgianPage,belgianPayload(belgianPage)));
     if(url.pathname==="/api/entur/status")return sendJson(res,200,enturState);
     if(belgianPage&&norwegianStations[belgianPage])return sendJson(res,200,applyBoardSettings(belgianPage,norwegianPayload(belgianPage)));
@@ -1129,7 +1142,7 @@ const server=http.createServer(async(req,res)=>{
 
 await initStorage();
 await initBoardAdmin({config,swissStations,norwegianStations,belgianStations,rfiStations,frenchStations,spanishStations,swedishStations,matchDirection:stationDirectionMatches,getPayload:page=>
- internationalPayload(page,Object.hasOwn(swedishStations,page)?swedishPayload(page):Object.hasOwn(frenchStations,page)?frenchPayload(page):Object.hasOwn(spanishStations,page)?null:Object.hasOwn(rfiStations,page)?rfiPayload(page,page==='tirano'?swissPayload('tirano'):null):Object.hasOwn(swissStations,page)?swissPayload(page):Object.hasOwn(norwegianStations,page)?norwegianPayload(page):Object.hasOwn(belgianStations,page)?belgianPayload(page):stationPagePayload(page))});
+ internationalPayload(page,Object.hasOwn(swedishStations,page)?swedishPayload(page):Object.hasOwn(frenchStations,page)?frenchPayload(page):Object.hasOwn(spanishStations,page)?null:Object.hasOwn(rfiStations,page)?italianEmbedPayload(page):Object.hasOwn(swissStations,page)?swissPayload(page):Object.hasOwn(norwegianStations,page)?norwegianPayload(page):Object.hasOwn(belgianStations,page)?belgianPayload(page):stationPagePayload(page))});
 await Promise.all([restoreSwiss(),restoreEntur(),restoreBelgium(),restoreDutchPlan(),restoreRfi(),restoreFrance(),restoreInternational(),restoreSweden(),restoreDbBoards().catch(e=>console.error('DB-bordcache laden mislukt:',e.message))]);
 for(const row of await loadBoardCache('NDOV:rows')||[])if(row.plannedTimestamp>Date.now()-86400000)ndovRows.set(row.id,row);
 server.listen(PORT,async()=>{
