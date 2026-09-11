@@ -421,6 +421,19 @@ async function restoreDbHistory(){
   }
 }
 
+function screenBoardTrains(now=Date.now()){
+  const numbers=new Set((config.stations||[]).flatMap(s=>s.trainNumbers||[]).map(String));
+  const categories=new Set((config.allowedCategories||[]).map(c=>String(c).toUpperCase()));
+  const ndovFresh=ndovStatus().fresh;
+  const liveNl=[...ndovRows.values()].map(r=>ndovFresh?r:{...r,hasRealtime:false,delay:0,status:'',expectedTimestamp:r.plannedTimestamp,currentTime:r.plannedTime});
+  const rows=dedupeRows([...dbState.trains.flatMap(r=>r.mergedServices||[r]),...Object.values(collectorState.byStation).flat(),...liveNl.map(r=>({...r,hasChangedTime:r.currentTime!==r.plannedTime}))]);
+  const groups=new Map();
+  for(const r of rows){if(!numbers.has(String(r.number))||(categories.size&&!categories.has(String(r.category).toUpperCase()))||!visibleOnBoard(r,now)||r.departed)continue;
+    if(!groups.has(String(r.number)))groups.set(String(r.number),[]);groups.get(String(r.number)).push(r);
+  }
+  const selected=[...groups.values()].map(items=>{const realtime=items.filter(r=>r.hasRealtime);return chooseBest(realtime.length?realtime:items);});
+  return mergeEquivalentBoardTrains(selected).sort((a,b)=>Number(Number(b.delay)>=20)-Number(Number(a.delay)>=20)||(a.plannedTimestamp||0)-(b.plannedTimestamp||0));
+}
 async function performScan(){
   if(dbState.scanning)return;dbState.scanning=true;
   const boardRows=[],collectorRows=[],warnings=[],stations=[],collectorByStation={...collectorState.byStation};
@@ -440,11 +453,12 @@ async function performScan(){
               ),
               fetched=await fetchMergedStation(name,{before:windowBefore,after:windowAfter});
 
-        for(const cfg of boardSelectors){
-          boardRows.push(...rowsForSelector(fetched.stops,fetched.station,cfg));
-        }
+        // Follow the configured train numbers at every station we already collect.
+        const globalSelector={trainNumbers:[...new Set((config.stations||[]).flatMap(s=>s.trainNumbers||[]))]};
+        const selectedRows=rowsForSelector(fetched.stops,fetched.station,boardSelectors[0]?{...boardSelectors[0],trainNumbers:globalSelector.trainNumbers}:globalSelector);
+        boardRows.push(...selectedRows);
 
-        const cRows=[];
+        const cRows=[...selectedRows];
         for(const cfg of collectorSelectors){
           cRows.push(...rowsForSelector(fetched.stops,fetched.station,cfg));
         }
@@ -821,6 +835,7 @@ async function scanOneItaly(cfg){
     time:hhmmMs(event.planned||event.actual),plannedTime:hhmmMs(event.planned||event.actual),currentTime:hhmmMs(event.actual||event.planned),
     plannedTimestamp:plannedTs,expectedTimestamp:expectedTs,actualTimestamp:Number(event.actual||0)||null,
     plannedTrack:event.plannedTrack,currentTrack:event.currentTrack,track:event.track||"—",delay,status,type,cancelled,trend30:null,
+    hasRealtime:Boolean(event.actual||data?.oraUltimoRilevamento),
     lastDetection:String(data?.stazioneUltimoRilevamento||"").trim(),lastDetectionAt:data?.oraUltimoRilevamento||null,
     rawStop:stop,rawData:data
   };
@@ -1104,7 +1119,7 @@ const server=http.createServer(async(req,res)=>{
     }
     if(url.pathname==="/api/trains"){
       if(!dbState.lastScanAt&&!dbState.scanning)await performScan();if(!dbState.lastScanAt&&dbState.warnings.length)return sendJson(res,503,{error:dbState.warnings.join(" | ")});
-      return sendJson(res,200,{source:"DB Timetables",updatedAt:dbState.lastScanAt,lastScanAt:dbState.lastScanAt,nextScanAt:dbState.nextScanAt,currentIntervalMinutes:dbState.currentIntervalMinutes,warnings:dbState.warnings,stations:dbState.stations,trains:dbState.trains});
+      return sendJson(res,200,{source:"DB Timetables",updatedAt:dbState.lastScanAt,lastScanAt:dbState.lastScanAt,nextScanAt:dbState.nextScanAt,currentIntervalMinutes:dbState.currentIntervalMinutes,warnings:dbState.warnings,stations:dbState.stations,trains:screenBoardTrains()});
     }
     const embedPage=url.pathname.match(/^\/embed\/([a-z0-9-]+)\/?$/)?.[1];
     if(embedPage&&boardSource(embedPage))return sendFile(res,path.join(publicDir,'koeln-embed.html'));

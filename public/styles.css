@@ -115,7 +115,7 @@ html,body{
 
 .db-row,.db-train-row{
   display:grid;
-  grid-template-columns:17% 14% 25% 27% 17%;
+  grid-template-columns:17% 14% 28% 29% 12%;
   align-items:center;
   padding:0 2.2vw;
 }
@@ -133,7 +133,7 @@ html,body{
 .db-rows{min-height:0;overflow:hidden}
 
 .db-train-row{
-  height:calc((100vh - 22.5vh)/8);
+  height:calc((100vh - 22.5vh)/var(--db-row-count,8));
   min-height:60px;
   background:var(--sky);
   border-bottom:1px solid var(--line);
@@ -426,7 +426,7 @@ html,body{
 
 .italy-panel .italy-row,
 .italy-panel .italy-train-row{
-  grid-template-columns:13% 19% 37% 12% 19%;
+  grid-template-columns:21% 15% 38% 12% 14%;
   padding:0 1vw;
 }
 
@@ -463,3 +463,11 @@ html,body{
 .db-time-cell{overflow:hidden;line-height:1.15}
 .db-time-cell .db-time{white-space:nowrap}
 .db-time-cell .db-scanpoint{margin-top:.65vh;font-size:clamp(13.8px,1.15vw,27.6px);line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Large-screen status marks and unclipped Italian departure times. */
+.on-time{color:#198448;font-weight:800}.planned-only{color:#8a8a8a}
+.italy-status .on-time{color:#68db8c}.italy-status .planned-only{color:#b9b9b9}
+.db-status.delay::before{display:none}
+.italy-train{font-size:clamp(17px,1.35vw,31px);font-weight:400;letter-spacing:0}
+.italy-time{padding-right:.3vw;font-size:clamp(25px,2.228125vw,50.3125px);letter-spacing:0;text-overflow:clip;overflow:visible;color:#ffe5ac}
+.db-rows .db-train-row{min-height:0}

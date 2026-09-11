@@ -3,6 +3,7 @@ import GTFS from 'gtfs-realtime-bindings';
 import {Worker,isMainThread,parentPort,workerData} from 'node:worker_threads';
 import {csv,dayKey,gtfsTime} from './belgium.mjs';
 import {saveBoardCache,loadBoardCache} from './board-cache.mjs';
+import {frenchCurrentTrack} from './france.mjs';
 import {recordObservations} from './storage.mjs';
 export const spanishStations=Object.fromEntries([
  ['barcelona','Barcelona Sants','71801'],['madrid-atocha','Madrid Puerta de Atocha-Almudena Grandes','60000'],['sevilla','Sevilla Santa Justa','51003'],['cordoba','Córdoba-Julio Anguita','50500'],['cadiz','Cádiz','51405'],['malaga','Málaga María Zambrano','54413'],['ronda','Ronda','55007'],['granada','Granada','05000'],['jaen','Jaén','03100'],['irun','Irun','11600']
@@ -25,7 +26,7 @@ export function parseInternational(source,bytes,now=Date.now()){
  for(const r of read('stop_times.txt')){const t=trips.get(r.trip_id),s=stops.get(r.stop_id);if(t&&s)t.stops.push({...s,stopId:r.stop_id,seq:+r.stop_sequence,time:r.departure_time,pickup:r.pickup_type!=='1'});}
  const rows=[];for(const [tripId,t] of trips){t.stops.sort((a,b)=>a.seq-b.seq);for(let i=0;i<t.stops.length-1;i++){const s=t.stops[i];if(!s.page||!s.pickup)continue;for(const date of t.days){const plannedTimestamp=gtfsTime(date,s.time);if(!Number.isFinite(plannedTimestamp))continue;rows.push({source,page:s.page,tripId,date,sequence:s.seq,stopId:s.stopId,station:s.name,number:t.trip_short_name,category:t.category,plannedTimestamp,plannedTrack:s.platform,to:t.stops.at(-1).name,futureRoute:t.stops.slice(i+1).map(s=>s.name),tripStops:t.stops.map(s=>s.stopId)});}}}
  if(!rows.length)throw Error(source+' dienstregeling leeg');
- return {rows,platforms:Object.fromEntries([...stops].filter(([,s])=>s.page).map(([id,s])=>[id,s.platform])),generatedAt:now};
+ return {rows,platformPages:Object.fromEntries([...stops].map(([id,s])=>[id,s.page])),platforms:Object.fromEntries([...stops].filter(([,s])=>s.page).map(([id,s])=>[id,s.platform])),generatedAt:now};
 }
 export function decodeInternational(source,bytes){const message=source==='RENFE'?GTFS.transit_realtime.FeedMessage.fromObject(JSON.parse(new TextDecoder().decode(bytes))):GTFS.transit_realtime.FeedMessage.decode(bytes);return GTFS.transit_realtime.FeedMessage.toObject(message,{longs:Number,enums:Number});}
 function updateKey(source,trip){if(source==='RENFE'){const m=trip.tripId?.match(/^(.*?)(\d{4})-(\d{2})-(\d{2})$/);return m?m[1]+'|'+m[2]+m[3]+m[4]:null;}return trip.tripId+'|'+trip.startDate;}
@@ -44,7 +45,10 @@ export function internationalRows(plan,feed,now=Date.now()){
    if(known&&p.tripStops.indexOf(known.stopId)<p.tripStops.indexOf(p.stopId)&&known.arrival.time*1000<=now+60000&&now-known.arrival.time*1000<3*3600000){event={delay:u.delay};propagated=true;}
   }
   const hasRealtime=Boolean(event&&(Number.isFinite(event.time)||Number.isFinite(event.delay))),expected=hasRealtime?(Number.isFinite(event.time)?event.time*1000:p.plannedTimestamp+event.delay*1000):p.plannedTimestamp;
-  const currentTrack=fresh&&exact?(plan.platforms[exact.stopId]||''):'',id=[p.source,p.date,p.tripId,p.sequence].join('|'),delay=hasRealtime?Math.round((expected-p.plannedTimestamp)/60000):0;
+  const assigned=exact?.stopTimeProperties?.assignedStopId;
+  const trackStop=assigned||exact?.stopId;
+  const matchingPlatform=trackStop&&(plan.platformPages?.[trackStop]===p.page||(!plan.platformPages&&trackStop.startsWith(p.stopId+'_')));
+  const currentTrack=!cancelled&&fresh&&exact&&matchingPlatform?(plan.platforms[trackStop]||''):'',id=[p.source,p.date,p.tripId,p.sequence].join('|'),delay=hasRealtime?Math.round((expected-p.plannedTimestamp)/60000):0;
   return {id,page:p.page,source:p.source,sourceTripId:p.tripId,sourceEventId:id,serviceDate:p.date.slice(0,4)+'-'+p.date.slice(4,6)+'-'+p.date.slice(6),trainKey:p.date+'|'+p.number,number:p.number,train:p.category+' '+p.number,category:p.category,transportMode:'rail',countryCode:spanishStations[p.page]?'ES':'FR',observedAt:spanishStations[p.page]?.name||p.station,stationCode:p.stopId,eventMode:'departure',plannedTimestamp:p.plannedTimestamp,expectedTimestamp:expected,plannedTime:clock(p.plannedTimestamp),time:clock(p.plannedTimestamp),currentTime:clock(expected),plannedTrack:p.plannedTrack,currentTrack,track:cancelled?'—':currentTrack||p.plannedTrack||'—',delay,cancelled,hasRealtime,delayPropagated:propagated,status:cancelled?'Geannuleerd':hasRealtime&&delay?(delay>0?'+':'')+delay+' min':'',from:p.station,to:p.to,route:p.futureRoute,futureRoute:p.futureRoute,routeComplete:true,messageTimestamp:fresh?stamp:null};
  });
 }
@@ -53,7 +57,7 @@ const running=new Set();
 export async function scanInternational(source){
  if(running.has(source))return;running.add(source);const state=internationalState[source],def=definitions[source];
  let saved=cache.get(source)||{};
- try{const now=Date.now();if(!saved.plan||saved.day!==dayKey(now)){
+ try{const now=Date.now();if(!saved.plan||!saved.plan.platformPages||saved.day!==dayKey(now)){
   const bytes=await download(def.plan),next=await new Promise((resolve,reject)=>{const w=new Worker(new URL(import.meta.url),{workerData:{internationalBytes:bytes,source,now},transferList:[bytes.buffer]});w.once('message',resolve);w.once('error',reject);w.once('exit',c=>{if(c)reject(Error('Import mislukt'));});});
   saved={...saved,plan:next,day:dayKey(now)};cache.set(source,saved);await saveBoardCache(source+':plan',{plan:next,day:saved.day});state.lastPlanAt=new Date(now).toISOString();
  }
@@ -67,10 +71,10 @@ export function startInternational(){for(const s of Object.keys(definitions)){vo
 export function internationalPayload(page,base=null,now=Date.now()){
  const sources=Object.keys(definitions).filter(s=>Object.values(definitions[s].stops).includes(page));if(!sources.length)return base;
  const extra=sources.flatMap(s=>{const c=cache.get(s);return c?.plan?internationalRows(c.plan,c.live,now).filter(r=>r.page===page&&r.expectedTimestamp>=now-60000):[];});
- // Only replace the same numbered, timed service with the same destination and platform.
- const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,''),key=r=>[String(r.number).replace(/^0+/,''),r.plannedTimestamp,norm(r.to),r.track||'—'].join('|');
- const merged=new Map((base?.departures?.all||[]).map(r=>[key(r),r]));for(const r of extra){const old=merged.get(key(r));if(!old||r.hasRealtime||!old.hasRealtime)merged.set(key(r),r);}
- const all=[...merged.values()].sort((a,b)=>a.plannedTimestamp-b.plannedTimestamp),fern=r=>/^(EST|EUROSTAR|AVE|AVLO|ALVIA|EUROMED|INTERCITY|IC|TGV|ICE|OUIGO)/i.test(r.category);
+ // Merge identical services independently of which source already has a platform.
+ const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,''),key=r=>[String(r.number).replace(/^0+/,''),r.plannedTimestamp,norm(r.to)].join('|');
+ const merged=new Map((base?.departures?.all||[]).map(r=>[key(r),r]));for(const r of extra){const old=merged.get(key(r));if(!old||r.hasRealtime||!old.hasRealtime)merged.set(key(r),{...r,currentTrack:r.currentTrack||old?.currentTrack||'',track:r.cancelled?'—':r.currentTrack||old?.currentTrack||r.track});}
+ const all=[...merged.values()].map(r=>{const track=!r.cancelled&&(r.currentTrack||frenchCurrentTrack(page,r.number,r.plannedTimestamp,now));return track?{...r,currentTrack:track,track}:r;}).sort((a,b)=>a.plannedTimestamp-b.plannedTimestamp),fern=r=>/^(EST|EUROSTAR|AVE|AVLO|ALVIA|EUROMED|INTERCITY|IC|TGV|ICE|OUIGO)/i.test(r.category);
  const ready=sources.every(s=>internationalState[s].status==='ready'),notice=spanishStations[page]?'Renfe-langeafstand en Media Distancia; Cercanías en andere Spaanse vervoerders zijn niet opgenomen.':'Aanvullende '+sources.join(' en ')+'-treinen. RER/Transilien en andere vervoerders zijn niet volledig gedekt.';
  return {...base,title:base?.title||'Vertrektijden '+spanishStations[page].name,country:spanishStations[page]?'ES':base?.country||'FR',source:[base?.source,...sources].filter(Boolean).join(' + '),lastScanAt:[base?.lastScanAt,...sources.map(s=>internationalState[s].lastRealtimeAt)].filter(Boolean).sort().at(-1)||null,status:ready&&(!base||base.status==='ready')?'ready':'partial',notice,quick:base?.quick||[],departures:{all,fernverkehr:all.filter(fern),regional:all.filter(r=>!fern(r))}};
 }

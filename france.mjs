@@ -24,6 +24,9 @@ export const franceState={status:'starting',lastPlanAt:null,lastRealtimeAt:null,
 let plan=null,live=null,tracks=null,planDay='',busy=false,retryPlanAt=0;
 const array=v=>v==null?[]:Array.isArray(v)?v:[v];
 const trackKey=(station,number,time)=>[station,String(number).trim().replace(/^0+(?=\d)/,''),time].join('|');
+export function frenchCurrentTrack(page,number,time,now=Date.now()){
+ const station=frenchStations[page];return station&&tracks?.at<=now+60000&&now-tracks.at<=300000?tracks.rows?.[trackKey(station.uic,number,time)]||'':'';
+}
 export function parseFrenchTracks(xml){
  if(XMLValidator.validate(xml)!==true)throw Error('SNCF-sporen: ongeldige XML');
  const doc=new XMLParser({removeNSPrefix:true,parseTagValue:false,processEntities:true}).parse(xml);
