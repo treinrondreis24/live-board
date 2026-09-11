@@ -410,6 +410,55 @@
       "allDepartures": true,
       "categories": [],
       "planHoursAfter": 8
+    },
+    {
+      "id": "wuerzburg-all",
+      "name": "Würzburg Hbf",
+      "allDepartures": true,
+      "categories": [],
+      "planHoursAfter": 8
+    },
+    {
+      "id": "moenchengladbach-all",
+      "name": "Mönchengladbach Hbf",
+      "allDepartures": true,
+      "categories": [],
+      "planHoursAfter": 8
+    },
+    {
+      "id": "gengenbach-all",
+      "name": "Gengenbach",
+      "allDepartures": true,
+      "categories": [],
+      "planHoursAfter": 8
+    },
+    {
+      "id": "duisburg-all",
+      "name": "Duisburg Hbf",
+      "allDepartures": true,
+      "categories": [],
+      "planHoursAfter": 8
+    },
+    {
+      "id": "leer-all",
+      "name": "Leer (Ostfriesl)",
+      "allDepartures": true,
+      "categories": [],
+      "planHoursAfter": 8
+    },
+    {
+      "id": "bremen-all",
+      "name": "Bremen Hbf",
+      "allDepartures": true,
+      "categories": [],
+      "planHoursAfter": 8
+    },
+    {
+      "id": "aachen-all",
+      "name": "Aachen Hbf",
+      "allDepartures": true,
+      "categories": [],
+      "planHoursAfter": 8
     }
   ],
   "nightjet": {
@@ -1561,6 +1610,108 @@
           ]
         }
       ]
+    },
+    "wuerzburg": {
+      "station": "Würzburg Hbf",
+      "title": "Vertrektijden Würzburg Hbf",
+      "country": "DE",
+      "quickDirections": []
+    },
+    "moenchengladbach": {
+      "station": "Mönchengladbach Hbf",
+      "title": "Vertrektijden Mönchengladbach Hbf",
+      "country": "DE",
+      "quickDirections": []
+    },
+    "gengenbach": {
+      "station": "Gengenbach",
+      "title": "Vertrektijden Gengenbach",
+      "country": "DE",
+      "quickDirections": []
+    },
+    "duisburg": {
+      "station": "Duisburg Hbf",
+      "title": "Vertrektijden Duisburg Hbf",
+      "country": "DE",
+      "quickDirections": []
+    },
+    "leer": {
+      "station": "Leer (Ostfriesl)",
+      "title": "Vertrektijden Leer (Ostfriesl)",
+      "country": "DE",
+      "quickDirections": []
+    },
+    "bremen": {
+      "station": "Bremen Hbf",
+      "title": "Vertrektijden Bremen Hbf",
+      "country": "DE",
+      "quickDirections": []
+    },
+    "aachen": {
+      "station": "Aachen Hbf",
+      "title": "Vertrektijden Aachen Hbf",
+      "country": "DE",
+      "quickDirections": []
+    },
+    "roosendaal": {
+      "station": "Roosendaal",
+      "title": "Vertrektijden Roosendaal",
+      "country": "NL",
+      "quickDirections": []
+    },
+    "hilversum": {
+      "station": "Hilversum",
+      "title": "Vertrektijden Hilversum",
+      "country": "NL",
+      "quickDirections": []
+    },
+    "den-haag-hs": {
+      "station": "Den Haag HS",
+      "title": "Vertrektijden Den Haag HS",
+      "country": "NL",
+      "quickDirections": []
+    },
+    "maastricht": {
+      "station": "Maastricht",
+      "title": "Vertrektijden Maastricht",
+      "country": "NL",
+      "quickDirections": []
+    },
+    "roermond": {
+      "station": "Roermond",
+      "title": "Vertrektijden Roermond",
+      "country": "NL",
+      "quickDirections": []
+    },
+    "assen": {
+      "station": "Assen",
+      "title": "Vertrektijden Assen",
+      "country": "NL",
+      "quickDirections": []
+    },
+    "almere": {
+      "station": "Almere Centrum",
+      "title": "Vertrektijden Almere Centrum",
+      "country": "NL",
+      "quickDirections": []
+    },
+    "delft": {
+      "station": "Delft",
+      "title": "Vertrektijden Delft",
+      "country": "NL",
+      "quickDirections": []
+    },
+    "haarlem": {
+      "station": "Haarlem",
+      "title": "Vertrektijden Haarlem",
+      "country": "NL",
+      "quickDirections": []
+    },
+    "leeuwarden": {
+      "station": "Leeuwarden",
+      "title": "Vertrektijden Leeuwarden",
+      "country": "NL",
+      "quickDirections": []
     }
   },
   "ndov": {
@@ -1649,6 +1800,56 @@
         "code": "UT",
         "name": "Utrecht Centraal",
         "page": "utrecht"
+      },
+      {
+        "code": "RSD",
+        "name": "Roosendaal",
+        "page": "roosendaal"
+      },
+      {
+        "code": "HVS",
+        "name": "Hilversum",
+        "page": "hilversum"
+      },
+      {
+        "code": "GV",
+        "name": "Den Haag HS",
+        "page": "den-haag-hs"
+      },
+      {
+        "code": "MT",
+        "name": "Maastricht",
+        "page": "maastricht"
+      },
+      {
+        "code": "RM",
+        "name": "Roermond",
+        "page": "roermond"
+      },
+      {
+        "code": "ASN",
+        "name": "Assen",
+        "page": "assen"
+      },
+      {
+        "code": "ALM",
+        "name": "Almere Centrum",
+        "page": "almere"
+      },
+      {
+        "code": "DT",
+        "name": "Delft",
+        "page": "delft"
+      },
+      {
+        "code": "HLM",
+        "name": "Haarlem",
+        "page": "haarlem"
+      },
+      {
+        "code": "LW",
+        "name": "Leeuwarden",
+        "page": "leeuwarden"
       }
     ]
   },

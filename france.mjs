@@ -7,6 +7,8 @@ import {saveBoardCache,loadBoardCache} from './board-cache.mjs';
 import {recordObservations} from './storage.mjs';
 
 export const frenchStations=Object.fromEntries([
+ ['paris-est','Paris Est','87113001'],['paris-austerlitz','Paris Austerlitz','87547000'],
+ ['paris-bercy',"Paris Bercy Bourgogne - Pays d’Auvergne",'87686667'],['paris-montparnasse','Paris Montparnasse','87391003'],
  ['barcelona','Barcelona Sants','71718010'],
  ['paris-nord','Paris Gare du Nord','87271007'],['paris-lyon','Paris Gare de Lyon','87686006'],
  ['lille-europe','Lille Europe','87223263'],['lille-flandres','Lille Flandres','87286005'],

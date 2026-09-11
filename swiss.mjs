@@ -6,6 +6,7 @@ import {recordObservations} from './storage.mjs';
 
 // StopPlace identifiers verified with OJP LocationInformation, September 2026.
 export const swissStations=Object.fromEntries([
+  ['geneve','Genève','1008'],['olten','Olten','218'],['winterthur','Winterthur','6000'],['locarno','Locarno','5400'],
   ['visp','Visp','1605'],['chur','Chur','9000'],['basel-sbb','Basel SBB','10'],['zuerich','Zürich HB','3000'],
   ['luzern','Luzern','5000'],['interlaken-ost','Interlaken Ost','7492'],['interlaken-west','Interlaken West','7493'],
   ['bern','Bern','7000'],['spiez','Spiez','7483'],['thun','Thun','7100'],['kandersteg','Kandersteg','7475'],

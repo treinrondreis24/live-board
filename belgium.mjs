@@ -3,6 +3,9 @@ import {unzipSync,strFromU8} from 'fflate';
 import {recordObservations} from './storage.mjs';
 import {Worker,isMainThread,parentPort,workerData} from 'node:worker_threads';
 export const belgianStations={
+  oostende:{name:'Oostende',uic:'8891702'},
+  mechelen:{name:'Mechelen',uic:'8822004'},
+  'antwerpen-berchem':{name:'Antwerpen-Berchem',uic:'8821121'},
   antwerpen:{name:'Antwerpen-Centraal',uic:'8821006'},
   'brussel-zuid':{name:'Brussel-Zuid',uic:'8814001'},
   'brussel-noord':{name:'Brussel-Noord',uic:'8812005'},
@@ -100,7 +103,7 @@ async function tick(){
     belgiumState.status=Date.now()-Number(next.header.timestamp)*1000>180000?'stale':'ready';belgiumState.error=null;
   }catch(e){belgiumState.status='error';belgiumState.error=String(e.message).slice(0,160);}finally{busy=false;}
 }
-export async function restoreBelgium(){const saved=await loadBoardCache('NMBS:plan'),restored=restorePlan(saved?.plan);if(restored){plan=restored.schedule;planDay=restored.needsRefresh?'':saved.planDay;live=await loadBoardCache('NMBS:live');if(live)belgiumState.lastRealtimeAt=new Date(Number(live.header.timestamp)*1000).toISOString();}}
+export async function restoreBelgium(){const saved=await loadBoardCache('NMBS:plan'),restored=restorePlan(saved?.plan);if(restored){plan=restored.schedule;planDay=restored.needsRefresh||!Object.keys(belgianStations).every(page=>plan.rows.some(r=>r.page===page))?'':saved.planDay;live=await loadBoardCache('NMBS:live');if(live)belgiumState.lastRealtimeAt=new Date(Number(live.header.timestamp)*1000).toISOString();}}
 export function startBelgium(){void tick();setInterval(()=>void tick(),30000).unref();}
 export function belgianPayload(page){
   if(!belgianStations[page])return null;
