@@ -1,0 +1,24 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {DatabaseSync} from 'node:sqlite';
+import {parsePlan} from './belgium.mjs';
+import {belgianIceUpdates,archiveBelgianIce} from './belgian-journeys.mjs';
+import {initJourneys,recordJourneyMeasurements} from './journeys.mjs';
+const at=Date.parse('2026-08-19T12:00:00Z');
+const plan=parsePlan(fs.readFileSync(new URL('../belgium/gtfs.zip',import.meta.url)),at);
+const journeys=plan.iceJourneys;assert(journeys.length>0);assert(journeys.every(p=>p.category==='ICE'&&p.stops.length>=6));
+const p=journeys.find(p=>p.trainNumber==='13'),s=p.stops.find(s=>s.station==='Köln Hbf');assert(s);
+const feed={header:{timestamp:at/1000},entity:[{tripUpdate:{trip:{tripId:p.journeyRef,startDate:p.serviceDate.replaceAll('-','')},stopTimeUpdate:[{stopSequence:s.sequence,departure:{delay:600}}]}}]};
+assert.equal(belgianIceUpdates(journeys,feed,at)[0].stops[0].departure.expectedTime,s.departure.plannedTime+600000);
+assert.equal(belgianIceUpdates(journeys,feed,at+181000).length,0);
+const db=new DatabaseSync(':memory:');await initJourneys({backend:'sqlite',sqlite:db});await archiveBelgianIce(journeys,feed,at);
+let id='NMBS|'+p.serviceDate+'|'+p.journeyRef;
+let state=()=>JSON.parse(db.prepare('SELECT state_json FROM journey_archive WHERE journey_id=?').get(id).state_json);
+assert.equal(state().archiveSource,'NMBS');
+const revisions=db.prepare('SELECT COUNT(*) n FROM journey_archive_revisions').get().n;await archiveBelgianIce(journeys,feed,at);assert.equal(db.prepare('SELECT COUNT(*) n FROM journey_archive_revisions').get().n,revisions);
+await recordJourneyMeasurements([{number:p.trainNumber,hasRealtime:true,observedAt:'Köln Hbf',eventMode:'departure',plannedTimestamp:s.departure.plannedTime,expectedTimestamp:s.departure.plannedTime+900000,currentTrack:'6'}],'DB',Date.parse(p.serviceDate+'T12:00:00Z'));
+assert.equal(state().stops.find(x=>x.id===s.id).departure.measurement.expectedTime,s.departure.plannedTime+900000);
+assert.equal(db.prepare("SELECT COUNT(*) n FROM journey_archive WHERE journey_id LIKE 'OJP|%'").get().n,0);
+assert.equal(state().stops.find(x=>x.id===s.id).departure.original.time,s.departure.plannedTime);
+console.log('PASS',journeys.length,'dated ICE journeys, full source routes, realtime, stale feed, deduplication, first planning and DB enrichment');
+
