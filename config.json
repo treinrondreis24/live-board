@@ -3,23 +3,8 @@
   "scanSchedule": [
     {
       "from": "00:00",
-      "to": "06:00",
-      "everyMinutes": 60
-    },
-    {
-      "from": "06:00",
-      "to": "08:00",
-      "everyMinutes": 5
-    },
-    {
-      "from": "08:00",
-      "to": "21:00",
-      "everyMinutes": 3
-    },
-    {
-      "from": "21:00",
       "to": "24:00",
-      "everyMinutes": 10
+      "everyMinutes": 3
     }
   ],
   "stations": [
@@ -77,38 +62,6 @@
         "5",
         "403",
         "402"
-      ]
-    },
-    {
-      "name": "Arnhem Centraal",
-      "trainNumbers": [
-        "402",
-        "403",
-        "225",
-        "224",
-        "122",
-        "421",
-        "420",
-        "40421",
-        "40490",
-        "124",
-        "141",
-        "143",
-        "145",
-        "146",
-        "142",
-        "140"
-      ]
-    },
-    {
-      "name": "Deventer",
-      "trainNumbers": [
-        "141",
-        "143",
-        "145",
-        "146",
-        "142",
-        "140"
       ]
     },
     {
@@ -423,27 +376,39 @@
       "planHoursAfter": 8
     },
     {
-      "id": "arnhem-all",
-      "name": "Arnhem Centraal",
-      "allDepartures": true,
-      "categories": [],
-      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day",
-      "planHoursAfter": 8
-    },
-    {
-      "id": "deventer-all",
-      "name": "Deventer",
-      "allDepartures": true,
-      "categories": [],
-      "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day",
-      "planHoursAfter": 8
-    },
-    {
       "id": "nuernberg-all",
       "name": "Nürnberg Hbf",
       "allDepartures": true,
       "categories": [],
       "retention": "fernverkehr-permanent-regional-current-plus-previous-service-day",
+      "planHoursAfter": 8
+    },
+    {
+      "id": "koeln-messe-deutz-all",
+      "name": "Köln Messe/Deutz",
+      "allDepartures": true,
+      "categories": [],
+      "planHoursAfter": 8
+    },
+    {
+      "id": "freiburg-all",
+      "name": "Freiburg(Breisgau) Hbf",
+      "allDepartures": true,
+      "categories": [],
+      "planHoursAfter": 8
+    },
+    {
+      "id": "berlin-gesundbrunnen-all",
+      "name": "Berlin Gesundbrunnen",
+      "allDepartures": true,
+      "categories": [],
+      "planHoursAfter": 8
+    },
+    {
+      "id": "dresden-all",
+      "name": "Dresden Hbf",
+      "allDepartures": true,
+      "categories": [],
       "planHoursAfter": 8
     }
   ],

@@ -140,12 +140,12 @@ function tzParts(date){
 }
 function clockMinutes(s){if(s==="24:00")return 1440;const[h,m]=s.split(":").map(Number);return h*60+m;}
 function localMinutes(date){const p=tzParts(date);return Number(p.hour)*60+Number(p.minute);}
-function intervalFor(date){const m=localMinutes(date);for(const x of config.scanSchedule){if(m>=clockMinutes(x.from)&&m<clockMinutes(x.to))return Number(x.everyMinutes);}return 60;}
-function nextDelay(date){
-  const interval=intervalFor(date),p=tzParts(date),minute=Number(p.minute),sec=date.getSeconds(),ms=date.getMilliseconds();
+function intervalFor(date,schedule=config.scanSchedule){const m=localMinutes(date);for(const x of schedule){if(m>=clockMinutes(x.from)&&m<clockMinutes(x.to))return Number(x.everyMinutes);}return 60;}
+function nextDelay(date,schedule=config.scanSchedule){
+  const interval=intervalFor(date,schedule),p=tzParts(date),minute=Number(p.minute),sec=date.getSeconds(),ms=date.getMilliseconds();
   let add=interval-(minute%interval);if(add===0)add=interval;let aligned=add*60000-sec*1000-ms;
   const nowM=localMinutes(date);let boundary=Infinity;
-  for(const x of config.scanSchedule){const b=clockMinutes(x.to);if(b>nowM&&b<1440)boundary=Math.min(boundary,(b-nowM)*60000-sec*1000-ms);}
+  for(const x of schedule){const b=clockMinutes(x.to);if(b>nowM&&b<1440)boundary=Math.min(boundary,(b-nowM)*60000-sec*1000-ms);}
   if(!Number.isFinite(boundary))boundary=(1440-nowM)*60000-sec*1000-ms;
   return {interval,delay:Math.max(1000,Math.min(aligned,boundary))};
 }
@@ -861,7 +861,7 @@ function milanoViaggiaPayload(base,now=Date.now()){
 }
 function italianEmbedPayload(page){const base=rfiPayload(page,page==='tirano'?swissPayload('tirano'):null);return page==='milano'?milanoViaggiaPayload(base):base;}
 
-function scheduleNextItaly(){if(!config.italy?.enabled)return;const {interval,delay}=nextDelay(new Date());italyState.currentIntervalMinutes=interval;italyState.nextScanAt=new Date(Date.now()+delay).toISOString();setTimeout(async()=>{await performItalyScan();scheduleNextItaly();},delay);}
+function scheduleNextItaly(){if(!config.italy?.enabled)return;const {interval,delay}=nextDelay(new Date(),config.italy.scanSchedule||config.scanSchedule);italyState.currentIntervalMinutes=interval;italyState.nextScanAt=new Date(Date.now()+delay).toISOString();setTimeout(async()=>{await performItalyScan();scheduleNextItaly();},delay);}
 
 function stationViewPayload(station,kind){
   let rows=currentCollectorRows(station);
