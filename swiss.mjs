@@ -1,3 +1,4 @@
+import {recordJourneySnapshot,selectedJourney} from './journeys.mjs';
 import {swissQuick} from './swiss-directions.mjs';
 import {saveBoardCache,loadBoardCache} from './board-cache.mjs';
 import {XMLParser,XMLValidator} from 'fast-xml-parser';
@@ -33,7 +34,7 @@ const cache=new Map(),MAX_AGE=7*60000;
 export function swissRequest(page,now=Date.now(),stopId=swissStations[page]?.id){
   const s=swissStations[page],at=new Date(now).toISOString();
   if(!s)throw new Error('Onbekend station');
-  return `<OJP xmlns="http://www.vdv.de/ojp" xmlns:siri="http://www.siri.org.uk/siri" version="2.0"><OJPRequest><siri:ServiceRequest><siri:ServiceRequestContext><siri:Language>de</siri:Language></siri:ServiceRequestContext><siri:RequestTimestamp>${at}</siri:RequestTimestamp><siri:RequestorRef>Treinrondreis_prod</siri:RequestorRef><OJPStopEventRequest><siri:RequestTimestamp>${at}</siri:RequestTimestamp><Location><PlaceRef><StopPlaceRef>${stopId}</StopPlaceRef><Name><Text>${escapeXml(s.name)}</Text></Name></PlaceRef><DepArrTime>${at}</DepArrTime></Location><Params><ModeFilter><Exclude>false</Exclude><PtMode>${stopId===s.boatId?'water':'rail'}</PtMode></ModeFilter><NumberOfResults>3000</NumberOfResults><StopEventType>departure</StopEventType><IncludePreviousCalls>false</IncludePreviousCalls><IncludeOnwardCalls>true</IncludeOnwardCalls><UseRealtimeData>explanatory</UseRealtimeData><IncludePlacesContext>false</IncludePlacesContext><IncludeSituationsContext>false</IncludeSituationsContext></Params></OJPStopEventRequest></siri:ServiceRequest></OJPRequest></OJP>`;
+  return `<OJP xmlns="http://www.vdv.de/ojp" xmlns:siri="http://www.siri.org.uk/siri" version="2.0"><OJPRequest><siri:ServiceRequest><siri:ServiceRequestContext><siri:Language>de</siri:Language></siri:ServiceRequestContext><siri:RequestTimestamp>${at}</siri:RequestTimestamp><siri:RequestorRef>Treinrondreis_prod</siri:RequestorRef><OJPStopEventRequest><siri:RequestTimestamp>${at}</siri:RequestTimestamp><Location><PlaceRef><StopPlaceRef>${stopId}</StopPlaceRef><Name><Text>${escapeXml(s.name)}</Text></Name></PlaceRef><DepArrTime>${at}</DepArrTime></Location><Params><ModeFilter><Exclude>false</Exclude><PtMode>${stopId===s.boatId?'water':'rail'}</PtMode></ModeFilter><NumberOfResults>3000</NumberOfResults><StopEventType>both</StopEventType><IncludePreviousCalls>true</IncludePreviousCalls><IncludeOnwardCalls>true</IncludeOnwardCalls><UseRealtimeData>explanatory</UseRealtimeData><IncludePlacesContext>false</IncludePlacesContext><IncludeSituationsContext>false</IncludeSituationsContext></Params></OJPStopEventRequest></siri:ServiceRequest></OJPRequest></OJP>`;
 }
 
 export function swissRows(page,xml,now=Date.now()){
@@ -74,6 +75,33 @@ export function swissRows(page,xml,now=Date.now()){
   return {rows,sourceAt};
 }
 
+export function swissJourneySnapshots(xml,now=Date.now()){
+ if(XMLValidator.validate(xml)!==true)throw Error('OJP gaf ongeldige XML terug');
+ const delivery=parser.parse(xml)?.OJP?.OJPResponse?.ServiceDelivery,data=delivery?.OJPStopEventDelivery;
+ const sourceTimestamp=Date.parse(data?.ResponseTimestamp||delivery?.ResponseTimestamp);
+ if(!data||data.ErrorCondition||data.Status==='false'||!Number.isFinite(sourceTimestamp)||sourceTimestamp>now+60000||now-sourceTimestamp>MAX_AGE)throw Error('OJP ritgegevens niet actueel');
+ const results=new Map();
+ for(const r of list(data.StopEventResult)){
+  const e=r.StopEvent,service=e?.Service,number=text(service?.TrainNumber),category=text(service?.ProductCategory?.ShortName)||text(service?.Mode?.ShortName);
+  if(!service||!selectedJourney(number,category)||!/^\d+$/.test(number))continue;
+  const journeyRef=text(service.JourneyRef),serviceDate=text(service.OperatingDayRef);if(!journeyRef||!/^\d{4}-\d{2}-\d{2}$/.test(serviceDate))continue;
+  const calls=[...list(e.PreviousCall),...list(e.ThisCall),...list(e.OnwardCall)].map(x=>x.CallAtStop).filter(Boolean);
+  const seen=new Set(),counts=new Map(),stops=[];
+  for(const c of calls){
+   const station=text(c.StopPointName),identity=station.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+   const callKey=JSON.stringify([identity,c.Order,c.ServiceArrival?.TimetabledTime,c.ServiceDeparture?.TimetabledTime]);if(seen.has(callKey))continue;seen.add(callKey);
+   const occurrence=(counts.get(identity)||0)+1;counts.set(identity,occurrence);
+   const event=v=>{if(!v)return null;const plannedTime=Date.parse(v.TimetabledTime),expectedTime=Date.parse(v.EstimatedTime);if(!Number.isFinite(plannedTime))return null;return {plannedTime,plannedPlatform:text(c.PlannedQuay)||null,realtime:Number.isFinite(expectedTime)||yes(c.Cancelled)||yes(service.Cancelled),expectedTime:Number.isFinite(expectedTime)?expectedTime:null,currentPlatform:text(c.EstimatedQuay)||null,cancelled:yes(c.Cancelled)||yes(c.NotServicedStop)||yes(service.Cancelled)};};
+   stops.push({id:identity+'#'+occurrence,stationCode:text(c.StopPointRef),station,sequence:stops.length+1,stopType:yes(c.NoBoardingAtStop)&&yes(c.NoAlightingAtStop)?'N':undefined,arrival:event(c.ServiceArrival),departure:event(c.ServiceDeparture)});
+  }
+  if(!stops.length)continue;
+  const completePlan=stops[0].station===text(service.OriginText)&&stops.at(-1).station===text(service.DestinationText);
+  const snapshot={trainNumber:number,serviceDate,journeyRef,category,source:'OJP',sourceTimestamp,completePlan,stops};
+  const id=serviceDate+'|'+journeyRef,old=results.get(id);if(!old||stops.length>old.stops.length)results.set(id,snapshot);
+ }
+ return [...results.values()];
+}
+
 export function mergeSwissRows(rows){
   const groups=new Map();
   for(const r of rows){
@@ -85,7 +113,7 @@ export function mergeSwissRows(rows){
   return [...groups.values()].map(({trainLabels,...r})=>r);
 }
 
-export async function scanSwissStation(page,{fetcher=fetch,store=recordObservations,now=()=>Date.now(),key=process.env.OJP_API_KEY}={}){
+export async function scanSwissStation(page,{fetcher=fetch,store=recordObservations,now=()=>Date.now(),key=process.env.OJP_API_KEY,archive=recordJourneySnapshot}={}){
   const state=swissState.stations[page];
   if(!state)throw new Error('Onbekend station');
   if(!key?.trim()){state.status='missing-key';state.error='OJP_API_KEY ontbreekt';return;}
@@ -94,7 +122,9 @@ export async function scanSwissStation(page,{fetcher=fetch,store=recordObservati
     for(const stopId of [swissStations[page].id,...swissStations[page].extraStopIds||[],swissStations[page].boatId].filter(Boolean)){
       const response=await fetcher('https://api.opentransportdata.swiss/ojp20',{method:'POST',headers:{'Content-Type':'application/xml',Authorization:'Bearer '+key.trim().replace(/^Bearer\s+/i,''),'User-Agent':'Treinrondreis/1.0'},body:swissRequest(page,now(),stopId),signal:AbortSignal.timeout(25000)});
       if(!response.ok)throw new Error('OJP HTTP '+response.status);
-      results.push(swissRows(page,await response.text(),now()));
+      const xml=await response.text();
+      results.push(swissRows(page,xml,now()));
+      for(const snapshot of swissJourneySnapshots(xml,now()))await archive(snapshot);
     }
     const at=now(),rows=results.flatMap(r=>r.rows),sourceAt=Math.min(...results.map(r=>r.sourceAt));
     cache.set(page,{at:sourceAt,rows});state.lastSuccessAt=new Date(sourceAt).toISOString();state.count=rows.length;state.realtimeCount=rows.filter(r=>r.hasRealtime).length;state.status='ready';state.error=null;
