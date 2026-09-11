@@ -26,3 +26,8 @@ assert.throws(()=>swissJourneySnapshots(xml,now+600000));assert(swissRequest('ba
 const rit={ReisInformatieProductRitInfo:{'@_TimeStamp':new Date(now).toISOString(),RitInfo:{TreinNummer:'225',TreinDatum:date,TreinSoort:{'@_Code':'ICE'},LogischeRit:{LogischeRitDeel:{LogischeRitDeelStation:{Station:{StationCode:'EM',LangeNaam:'Emmerich'},StationnementType:'N',AankomstTijd:{'@_InfoStatus':'Gepland','#text':new Date(time).toISOString()}}}}}}};
 assert.equal(parseRitJourneys(rit,[])[0].stops[0].stopType,'N');
 console.log('PASS: selection, direction, per-event DB matching, no date mixing, changes-only revisions, OJP complete calls/source identity, stale response, operational stop.');
+
+await recordJourneyMeasurements([{number:'225',observedAt:'Köln Hbf',eventMode:'departure',plannedTimestamp:time+120000,expectedTimestamp:time+600000,hasRealtime:true}], 'DB',now+10000);
+assert.equal((await getJourney('225',date)).stops[0].departure.measurement.plannedTime,time+120000);
+assert.equal((await getJourney('225',date)).stops[0].departure.measurement.expectedTime,time+600000);
+console.log('PASS differing DB planning retained for delay baseline');
