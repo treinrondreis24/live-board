@@ -17,6 +17,7 @@ export async function initBoardAdmin({config,swissStations,norwegianStations,bel
 }
 export function defaultBoardSettings(page){if(!Object.hasOwn(catalog,page))throw Error('Onbekend station');const s=catalog[page];return {title:s.title,footer:'',enabled:true,directions:structuredClone(s.directions).map((d,i)=>({...d,id:d.id||'richting-'+i,enabled:true,limit:8})),appearance:{...defaultAppearance}};}
 export const standardLayouts=[
+ {id:'treinreiziger',name:'Treinreiziger-bord',appearance:{...defaultAppearance,design:'treinreiziger',accent:'#e5303c',text:'#555555',background:'#ffffff',alternate:'#f4f4f4',buttonStart:'#e5303c',buttonEnd:'#e5303c',font:'treinrondreis',width:1050,density:'normal',fullOpen:true}},
  {id:'db',name:'DB-bord',appearance:{...defaultAppearance,design:'db',accent:'#003082',text:'#003082',alternate:'#f7fbfd',buttonStart:'#003082',buttonEnd:'#003082',width:760,density:'roomy',fullOpen:true}},
  {id:'trenitalia',name:'Trenitalia-bord',appearance:{...defaultAppearance,design:'trenitalia',accent:'#f3b548',text:'#f3b548',background:'#111111',alternate:'#191919',buttonStart:'#343434',buttonEnd:'#343434',width:760,density:'roomy',fullOpen:true}},
  {id:'uk',name:'UK-bord',appearance:{...defaultAppearance,design:'uk',accent:'#ffda44',text:'#ffda44',background:'#101010',alternate:'#191919',buttonStart:'#333333',buttonEnd:'#333333',font:'system',width:1050,fullOpen:true}},
@@ -54,8 +55,8 @@ export function validateBoardSettings(page,input){
  });
  if(new Set(result.directions.map(d=>d.id)).size!==result.directions.length)throw Error('Filters moeten een unieke identificatie hebben.');
  const a=input.appearance||{};
- result.appearance.layout=['standard','db','trenitalia','uk','sncf','compact','quiet'].includes(a.layout)?a.layout:'standard';
- result.appearance.design=['standard','db','trenitalia','uk','sncf'].includes(a.design)?a.design:'standard';
+ result.appearance.layout=['standard','db','trenitalia','uk','sncf','treinreiziger','compact','quiet'].includes(a.layout)?a.layout:'standard';
+ result.appearance.design=['standard','db','trenitalia','uk','sncf','treinreiziger'].includes(a.design)?a.design:'standard';
  for(const key of ['accent','text','background','alternate','buttonStart','buttonEnd'])if(/^#[a-f\d]{6}$/i.test(a[key]||''))result.appearance[key]=a[key];
  result.appearance.font=['treinrondreis','system','arial','verdana'].includes(a.font)?a.font:'treinrondreis';
  result.appearance.width=Math.min(1800,Math.max(600,Number(a.width)||1050));result.appearance.density=['compact','normal','roomy'].includes(a.density)?a.density:'normal';

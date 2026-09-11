@@ -1,0 +1,18 @@
+import fs from 'node:fs';import assert from 'node:assert/strict';import vm from 'node:vm';
+import {internationalRows} from './international.mjs';
+import {standardLayouts,initBoardAdmin,validateBoardSettings} from './board-admin.mjs';
+import {initBoardCache} from './board-cache.mjs';import {DatabaseSync} from 'node:sqlite';
+const now=Date.parse('2026-09-11T10:00:00Z');
+const plan={rows:[{source:'EUROSTAR',page:'paris-nord',tripId:'9001-0911',date:'20260911',sequence:1,stopId:'paris_nord',number:'9001',plannedTimestamp:now,tripStops:['paris_nord']}],platformPages:{paris_nord_18:'paris-nord',other_1:'other'},platforms:{paris_nord_18:'18',other_1:'1'}};
+const feed={header:{timestamp:now/1000},entity:[{tripUpdate:{trip:{tripId:'9001-0911',startDate:'20260911'},stopTimeUpdate:[{stopSequence:1,scheduleRelationship:2,stopTimeProperties:{assignedStopId:'paris_nord_18'}}]}}]};
+assert.equal(internationalRows(plan,feed,now)[0].currentTrack,'18');assert.equal(internationalRows(plan,feed,now)[0].hasRealtime,false);
+assert.equal(internationalRows(plan,feed,now+301000)[0].currentTrack,'');feed.entity[0].tripUpdate.trip.startDate='20260912';assert.equal(internationalRows(plan,feed,now)[0].currentTrack,'');feed.entity[0].tripUpdate.trip.startDate='20260911';feed.entity[0].tripUpdate.stopTimeUpdate[0].stopTimeProperties.assignedStopId='other_1';assert.equal(internationalRows(plan,feed,now)[0].currentTrack,'');
+feed.entity[0].tripUpdate.stopTimeUpdate[0].stopTimeProperties.assignedStopId='paris_nord_18';feed.entity[0].tripUpdate.trip.scheduleRelationship=3;assert.equal(internationalRows(plan,feed,now)[0].track,'—');
+const app=fs.readFileSync(new URL(fs.existsSync(new URL('./public/app.js',import.meta.url))?'./public/app.js':'./app.js',import.meta.url),'utf8');const c=vm.createContext({dbTrains:[{delay:20},{delay:35},...Array.from({length:13},()=>({delay:0}))],CONFIG:{dbRowsPerPage:8}});
+vm.runInContext(app.slice(app.indexOf('function shortStation'),app.indexOf('function dbScreenDuration')),c);
+assert.equal(vm.runInContext("shortStation('München Hbf (tief)')",c),'München Hbf');assert.equal(vm.runInContext("shortStation('Amsterdam Centraal')",c),'Amsterdam C');assert.equal(vm.runInContext("shortStation('Venezia Santa Lucia')",c),'Venezia');assert.equal(vm.runInContext("shortStation('Milano Centrale',true)",c),'Milano');
+assert.equal(vm.runInContext('screenStatus({delay:30})',c),'+30');assert(vm.runInContext('screenStatus({delay:0,hasRealtime:true})',c).includes('✓'));assert(vm.runInContext('screenStatus({delay:0,hasRealtime:false})',c).includes('◷'));
+const g=vm.runInContext('dbPageItems()',c);assert.equal(g.pinned.length,2);assert.equal(g.slots,6);assert.equal(g.pages,3);
+await initBoardCache({backend:'sqlite',sqlite:new DatabaseSync(':memory:')});await initBoardAdmin({config:{stationPages:{test:{station:'Test'}}},swissStations:{},norwegianStations:{},belgianStations:{},getPayload:()=>({}),matchDirection:()=>true});
+const layout=standardLayouts.find(s=>s.id==='treinreiziger');assert(layout);const settings=validateBoardSettings('test',{directions:[],appearance:{...layout.appearance,layout:'treinreiziger',accent:'#123456'}});assert.equal(settings.appearance.design,'treinreiziger');assert.equal(settings.appearance.accent,'#123456');
+console.log('PASS: platform assignment, station/date/freshness/cancellation guards; compact names/status; pinned pagination; Treinreiziger with editable colors');
