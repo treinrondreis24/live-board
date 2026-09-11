@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {serializePlan,restorePlan,rowsWithRealtime} from './belgium.mjs';
-const now=Date.now(),schedule={iceJourneys:[],rows:[{tripId:'test',date:'20260910',sequence:1,plannedTimestamp:now,plannedTrack:'2',station:{name:'Brussel-Zuid',uic:'8814001'},number:'123',category:'IC',to:'Gent',page:'brussel-zuid'}],stops:new Map([['new-platform',{platform_code:'8'}]])};
+const now=Date.now(),schedule={iceSelectionVersion:2,iceJourneys:[],rows:[{tripId:'test',date:'20260910',sequence:1,plannedTimestamp:now,plannedTrack:'2',station:{name:'Brussel-Zuid',uic:'8814001'},number:'123',category:'IC',to:'Gent',page:'brussel-zuid'}],stops:new Map([['new-platform',{platform_code:'8'}]])};
 const feed={header:{timestamp:Math.floor(now/1000)},entity:[{tripUpdate:{trip:{tripId:'test',startDate:'20260910'},stopTimeUpdate:[{stopSequence:1,stopId:'new-platform',departure:{delay:120}}]}}]};
 const restored=restorePlan(JSON.parse(JSON.stringify(serializePlan(schedule))));assert.equal(restored.needsRefresh,false);const rows=rowsWithRealtime(restored.schedule,feed,now);assert.equal(rows[0].track,'8');assert.equal(rows[0].delay,2);
 const legacy=restorePlan(JSON.parse(JSON.stringify(schedule)));assert.equal(legacy.needsRefresh,true);assert.equal(rowsWithRealtime(legacy.schedule,feed,now)[0].track,'2');assert.equal(rowsWithRealtime(legacy.schedule,null,now).length,1);assert.equal(restorePlan(null),null);console.log('PASS: JSON restart preserves stop lookup and real-time platform; old cache serves planned tracks and requests refresh');

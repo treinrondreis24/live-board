@@ -54,14 +54,14 @@ export function parsePlan(bytes,now=Date.now()){
     for(const date of trip.days){const ts=gtfsTime(date,r.departure_time);if(!ts)continue;rows.push({page:station[0],tripId:r.trip_id,sequence:+r.stop_sequence,stopId:r.stop_id,date,plannedTimestamp:ts,plannedTrack:stop.platform_code||'',station:station[1],number:trip.trip_short_name,category:trip.category,to:trip.destination});}
   }
   if(!rows.length)throw new Error('Geen vertrekken voor de gekozen stations in de dienstregeling');
-  return {rows,stops,iceJourneys:belgianIcePlans(read,stops,routes,trips,gtfsTime,now)};
+  return {rows,stops,iceSelectionVersion:2,iceJourneys:belgianIcePlans(read,stops,routes,trips,gtfsTime,now)};
 }
 // JSON does not preserve Maps. Store entries and rebuild the lookup after restart.
 export function serializePlan(schedule){return {...schedule,stops:[...schedule.stops.entries()]};}
 export function restorePlan(schedule){
   if(!schedule||!Array.isArray(schedule.rows))return null;
   const valid=schedule.stops instanceof Map||Array.isArray(schedule.stops);
-  return {schedule:{...schedule,stops:schedule.stops instanceof Map?schedule.stops:new Map(valid?schedule.stops:[])},needsRefresh:!valid||!Array.isArray(schedule.iceJourneys)};
+  return {schedule:{...schedule,stops:schedule.stops instanceof Map?schedule.stops:new Map(valid?schedule.stops:[])},needsRefresh:!valid||schedule.iceSelectionVersion!==2||!Array.isArray(schedule.iceJourneys)};
 }
 export function rowsWithRealtime(schedule,feed,now=Date.now()){
   const updates=new Map(),stamp=Number(feed?.header?.timestamp)*1000;

@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {belgianIcePlans} from './belgian-journeys.mjs';
+const routes=new Map([['r',{route_short_name:'TRN',route_long_name:'Antwerpen-Centraal -- Köln'}]]);
+const trips=new Map(['311','313','315'].map(n=>[n,{route_id:'r',trip_short_name:n,days:['20260911']}]));
+const stops=new Map([['a',{name:'Antwerpen-Centraal',parent_station:'gs:nmbssncb:S8821006'}],['b',{name:'Köln Hbf (DE)',parent_station:'cologne'}]]);
+const rows=[...trips.keys()].flatMap(n=>['a','b'].map((id,i)=>({trip_id:n,stop_id:id,stop_sequence:String(i+1),arrival_time:'12:00:00',departure_time:'12:01:00'})));
+const read=()=>rows;
+const plans=belgianIcePlans(read,stops,routes,trips,()=>1000,2000);
+assert.deepEqual(plans.map(p=>p.trainNumber),['311','313']);assert(plans.every(p=>p.category==='ICE'&&p.stops.length===2));
+assert.equal(belgianIcePlans(()=>rows.filter(r=>r.stop_id==='b'),stops,routes,trips,()=>1000,2000).length,0);
+console.log('PASS: TRN 311 and 313 from Antwerpen, full route, unrelated 315 excluded, Antwerp required');
