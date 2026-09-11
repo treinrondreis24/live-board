@@ -128,3 +128,18 @@ body[data-board-design=sncf] .track strong{display:inline-block;padding:4px 8px;
 }
 body[data-board-design]:not([data-board-design=standard]) .board-footer{flex-wrap:wrap;gap:8px}
 body[data-board-design]:not([data-board-design=standard]) #swiss-source{flex-basis:100%;font-size:11px;overflow-wrap:anywhere}
+
+/* Sources follow the complete departure board. */
+.board-sources{display:block;padding:10px 14px 12px;border-top:1px solid var(--line);font-size:10px;line-height:1.5;color:var(--muted)}
+.board-sources:empty{display:none}
+.board-sources a,body[data-board-design] .board-sources a{display:block;font-size:10px;color:inherit;overflow-wrap:anywhere;text-decoration:none}
+.board-sources a:hover{text-decoration:underline}
+body[data-custom-board][data-board-design=treinreiziger]{--muted:#777;--green:#22844b;--delay:#b45b00;--major:#bd2431;--line:#e4e4e4}
+body[data-custom-board][data-board-design=treinreiziger] .board{border:0}
+body[data-custom-board][data-board-design=treinreiziger] h2{font-weight:400;line-height:1.35;font-size:25px}
+body[data-custom-board][data-board-design=treinreiziger] .where{font-weight:600}
+body[data-custom-board][data-board-design=treinreiziger] .primary{color:white;border:0;background:linear-gradient(90deg,var(--blue),var(--button-green))}
+body[data-custom-board][data-board-design=treinreiziger] .board-head{padding:16px 14px;border-bottom:2px solid var(--red)}
+body[data-custom-board][data-board-design=treinreiziger] .full-row{min-height:48px}
+@media(max-width:560px){body[data-custom-board][data-board-design=treinreiziger] h2{font-size:21px}}
+body[data-custom-board][data-board-design=treinreiziger] .primary{color:#fff!important}

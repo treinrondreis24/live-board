@@ -103,8 +103,27 @@ function dbTimeHtml(t){
   `;
 }
 
+function shortStation(value,italian=false){
+  let name=String(value||'').replace(/\bCentraal\b/gi,'C').replace(/(\bHbf\b).*$/i,'$1').replace(/(\bVenezia\b).*$/i,'$1');
+  if(italian)name=name.replace(/\bCentrale\b/gi,'').replace(/\s+/g,' ');
+  return name.trim();
+}
+function screenStatus(t){
+  if(t.cancelled||t.type==='cancel')return '<span title="Geannuleerd">×</span>';
+  if(t.type==='partial')return '<span title="Gedeeltelijk geannuleerd">⚠</span>';
+  const delay=Math.round(Number(t.delay)||0);
+  if(delay)return (delay>0?'+':'')+delay;
+  return t.hasRealtime?'<span class="on-time" title="Op tijd" aria-label="Op tijd">✓</span>':'<span class="planned-only" title="Gepland; geen actuele bevestiging" aria-label="Gepland">◷</span>';
+}
+function dbPageItems(){
+  const pinned=dbTrains.filter(t=>!t.cancelled&&Number(t.delay)>=20);
+  const rotating=dbTrains.filter(t=>t.cancelled||Number(t.delay)<20||!Number.isFinite(Number(t.delay)));
+  const size=Math.max(CONFIG.dbRowsPerPage,pinned.length+(rotating.length?1:0));
+  const slots=Math.max(1,size-pinned.length),pages=Math.max(1,Math.ceil(rotating.length/slots));
+  return {pinned,rotating,size,slots,pages};
+}
 function dbPageCount(){
-  return Math.max(1, Math.ceil(dbTrains.length / CONFIG.dbRowsPerPage));
+  return dbPageItems().pages;
 }
 
 function dbScreenDuration(){
@@ -121,8 +140,9 @@ function renderDb(){
   const pages = dbPageCount();
   if(dbPage >= pages) dbPage = 0;
 
-  const start = dbPage * CONFIG.dbRowsPerPage;
-  const items = dbTrains.slice(start, start + CONFIG.dbRowsPerPage);
+  const group=dbPageItems(),start=dbPage*group.slots;
+  const items=[...group.pinned,...group.rotating.slice(start,start+group.slots)];
+  document.documentElement.style.setProperty('--db-row-count',group.size);
 
   if(!items.length){
     dbRowsEl.innerHTML = `
@@ -136,12 +156,12 @@ function renderDb(){
   }else{
     dbRowsEl.innerHTML = items.map(t=>`
       <div class="db-train-row ${t.type === "cancel" ? "db-cancelled-row" : ""}">
-        <div class="db-cell db-time-cell"><div class="db-time">${dbTimeHtml(t)}</div><div class="db-scanpoint">${escapeHtml(t.observedAt)}</div></div>
+        <div class="db-cell db-time-cell"><div class="db-time">${dbTimeHtml(t)}</div><div class="db-scanpoint">${escapeHtml(shortStation(t.observedAt))}</div></div>
         <div class="db-cell db-train">${escapeHtml(t.train)}</div>
-        <div class="db-cell db-from">${escapeHtml(t.from)}</div>
-        <div class="db-cell db-to">${escapeHtml(t.to)}</div>
+        <div class="db-cell db-from">${escapeHtml(shortStation(t.from))}</div>
+        <div class="db-cell db-to">${escapeHtml(shortStation(t.to))}</div>
         <div class="db-cell db-status ${escapeHtml(t.type)}">
-          ${escapeHtml(t.status)}${trendHtml(t)}
+          ${screenStatus(t)}${trendHtml(t)}
         </div>
       </div>
     `).join("");
@@ -154,12 +174,12 @@ function italyFullRowHtml(t){
   return `
     <div class="italy-train-row ${t.type === "cancel" ? "italy-cancelled-row" : ""}">
       <div class="italy-cell italy-time">${escapeHtml(t.time)}</div>
-      <div class="italy-cell italy-train">${escapeHtml(t.train)}</div>
-      <div class="italy-cell">${escapeHtml(t.from)}</div>
-      <div class="italy-cell">${escapeHtml(t.to)}</div>
+      <div class="italy-cell italy-train">${escapeHtml(t.number||t.train)}</div>
+      <div class="italy-cell">${escapeHtml(shortStation(t.from))}</div>
+      <div class="italy-cell">${escapeHtml(shortStation(t.to))}</div>
       <div class="italy-cell italy-track">${escapeHtml(t.track || "—")}</div>
       <div class="italy-cell italy-status ${escapeHtml(t.type)}">
-        ${escapeHtml(t.status)}${trendHtml(t)}
+        ${screenStatus(t)}${trendHtml(t)}
       </div>
     </div>`;
 }
@@ -169,11 +189,11 @@ function italySplitRowHtml(t, kind){
   return `
     <div class="italy-train-row ${t.type === "cancel" ? "italy-cancelled-row" : ""}">
       <div class="italy-cell italy-time">${escapeHtml(t.time)}</div>
-      <div class="italy-cell italy-train">${escapeHtml(t.train)}</div>
-      <div class="italy-cell">${escapeHtml(mainPlace)}</div>
+      <div class="italy-cell italy-train">${escapeHtml(t.number||t.train)}</div>
+      <div class="italy-cell">${escapeHtml(shortStation(mainPlace,true))}</div>
       <div class="italy-cell italy-track">${escapeHtml(t.track || "—")}</div>
       <div class="italy-cell italy-status ${escapeHtml(t.type)}">
-        ${escapeHtml(t.status)}${trendHtml(t)}
+        ${screenStatus(t)}${trendHtml(t)}
       </div>
     </div>`;
 }
