@@ -8,13 +8,15 @@
     "check": "node --check server.mjs && node --check storage.mjs && node --check datahub.mjs && node --check public/app.js && node --check public/mobile-common.js && node --check public/mobile.js && node --check public/nightjets.js && node --check public/station-mobile.js && node --check public/datahub.js && node --check public/koeln-embed.js"
   },
   "engines": {
-    "node": ">=22.13.0"
+    "node": ">=24.0.0 <25"
   },
   "dependencies": {
     "fast-xml-parser": "5.11.1",
     "fflate": "0.8.3",
+    "geoip-lite": "2.0.3",
     "gtfs-realtime-bindings": "^1.1.1",
     "pg": "^8.16.3",
+    "qrcode": "1.5.4",
     "zeromq": "6.7.0"
   }
 }

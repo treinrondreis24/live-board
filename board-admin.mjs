@@ -1,4 +1,5 @@
 import {createHmac,timingSafeEqual,randomBytes} from 'node:crypto';
+import {securityStatus,adminAuthenticated,handleAdminSecurity} from './admin-security.mjs';
 import {readBoardSettings,writeBoardSettings,insertBoardSettings,readBoardLayouts,createBoardLayout} from './board-cache.mjs';
 import {swissDirections,matchesSwissDirection} from './swiss-directions.mjs';
 let catalog={},saved=new Map(),provider,legacyMatch;
@@ -85,7 +86,8 @@ const password=()=>String(process.env.BOARD_ADMIN_PASSWORD||'');
 const configured=()=>password().length>=12;
 const sign=value=>createHmac('sha256',password()).update(value).digest('hex');
 function equal(a,b){const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);}
-function authenticated(req){
+async function authenticated(req){
+ if(await securityStatus())return adminAuthenticated(req);
  if(!configured())return false;
  const value=(req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith(cookieName+'='))?.slice(cookieName.length+1)||'';
  const [expires,nonce,signature]=value.split('.');return Number(expires)>Date.now()&&Number(expires)<Date.now()+13*3600000&&Boolean(nonce)&&equal(signature||'',sign(expires+'.'+nonce));
@@ -95,11 +97,14 @@ async function body(req){let bytes=0,chunks=[];for await(const chunk of req){byt
 function origin(req){return (req.headers['x-forwarded-proto']==='https'||req.socket.encrypted?'https':'http')+'://'+req.headers.host;}
 export async function handleBoardAdmin(req,res,url){
  if(!url.pathname.startsWith('/api/board-admin/'))return false;
+ res.setHeader('X-Robots-Tag','noindex, nofollow, noarchive');
  try{
   const action=url.pathname.slice('/api/board-admin/'.length);
-  if(req.method==='GET'&&action==='session'){reply(res,200,{configured:configured(),authenticated:authenticated(req)});return true;}
+  if(req.method==='POST'&&action==='logout'&&await securityStatus())return handleAdminSecurity(req,res,new URL('/api/admin-security/logout',url));
+  if(req.method==='GET'&&action==='session'){reply(res,200,{configured:configured(),authenticated:await authenticated(req)});return true;}
   if(req.method==='POST'&&req.headers.origin!==origin(req)){reply(res,403,{error:'Open het beheer op de eigen website.'});return true;}
   if(req.method==='POST'&&action==='login'){
+   if(await securityStatus()){reply(res,401,{error:'Log in via /stationschef met je gebruikersnaam en authenticator.'});return true;}
    if(!configured()){reply(res,503,{error:'Het beheerwachtwoord is nog niet ingesteld (minimaal 12 tekens).'});return true;}
    const ip=req.socket.remoteAddress||'unknown',now=Date.now(),times=(attempts.get(ip)||[]).filter(t=>now-t<15*60000);attempts.set(ip,times);
    if(times.length>=20){reply(res,429,{error:'Te veel pogingen. Probeer het over 15 minuten opnieuw.'});return true;}
@@ -108,7 +113,7 @@ export async function handleBoardAdmin(req,res,url){
    attempts.delete(ip);const value=(now+12*3600000)+'.'+randomBytes(18).toString('hex');
    res.setHeader('Set-Cookie',cookieName+'='+value+'.'+sign(value)+'; Path=/; HttpOnly; SameSite=Strict; Max-Age=43200'+(origin(req).startsWith('https:')?'; Secure':''));reply(res,200,{ok:true});return true;
   }
-  if(!authenticated(req)){reply(res,401,{error:'Log eerst in.'});return true;}
+  if(!await authenticated(req)){reply(res,401,{error:'Log eerst in via /stationschef.'});return true;}
   if(req.method==='POST'&&action==='logout'){res.setHeader('Set-Cookie',cookieName+'=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0');reply(res,200,{ok:true});return true;}
   if(req.method==='GET'&&action==='layouts'){reply(res,200,{layouts:[...standardLayouts,...await readBoardLayouts()]});return true;}
   if(req.method==='POST'&&action==='layout-save'){

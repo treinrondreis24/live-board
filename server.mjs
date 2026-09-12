@@ -1,6 +1,7 @@
 import {createTreinreizigerHandler,activeAppStation,acceptAppRow} from './tr-app-data.mjs';
 import {swedishStations,swedenState,swedishPayload,restoreSweden,startSweden} from './sweden.mjs';
 import {initBoardAdmin,handleBoardAdmin,applyBoardSettings,boardSource,duplicatePayload} from './board-admin.mjs';
+import {handleAdminSecurity,securityStatus,adminAuthenticated} from './admin-security.mjs';
 import {rfiStations,rfiState,rfiPayload,restoreRfi,startRfi} from './rfi.mjs';
 import {frenchStations,franceState,frenchPayload,restoreFrance,startFrance} from './france.mjs';
 import {spanishStations,internationalState,internationalPayload,restoreInternational,startInternational} from './international.mjs';
@@ -1035,6 +1036,17 @@ const handleTreinreiziger=createTreinreizigerHandler({stations:[...new Map(appSt
 const server=http.createServer(async(req,res)=>{
   try{
     const url=new URL(req.url,`http://${req.headers.host}`);
+    if(await handleAdminSecurity(req,res,url))return;
+    if(url.pathname==='/board-admin.js'){res.setHeader('X-Robots-Tag','noindex, nofollow');res.setHeader('Cache-Control','no-store');return sendFile(res,path.join(__dirname,'board-admin.js'));}
+    if(['/beheer','/beheer/','/board-admin.html'].includes(url.pathname)){
+      res.setHeader('X-Robots-Tag','noindex, nofollow, noarchive');
+      if(await securityStatus()){res.writeHead(404);return res.end('Not found');}
+    }
+    if(['/stationschef/borden','/stationschef/borden/'].includes(url.pathname)){
+      res.setHeader('X-Robots-Tag','noindex, nofollow, noarchive');res.setHeader('Cache-Control','no-store');res.setHeader('X-Frame-Options','DENY');
+      if(!await adminAuthenticated(req)){res.writeHead(303,{Location:'/stationschef'});return res.end();}
+      return sendFile(res,path.join(publicDir,'board-admin.html'));
+    }
     if(await handleTreinreiziger(req,res,url))return;
     if(await handleBoardAdmin(req,res,url))return;
     if(url.pathname==="/ritarchief"){res.writeHead(200,{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store"});return res.end(journeyPage);}
