@@ -1,6 +1,8 @@
 let db;
 export async function initBoardCache({backend,pool,sqlite}){
  db={backend,pool,sqlite};
+ const cmsSql='CREATE TABLE IF NOT EXISTS app_content (id INTEGER PRIMARY KEY, revision INTEGER NOT NULL, payload TEXT NOT NULL)';
+ if(pool)await pool.query(cmsSql);else sqlite.exec(cmsSql);
  const securitySql='CREATE TABLE IF NOT EXISTS admin_security (id INTEGER PRIMARY KEY, revision INTEGER NOT NULL, payload TEXT NOT NULL)';
  if(pool)await pool.query(securitySql);else sqlite.exec(securitySql);
  const sql='CREATE TABLE IF NOT EXISTS app_station_usage (station TEXT PRIMARY KEY, additions BIGINT NOT NULL); CREATE TABLE IF NOT EXISTS board_cache (cache_key TEXT PRIMARY KEY, updated_at BIGINT NOT NULL, payload TEXT NOT NULL); CREATE TABLE IF NOT EXISTS board_settings (page TEXT PRIMARY KEY, revision INTEGER NOT NULL, updated_at BIGINT NOT NULL, payload TEXT NOT NULL); CREATE TABLE IF NOT EXISTS board_layouts (layout_id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE, updated_at BIGINT NOT NULL, appearance TEXT NOT NULL)';
@@ -11,6 +13,16 @@ export async function initBoardCache({backend,pool,sqlite}){
 export async function readAdminSecurity(){
  const r=db.pool?(await db.pool.query('SELECT revision,payload FROM admin_security WHERE id=1')).rows[0]:db.sqlite.prepare('SELECT revision,payload FROM admin_security WHERE id=1').get();
  return r?{revision:Number(r.revision),value:JSON.parse(r.payload)}:{revision:0,value:null};
+}
+export async function readAppContent(){
+ const r=db.pool?(await db.pool.query('SELECT revision,payload FROM app_content WHERE id=1')).rows[0]:db.sqlite.prepare('SELECT revision,payload FROM app_content WHERE id=1').get();
+ return r?{revision:Number(r.revision),value:JSON.parse(r.payload)}:{revision:0,value:null};
+}
+export async function writeAppContent(value,revision){
+ const sql='INSERT INTO app_content(id,revision,payload) VALUES(1,1,$1) ON CONFLICT(id) DO UPDATE SET revision=app_content.revision+1,payload=excluded.payload WHERE app_content.revision=$2 RETURNING revision';
+ const args=[JSON.stringify(value),revision];
+ const r=db.pool?(await db.pool.query(sql,args)).rows[0]:db.sqlite.prepare(sql.replace(/\$\d/g,'?')).get(...args);
+ if(!r){const e=Error('Een andere sessie heeft wijzigingen opgeslagen. Herlaad het beheer.');e.status=409;throw e;}return Number(r.revision);
 }
 export async function writeAdminSecurity(value,revision){
  const sql='INSERT INTO admin_security(id,revision,payload) VALUES(1,1,$1) ON CONFLICT(id) DO UPDATE SET revision=admin_security.revision+1,payload=excluded.payload WHERE admin_security.revision=$2 RETURNING revision';

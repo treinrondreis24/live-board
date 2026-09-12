@@ -1,0 +1,28 @@
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {Readable} from 'node:stream';
+import {DatabaseSync} from 'node:sqlite';
+import {initBoardCache,writeAdminSecurity,readAppContent} from './board-cache.mjs';
+import {defaultContent,validateContent,feedUrl,handleAppCms} from './app-cms.mjs';
+process.env.RAILWAY_ENVIRONMENT_ID='test';
+const db=new DatabaseSync(':memory:');await initBoardCache({sqlite:db});
+await writeAdminSecurity({user:{name:'test'},countries:[{code:'NL'}],sessions:{[createHash('sha256').update('test-only').digest('hex')]:{expires:Date.now()+60000,country:'NL'}}},0);
+async function call(path,body,auth=true,origin='https://example.test'){
+ const req=Readable.from(body?[Buffer.from(JSON.stringify(body))]:[]);req.method=body?'POST':'GET';req.headers={host:'example.test',origin,'x-real-ip':'145.100.100.100',cookie:auth?'tr_admin_session=test-only':''};req.socket={};let status,out,headers={};const res={setHeader(k,v){headers[k]=v;},writeHead(s,h){status=s;Object.assign(headers,h);},end(v){try{out=JSON.parse(v);}catch{out=v;}}};await handleAppCms(req,res,new URL('https://example.test'+path));return {status,out,headers};
+}
+const draft=validateContent(defaultContent());assert.equal(draft.pages.length,8);
+assert.throws(()=>feedUrl('http://127.0.0.1/'));assert.throws(()=>feedUrl('https://localhost/'));assert.throws(()=>feedUrl('https://www.treinreiziger.nl.evil.test/feed'));
+const invalid=structuredClone(draft);invalid.pages[0].sections[0].count=0;assert.throws(()=>validateContent(invalid));
+assert.equal((await call('/api/app-content/draft',null,false)).status,401);
+assert.equal((await call('/api/app-content/save',{revision:0,draft},true,'https://evil.test')).status,403);
+assert.equal((await call('/api/app-content/save',{revision:0,draft})).status,200);
+assert.equal((await call('/api/app-content/public',null,false)).out.pages.length,0,'Draft private until publication');
+assert.equal((await call('/api/app-content/save',{revision:0,draft})).status,409);
+assert.equal((await call('/api/app-content/publish',{revision:1,draft})).status,200);
+assert.equal((await call('/api/app-content/public',null,false)).out.pages.length,8);
+const second=structuredClone(draft);second.pages[0].title='Nieuwe kop';await call('/api/app-content/publish',{revision:2,draft:second});assert.equal((await readAppContent()).value.previous.pages[0].title,'Nieuws');
+assert.equal((await call('/api/app-content/feed?url=https%3A%2F%2Flocalhost',null,false)).status,403);
+assert.equal((await call('/seinhuis/paginas')).headers['X-Robots-Tag'],'noindex, nofollow, noarchive');
+assert.equal((await call('/app/cms.css',null,false)).status,200);
+assert.equal((await call('/app/cms-render.js',null,false)).status,200);
+db.close();console.log('PASS: content validation, draft privacy, publication, previous version, conflict protection, authentication, CSRF and feed allowlist');

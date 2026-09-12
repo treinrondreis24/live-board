@@ -1,3 +1,4 @@
+import {handleAppCms} from './app-cms.mjs';
 import {createTreinreizigerHandler,activeAppStation,acceptAppRow} from './tr-app-data.mjs';
 import {swedishStations,swedenState,swedishPayload,restoreSweden,startSweden} from './sweden.mjs';
 import {initBoardAdmin,handleBoardAdmin,applyBoardSettings,boardSource,duplicatePayload} from './board-admin.mjs';
@@ -1036,6 +1037,7 @@ const handleTreinreiziger=createTreinreizigerHandler({stations:[...new Map(appSt
 const server=http.createServer(async(req,res)=>{
   try{
     const url=new URL(req.url,`http://${req.headers.host}`);
+    if(await handleAppCms(req,res,url))return;
     if(await handleAdminSecurity(req,res,url))return;
     if(url.pathname==='/board-admin.js'){res.setHeader('X-Robots-Tag','noindex, nofollow');res.setHeader('Cache-Control','no-store');return sendFile(res,path.join(__dirname,'board-admin.js'));}
     if(['/beheer','/beheer/','/board-admin.html'].includes(url.pathname)){

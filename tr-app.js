@@ -46,6 +46,7 @@ document.addEventListener('error',e=>{if(e.target.matches?.('.content-photo')){e
 
 async function render(){const token=++renderId,hash=location.hash.slice(1)||'nieuws';document.querySelectorAll('nav a').forEach(a=>{if(a.hash==='#'+(hash.startsWith('station/')?'tijden':hash.startsWith('internationaal')?'internationaal':hash))a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
 
+ if(await window.cmsRender?.(hash,view,token,t=>t===renderId))return;
  if(hash==='internationaal'||hash.startsWith('internationaal/')){await renderInternational(hash,token);return;}
  if(hash==='nieuws'){view.innerHTML='<div id="news-list" class="news-list"><p role="status">Nieuws laden…</p></div>';try{const j=await api('news');if(token!==renderId)return;$('#news-list').innerHTML=(j.stale?'<p>De verbinding is tijdelijk onderbroken. Dit is het laatst opgehaalde nieuws.</p>':'')+newsCards(j.items);}catch(e){if(token===renderId)$('#news-list').innerHTML='<div class="empty"><p>'+esc(e.message)+'</p><button id="retry">Probeer opnieuw</button></div>';}return;}
  if(hash==='tijden'){
