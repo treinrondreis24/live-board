@@ -116,8 +116,10 @@ function screenStatus(t){
   return t.hasRealtime?'<span class="on-time" title="Op tijd" aria-label="Op tijd">✓</span>':'<span class="planned-only" title="Gepland; geen actuele bevestiging" aria-label="Gepland">◷</span>';
 }
 function dbPageItems(){
-  const pinned=dbTrains.filter(t=>!t.cancelled&&Number(t.delay)>=20);
-  const rotating=dbTrains.filter(t=>t.cancelled||Number(t.delay)<20||!Number.isFinite(Number(t.delay)));
+  const cancelled=dbTrains.filter(t=>t.cancelled||t.type==='cancel');
+  const delayed=dbTrains.filter(t=>!cancelled.includes(t)&&Number(t.delay)>=20).sort((a,b)=>Number(b.delay)-Number(a.delay)).slice(0,4);
+  const pinned=[...cancelled,...delayed];
+  const rotating=dbTrains.filter(t=>!pinned.includes(t));
   const size=Math.max(CONFIG.dbRowsPerPage,pinned.length+(rotating.length?1:0));
   const slots=Math.max(1,size-pinned.length),pages=Math.max(1,Math.ceil(rotating.length/slots));
   return {pinned,rotating,size,slots,pages};
