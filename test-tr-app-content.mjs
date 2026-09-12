@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {parseTrips,contentUrl} from './tr-app-content.mjs';
+import {parseNews} from './tr-app-data.mjs';
+const product=(price,image)=>`<product><ID>one</ID><name>Reis &amp; Bergen</name><price>${price}</price><imageURL>${image}</imageURL><productURL>https://www.treinrondreis.nl/reizen/test</productURL><isoCodeArrival>ch</isoCodeArrival></product>`;
+const trips=parseTrips('<productFeed>'+product('123.50','https://cdn.sanity.io/images/test.jpg')+product('','')+product('NaN','javascript:alert(1)')+'</productFeed>');
+assert.equal(trips.length,3);assert.equal(trips[0].title,'Reis & Bergen');assert.equal(trips[0].country,'CH');assert.equal(trips[0].price,123.5);
+assert.equal(trips[1].price,null);assert.equal(trips[2].image,null);assert.equal(trips.filter(t=>t.image&&t.price).length,1);
+assert.equal(contentUrl('https://www.treinrondreis.nl.evil.test/x',['www.treinrondreis.nl']),null);
+assert.throws(()=>parseTrips('<!DOCTYPE productFeed><productFeed/>'));
+const news=parseNews('<rss><channel><item><title>Nieuws</title><link>https://www.treinreiziger.nl/test</link><image>https://www.treinreiziger.nl/photo.jpg</image><category>Internationaal</category></item><item><link>https://eviltreinreiziger.nl/test</link></item></channel></rss>');
+assert.equal(news.length,1);assert.deepEqual(news[0].categories,['Internationaal']);assert.equal(news[0].image,'https://www.treinreiziger.nl/photo.jpg');
+console.log('PASS: images, categories, price precision, missing trip data, country normalization and unsafe feed rejection');
