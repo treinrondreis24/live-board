@@ -1,3 +1,4 @@
+import {createTreinreizigerHandler,activeAppStation,acceptAppRow} from './tr-app-data.mjs';
 import {swedishStations,swedenState,swedishPayload,restoreSweden,startSweden} from './sweden.mjs';
 import {initBoardAdmin,handleBoardAdmin,applyBoardSettings,boardSource,duplicatePayload} from './board-admin.mjs';
 import {rfiStations,rfiState,rfiPayload,restoreRfi,startRfi} from './rfi.mjs';
@@ -918,7 +919,7 @@ function parseNdovRows(xml){
   const products=ndovProducts(ndovParser.parse(xml)),rows=[];
   for(const product of products){
     const dvs=product.DynamischeVertrekStaat,station=dvs?.RitStation;
-    const stationShortCode=ndovText(station?.StationCode).toUpperCase(),selectedStation=ndovStations.get(stationShortCode);
+    const stationShortCode=ndovText(station?.StationCode).toUpperCase(),selectedStation=ndovStations.get(stationShortCode)||activeAppStation(stationShortCode);
     if(!selectedStation)continue;
     const stationName=selectedStation.name;
     const train=dvs.Trein;if(!train)continue;
@@ -949,6 +950,7 @@ function parseNdovRows(xml){
   return rows;
 }
 function acceptNdovRow(row){
+  if(!ndovStations.has(row.stationShortCode)){acceptAppRow(row);return true;}
   const old=ndovRows.get(row.id);
   if(old&&old.messageTimestamp>=row.messageTimestamp)return false;
   if(row.plannedTimestamp<Date.now()-86400000||row.plannedTimestamp>Date.now()+172800000)return false;
@@ -1022,9 +1024,18 @@ const pageRoutes={
   "/datahub":"/datahub.html","/datahub/":"/datahub.html"
 };
 
+const appStations=[...(config.ndov?.stations||[]).map(s=>({id:'nl-'+s.code.toLowerCase(),name:s.name,country:'NL',page:s.page})),
+ ...[[swissStations,'CH'],[norwegianStations,'NO'],[belgianStations,'BE'],[rfiStations,'IT'],[frenchStations,'FR'],[spanishStations,'ES'],[swedishStations,'SE']].flatMap(([registry,country])=>Object.entries(registry).map(([page,s])=>({id:page,name:s.name,country:s.country||country,page}))),
+ ...(config.collectors||[]).filter(s=>!(config.ndov?.stations||[]).some(n=>n.name===s.name)).map(s=>({id:s.id,name:s.name,country:/Wien|Innsbruck/.test(s.name)?'AT':/Basel/.test(s.name)?'CH':'DE',db:true}))];
+const handleTreinreiziger=createTreinreizigerHandler({stations:[...new Map(appStations.map(s=>[s.name,s])).values()],getBoard:s=>{
+ if(s.db)return {source:'DB Timetables',departures:{all:stationUpcomingDepartures(s.name)}};
+ const page=s.page;return internationalPayload(page,Object.hasOwn(swedishStations,page)?swedishPayload(page):Object.hasOwn(frenchStations,page)?frenchPayload(page):Object.hasOwn(spanishStations,page)?null:Object.hasOwn(rfiStations,page)?italianEmbedPayload(page):Object.hasOwn(swissStations,page)?swissPayload(page):Object.hasOwn(norwegianStations,page)?norwegianPayload(page):Object.hasOwn(belgianStations,page)?belgianPayload(page):stationPagePayload(page));
+}});
+
 const server=http.createServer(async(req,res)=>{
   try{
     const url=new URL(req.url,`http://${req.headers.host}`);
+    if(await handleTreinreiziger(req,res,url))return;
     if(await handleBoardAdmin(req,res,url))return;
     if(url.pathname==="/ritarchief"){res.writeHead(200,{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store"});return res.end(journeyPage);}
     if(url.pathname==="/api/journeys/status")return sendJson(res,200,{...journeyImportState,selected:config.journeyArchive?.trainNumbers||[],categories:["ICE","NJ","RJ","RJX","ECD","ECC"],corridors:["Venlo richting Duitsland","Arnhem richting Emmerich"]});

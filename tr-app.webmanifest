@@ -1,0 +1,1 @@
+{"id":"/app/","name":"Treinreiziger","short_name":"Treinreiziger","description":"Treinnieuws, tickets en jouw persoonlijke vertrekborden","lang":"nl","start_url":"/app/","scope":"/app/","display":"standalone","background_color":"#f5f5f3","theme_color":"#ed2939","icons":[{"src":"/app/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]}

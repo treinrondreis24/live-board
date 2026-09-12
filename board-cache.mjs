@@ -1,7 +1,7 @@
 let db;
 export async function initBoardCache({backend,pool,sqlite}){
  db={backend,pool,sqlite};
- const sql='CREATE TABLE IF NOT EXISTS board_cache (cache_key TEXT PRIMARY KEY, updated_at BIGINT NOT NULL, payload TEXT NOT NULL); CREATE TABLE IF NOT EXISTS board_settings (page TEXT PRIMARY KEY, revision INTEGER NOT NULL, updated_at BIGINT NOT NULL, payload TEXT NOT NULL); CREATE TABLE IF NOT EXISTS board_layouts (layout_id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE, updated_at BIGINT NOT NULL, appearance TEXT NOT NULL)';
+ const sql='CREATE TABLE IF NOT EXISTS app_station_usage (station TEXT PRIMARY KEY, additions BIGINT NOT NULL); CREATE TABLE IF NOT EXISTS board_cache (cache_key TEXT PRIMARY KEY, updated_at BIGINT NOT NULL, payload TEXT NOT NULL); CREATE TABLE IF NOT EXISTS board_settings (page TEXT PRIMARY KEY, revision INTEGER NOT NULL, updated_at BIGINT NOT NULL, payload TEXT NOT NULL); CREATE TABLE IF NOT EXISTS board_layouts (layout_id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE, updated_at BIGINT NOT NULL, appearance TEXT NOT NULL)';
  if(pool)await pool.query(sql);else sqlite.exec(sql);
 }
 // Board configuration is reference data and is deliberately outside train retention.
@@ -74,4 +74,9 @@ export async function createBoardLayout(id,name,appearance){
  const row=db.pool?(await db.pool.query(sql,args)).rows[0]:db.sqlite.prepare(sql.replace(/\$\d/g,'?')).get(...args);
  if(!row){const e=Error('Deze layoutnaam bestaat al. Kies een andere naam.');e.status=409;throw e;}
  return {id,name,updatedAt:now,appearance};
+}
+
+export async function recordAppStationAdded(station){
+ const sql='INSERT INTO app_station_usage(station,additions) VALUES($1,1) ON CONFLICT(station) DO UPDATE SET additions=app_station_usage.additions+1';
+ if(db.pool)await db.pool.query(sql,[station]);else db.sqlite.prepare(sql.replace('$1','?')).run(station);
 }
