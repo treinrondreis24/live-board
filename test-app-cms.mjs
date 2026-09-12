@@ -3,7 +3,7 @@ import {createHash} from 'node:crypto';
 import {Readable} from 'node:stream';
 import {DatabaseSync} from 'node:sqlite';
 import {initBoardCache,writeAdminSecurity,readAppContent} from './board-cache.mjs';
-import {defaultContent,validateContent,feedUrl,handleAppCms} from './app-cms.mjs';
+import {defaultContent,validateContent,feedUrl,handleAppCms,articleBlocks} from './app-cms.mjs';
 process.env.RAILWAY_ENVIRONMENT_ID='test';
 const db=new DatabaseSync(':memory:');await initBoardCache({sqlite:db});
 await writeAdminSecurity({user:{name:'test'},countries:[{code:'NL'}],sessions:{[createHash('sha256').update('test-only').digest('hex')]:{expires:Date.now()+60000,country:'NL'}}},0);
@@ -11,6 +11,9 @@ async function call(path,body,auth=true,origin='https://example.test'){
  const req=Readable.from(body?[Buffer.from(JSON.stringify(body))]:[]);req.method=body?'POST':'GET';req.headers={host:'example.test',origin,'x-real-ip':'145.100.100.100',cookie:auth?'tr_admin_session=test-only':''};req.socket={};let status,out,headers={};const res={setHeader(k,v){headers[k]=v;},writeHead(s,h){status=s;Object.assign(headers,h);},end(v){try{out=JSON.parse(v);}catch{out=v;}}};await handleAppCms(req,res,new URL('https://example.test'+path));return {status,out,headers};
 }
 const draft=validateContent(defaultContent());assert.equal(draft.pages.length,8);
+const repeated=defaultContent();repeated.pages[0].sections.push({...structuredClone(repeated.pages[0].sections[0]),layout:'overlay',showIntro:false,showDate:false});const merged=validateContent(repeated);assert.equal(merged.pages[0].type,'overview');assert.equal(merged.pages[0].sections.length,2);assert.equal(merged.pages[0].sections[1].showIntro,false);assert.equal(merged.pages[0].sections[1].showDate,false);
+for(const layout of ['tiny','slideshow','slider','titles']){repeated.pages[0].sections[1].layout=layout;assert.equal(validateContent(repeated).pages[0].sections[1].layout,layout);}
+assert.deepEqual(articleBlocks('<p>Eerste alinea.</p><h2>Echte subkop</h2><p>Tweede <b>alinea</b>.</p><script>bad()</script>'),[{kind:'p',text:'Eerste alinea.'},{kind:'h2',text:'Echte subkop'},{kind:'p',text:'Tweede alinea.'}]);
 assert.equal(draft.navigation.filter(n=>n.visible).length,5);
 const menuDraft=structuredClone(draft);menuDraft.navigation.find(n=>n.page==='posities').visible=false;menuDraft.navigation.unshift(menuDraft.navigation.splice(3,1)[0]);assert.equal(validateContent(menuDraft).navigation[0].page,'internationaal');assert.equal(validateContent(menuDraft).navigation.find(n=>n.page==='posities').visible,false);
 const legacy=structuredClone(draft);delete legacy.navigation;assert.equal(validateContent(legacy).navigation.length,5);

@@ -7,9 +7,17 @@ import {parseTrips,plain} from './tr-app-content.mjs';
 const NEWS='https://www.treinreiziger.nl/category/nieuws/feed/',TRIPS='https://www.treinrondreis.nl/feed';
 const hosts=['www.treinreiziger.nl','treinreiziger.nl','www.treinrondreis.nl','treinrondreis.nl'];
 const types=['overview','feed','reader','embed'];
-const layouts=['hero','medium','small','titles','slider'];
+const layouts=['hero','medium','small','titles','slider','tiny','overlay','slideshow'];
 const emptyLink={page:'',url:''};
 const decode=s=>String(s??'').replace(/&#(x[0-9a-f]+|[0-9]+);/gi,(_,n)=>{const v=n[0].toLowerCase()==='x'?parseInt(n.slice(1),16):Number(n);return v<=0x10ffff?String.fromCodePoint(v):'';}).replace(/&(nbsp|amp|quot|apos|lt|gt);/g,(_,n)=>({nbsp:' ',amp:'&',quot:'"',apos:"'",lt:'<',gt:'>'}[n]));
+export function articleBlocks(html){
+ const blocks=[];let kind='p',value='';
+ const flush=()=>{const text=plain(decode(value.replace(/<br\s*\/?\s*>/gi,' ').replace(/<[^>]*>/g,'')));if(text)blocks.push({kind,text});value='';};
+ const safe=String(html||'').replace(/<(script|style|iframe)\b[^>]*>[\s\S]*?<\/\1>/gi,'');
+ for(const part of safe.split(/(<\/?(?:p|h[1-6]|li|div)\b[^>]*>)/gi)){
+  if(/^<\/?(?:p|h[1-6]|li|div)\b/i.test(part)){flush();kind=/^<h[1-3]\b/i.test(part)?'h2':/^<h[4-6]\b/i.test(part)?'h3':'p';}else value+=part;
+ }flush();return blocks;
+}
 const feed=(title,url,extra={})=>({kind:'feed',title,more:{page:'',url:''},moreLabel:'',feed:url,layout:'medium',count:6,start:1,field:'',equals:'',complete:false,...extra});
 export const defaultNavigation=()=>[['nieuws','Nieuws','▤'],['tijden','Mijn treintijden','◷'],['tickets','Tickets','▱'],['internationaal','Internationaal','◎'],['posities','Treinposities','⌖']].map(([page,title,icon])=>({page,title,icon,visible:true}));
 export function defaultContent(){return {navigation:defaultNavigation(),pages:[
@@ -35,15 +43,15 @@ export function validateContent(input){
   if(!Array.isArray(p.sections)||p.sections.length>30||!Array.isArray(p.menu)||p.menu.length>30)bad('Maximaal 30 onderdelen of menulinks per pagina.');
   const sections=p.sections.map(s=>{
    if(!['feed','content'].includes(s.kind)||!layouts.includes(s.layout))bad('Onbekende weergave.');
-   const out={kind:s.kind,title:text(s.title),more:link(s.more),moreLabel:text(s.moreLabel),layout:s.layout};
+   const out={kind:s.kind,title:text(s.title),more:link(s.more),moreLabel:text(s.moreLabel),layout:s.layout,showIntro:s.showIntro??!['small','titles','tiny'].includes(s.layout),showDate:s.showDate!==false};
    if(s.kind==='feed'){
     const count=Number(s.count),start=Number(s.start);if(!Number.isInteger(count)||count<1||count>100||!Number.isInteger(start)||start<1||start>1000)bad('Aantal moet 1–100 zijn; beginbericht 1–1000.');
     return {...out,feed:feedUrl(s.feed),count,start,field:text(s.field,80),equals:text(s.equals),complete:!!s.complete,countryFilter:!!s.countryFilter,reader:text(s.reader,80)};
    }
    return {...out,headline:text(s.headline),text:text(s.text,10000),image:safeHttps(s.image),link:link(s.link)};
   });
-  if(p.type==='feed'&&(sections.length!==1||sections[0].kind!=='feed'))bad('Een artikeloverzicht heeft precies één feed.');
-  return {id:p.id,title:text(p.title),showTitle:p.showTitle!==false,logo:p.logo,logoUrl:safeHttps(p.logoUrl),type:p.type,embed:p.type==='embed'?safeHttps(p.embed):'',sections,menu:p.menu.map(m=>({...link(m),title:text(m.title),icon:text(m.icon,8)}))};
+  // Legacy feed pages now share the overview model and allow repeated feeds.
+  return {id:p.id,title:text(p.title),showTitle:p.showTitle!==false,logo:p.logo,logoUrl:safeHttps(p.logoUrl),type:p.type==='feed'?'overview':p.type,embed:p.type==='embed'?safeHttps(p.embed):'',sections,menu:p.menu.map(m=>({...link(m),title:text(m.title),icon:text(m.icon,8)}))};
  });
  if(new Set(pages.map(p=>p.id)).size!==pages.length)bad('Paginacodes moeten uniek zijn.');
  const ids=new Set([...pages.map(p=>p.id),'tijden']);
@@ -70,7 +78,7 @@ export async function getCmsFeed(raw){
    const url=safeHttps(typeof i.link==='string'?i.link:'');let image='';try{image=safeHttps(typeof i.image==='string'?i.image:i.enclosure?.['@_url']||'');}catch{}
    const categories=(Array.isArray(i.category)?i.category:[i.category]).filter(v=>typeof v==='string');
    const article=String(i['content:encoded']||i.description||'').replace(/<\/(p|h[1-6]|li)>/gi,'\n\n').replace(/<br\s*\/?\s*>/gi,'\n').replace(/<[^>]*>/g,'').trim();
-   return {id:url,url,title:plain(decode(i.title)),summary:plain(decode(i.description)).replace(/lees meer\s*\.\.\.\s*$/i,''),body:decode(article),image,date:plain(i.pubDate),categories:categories.map(decode)};
+   return {id:url,url,title:plain(decode(i.title)),summary:plain(decode(i.description)).replace(/lees meer\s*\.\.\.\s*$/i,''),body:decode(article),blocks:articleBlocks(i['content:encoded']||i.description),image,date:plain(i.pubDate),categories:categories.map(decode)};
   }).filter(i=>i.url&&hosts.includes(new URL(i.url).hostname));}
   const value={at:Date.now(),items};cache.set(url,value);return value;
  }catch(e){if(saved)return {...saved,stale:true};throw e;}
