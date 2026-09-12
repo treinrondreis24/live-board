@@ -43,7 +43,7 @@ export function validateContent(input){
   if(!Array.isArray(p.sections)||p.sections.length>30||!Array.isArray(p.menu)||p.menu.length>30)bad('Maximaal 30 onderdelen of menulinks per pagina.');
   const sections=p.sections.map(s=>{
    if(!['feed','content'].includes(s.kind)||!layouts.includes(s.layout))bad('Onbekende weergave.');
-   const out={kind:s.kind,title:text(s.title),more:link(s.more),moreLabel:text(s.moreLabel),layout:s.layout,showIntro:s.showIntro??!['small','titles','tiny'].includes(s.layout),showDate:s.showDate!==false};
+   const out={kind:s.kind,title:text(s.title),more:link(s.more),moreLabel:text(s.moreLabel),layout:s.layout,showIntro:s.showIntro??!['small','titles','tiny'].includes(s.layout),showDate:s.showDate!==false,showSource:s.showSource!==false};
    if(s.kind==='feed'){
     const count=Number(s.count),start=Number(s.start);if(!Number.isInteger(count)||count<1||count>100||!Number.isInteger(start)||start<1||start>1000)bad('Aantal moet 1–100 zijn; beginbericht 1–1000.');
     return {...out,feed:feedUrl(s.feed),count,start,field:text(s.field,80),equals:text(s.equals),complete:!!s.complete,countryFilter:!!s.countryFilter,reader:text(s.reader,80)};

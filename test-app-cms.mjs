@@ -33,3 +33,4 @@ assert.equal((await call('/seinhuis/paginas')).headers['X-Robots-Tag'],'noindex,
 assert.equal((await call('/app/cms.css',null,false)).status,200);
 assert.equal((await call('/app/cms-render.js',null,false)).status,200);
 db.close();console.log('PASS: content validation, draft privacy, publication, previous version, conflict protection, authentication, CSRF and feed allowlist');
+const hiddenSource=defaultContent();hiddenSource.pages[0].sections[0].showSource=false;assert.equal(validateContent(hiddenSource).pages[0].sections[0].showSource,false);assert.equal(validateContent(defaultContent()).pages[0].sections[0].showSource,true);

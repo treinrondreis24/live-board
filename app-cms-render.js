@@ -21,12 +21,26 @@
   const price=t.price?`<div class="trip-bottom">Vanaf <strong>${esc(new Intl.NumberFormat('nl-NL',{style:'currency',currency:'EUR',minimumFractionDigits:0,maximumFractionDigits:2}).format(t.price))}</strong> <small>${esc(t.priceType)}</small></div>`:'';
   return `<article class="cms-card ${t.image?'has-photo':''}"><a href="${esc(href)}"${s.reader?'':' target="_blank" rel="noopener"'}>${overlay?`<div class="cms-cover">${img(t.image)}<div class="cms-cover-title">${title}</div></div>`:s.layout!=='titles'?img(t.image):''}<div class="cms-copy">${t.country?`<small>${esc(countries.of(t.country))}${t.duration?' · '+esc(t.duration)+' '+esc(t.durationType):''}</small>`:''}${overlay?'':title}${date}${intro}${price}</div></a></article>`;
  }).join('')+'</div>';}
+ const sliderCleanup=new Set();
  function sliderControls(holder,s){
+  holder.stopSlider?.();
   if(!['slider','slideshow'].includes(s.layout))return;
   const list=holder.querySelector('.cms-list');if(!list||list.children.length<2)return;
   const controls=document.createElement('div');controls.className='cms-slide-controls';const previous=document.createElement('button'),next=document.createElement('button');previous.textContent='← Vorige';next.textContent='Volgende →';previous.type=next.type='button';
   const move=direction=>{const step=list.children[0].getBoundingClientRect().width+18;list.scrollBy({left:direction*step,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});};
   previous.onclick=()=>move(-1);next.onclick=()=>move(1);controls.append(previous,next);holder.append(controls);
+  if(s.layout!=='slideshow')return;
+  const reduced=matchMedia('(prefers-reduced-motion: reduce)'),dots=document.createElement('div');dots.className='cms-slide-dots';dots.setAttribute('aria-label','Kies een bericht');
+  let paused=reduced.matches,hover=false,index=0;
+  const go=i=>{index=(i+list.children.length)%list.children.length;list.scrollTo({left:list.children[index].offsetLeft-list.children[0].offsetLeft,behavior:reduced.matches?'instant':'smooth'});update();};
+  const update=()=>{[...dots.children].forEach((d,i)=>d.setAttribute('aria-current',String(i===index)));};
+  [...list.children].forEach((_,i)=>{const dot=document.createElement('button');dot.type='button';dot.setAttribute('aria-label','Ga naar bericht '+(i+1));dot.onclick=()=>go(i);dots.append(dot);});
+  const pause=document.createElement('button');pause.type='button';const label=()=>pause.textContent=paused?'Afspelen':'Pauzeren';pause.onclick=()=>{paused=!paused;label();};label();controls.insertBefore(pause,next);holder.append(dots);update();
+  previous.onclick=()=>go(index-1);next.onclick=()=>go(index+1);
+  list.addEventListener('scroll',()=>{const step=list.children[1].offsetLeft-list.children[0].offsetLeft;index=Math.max(0,Math.min(list.children.length-1,Math.round(list.scrollLeft/step)));update();},{passive:true});
+  holder.onmouseenter=()=>hover=true;holder.onmouseleave=()=>hover=false;
+  const timer=setInterval(()=>{if(!holder.isConnected||!list.isConnected){stop();return;}if(!paused&&!hover&&!document.hidden&&!holder.contains(document.activeElement))go(index+1);},5000);
+  const stop=()=>{clearInterval(timer);sliderCleanup.delete(stop);};holder.stopSlider=stop;sliderCleanup.add(stop);
  }
  function readerText(item){return (item.blocks?.length?item.blocks:String(item.body||item.summary||'').split(/\n\s*\n/).filter(x=>x.trim()).map(text=>({kind:'p',text}))).map(b=>{const tag=['h2','h3'].includes(b.kind)?b.kind:'p';return `<${tag}>${esc(b.text)}</${tag}>`;}).join('');}
 
@@ -40,10 +54,11 @@
    if(s.countryFilter){const label=document.createElement('label');label.className='country-filter';label.textContent='Filter op land';const select=document.createElement('select');select.innerHTML='<option value="">Alle landen</option>'+[...new Set(items.map(t=>t.country).filter(Boolean))].sort((a,b)=>countries.of(a).localeCompare(countries.of(b),'nl')).map(c=>`<option value="${esc(c)}">${esc(countries.of(c))}</option>`).join('');select.onchange=()=>{const selected=items.filter(t=>!select.value||t.country===select.value);holder.innerHTML=cards(selected.slice(s.start-1,s.start-1+s.count),s);sliderControls(holder,s);};label.append(select);root.append(label);}
    holder.innerHTML=cards(items.slice(s.start-1,s.start-1+s.count),s)||'<p>Geen berichten gevonden.</p>';root.append(holder);sliderControls(holder,s);
    if(!items.length)holder.innerHTML='<p>Geen berichten gevonden voor dit filter.</p>';
-   const source=document.createElement('p');source.className='source';source.textContent=(j.stale?'Laatst opgehaalde gegevens · ':'')+'Bron: '+new URL(s.feed).hostname+(items.some(t=>t.price)?' · Vanafprijzen; controleer beschikbaarheid bij de aanbieder.':'');root.append(source);
+   if(j.stale||items.some(t=>t.price)){const note=document.createElement('p');note.className='source';note.textContent=[j.stale?'Laatst opgehaalde gegevens':'',items.some(t=>t.price)?'Vanafprijzen; controleer beschikbaarheid bij de aanbieder.':''].filter(Boolean).join(' · ');root.append(note);}
   }catch(e){if(current(token)){const error=document.createElement('p');error.textContent=e.message;root.append(error);}}
  }
  window.cmsRender=async(hash,root,token,current)=>{
+  for(const stop of sliderCleanup)stop();
   try{await ready;}catch(e){root.textContent=e.message;return true;}if(!current(token))return true;
   navigation(hash);const [id,query='']=hash.split('?');const p=config.pages.find(p=>p.id===id);applyLogo(p);if(!p)return false;
   root.innerHTML=(preview?'<p class="cms-preview-banner">Voorbeeld van het opgeslagen concept — nog niet gepubliceerd</p>':'')+(p.showTitle?`<h1>${esc(p.title)}</h1>`:'');
@@ -53,6 +68,7 @@
    const q=new URLSearchParams(query),url=q.get('feed');if(!config.pages.some(p=>p.sections.some(s=>s.feed===url&&s.reader===id))){root.insertAdjacentHTML('beforeend','<p>Open een artikel vanuit het nieuwsoverzicht.</p>');return true;}
    try{const j=await feed(url);if(!current(token))return true;const item=j.items.find(t=>(t.id||t.url)===q.get('item'));if(!item)throw Error('Dit artikel staat niet meer in de feed.');root.insertAdjacentHTML('beforeend',`<article class="cms-reader">${img(item.image)}<h1>${esc(item.title)}</h1>${readerText(item)}<a href="${esc(item.url)}" target="_blank" rel="noopener">Lees op de website ↗</a></article>`);}catch(e){if(current(token)){const el=document.createElement('p');el.textContent=e.message;root.append(el);}}return true;
   }
-  await Promise.all(p.sections.map(s=>{const el=document.createElement('section');el.className='cms-section';root.append(el);return section(s,el,token,current);}));return true;
+  await Promise.all(p.sections.map(s=>{const el=document.createElement('section');el.className='cms-section';root.append(el);return section(s,el,token,current);}));
+  if(current(token)){const sources=[...new Set(p.sections.filter(s=>s.kind==='feed'&&s.showSource!==false).map(s=>new URL(s.feed).hostname.replace(/^www\./,'')))];if(sources.length){const footer=document.createElement('p');footer.className='source cms-page-sources';footer.textContent='Bronnen: '+sources.join(' · ');root.append(footer);}}return true;
  };
 })();
