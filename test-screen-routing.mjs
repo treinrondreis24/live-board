@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';import vm from 'node:vm';
+import {createTreinreizigerHandler} from './tr-app-data.mjs';
+const handler=createTreinreizigerHandler({stations:[],getBoard:()=>({})});
+for(const path of ['/app.js','/app.css','/application'])assert.equal(await handler({}, {},new URL('http://localhost'+path)),false);
+const script=fs.readFileSync('app.js','utf8');const cancelled={number:'145',cancelled:true,type:'cancel',delay:2};
+const ctx=vm.createContext({dbTrains:[cancelled,...[70,60,50,40,30,0].map(delay=>({delay}))],CONFIG:{dbRowsPerPage:8}});
+vm.runInContext(script.slice(script.indexOf('function dbPageItems'),script.indexOf('function dbScreenDuration')),ctx);
+const pages=vm.runInContext('dbPageItems()',ctx);assert(pages.pinned.includes(cancelled));assert.equal(pages.pinned.length,5);assert.deepEqual(Array.from(pages.pinned.slice(1),x=>x.delay),[70,60,50,40]);assert(!pages.rotating.includes(cancelled));
+console.log('PASS: main screen assets bypass app router; cancelled ICE145 pinned alongside top four delays');

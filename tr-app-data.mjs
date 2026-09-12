@@ -42,7 +42,7 @@ export function createTreinreizigerHandler({stations,getBoard}){
  const foreign=stations.filter(s=>s.country!=='NL');
  const json=(res,status,value)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(value));};
  return async(req,res,url)=>{
- if(!url.pathname.startsWith('/app'))return false;
+ if(url.pathname!=='/app'&&!url.pathname.startsWith('/app/'))return false;
  try{
  const assets={'/app':'tr-app.html','/app/':'tr-app.html','/app/app.js':'tr-app.js','/app/app.css':'tr-app.css','/app/sw.js':'tr-app-sw.js','/app/icon.svg':'tr-app-icon.svg','/app/manifest.webmanifest':'tr-app.webmanifest'};
  if(assets[url.pathname]){const file=assets[url.pathname],type=file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.svg')?'image/svg+xml':file.endsWith('.webmanifest')?'application/manifest+json':'text/html';res.writeHead(200,{'Content-Type':type+'; charset=utf-8','Cache-Control':'no-cache','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; frame-src https:; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"});res.end(await fs.readFile(new URL(file,import.meta.url)));return true;}
