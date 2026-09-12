@@ -9,6 +9,7 @@
  const countries=new Intl.DisplayNames(['nl'],{type:'region'});
  const feeds=new Map();
  async function feed(url){const old=feeds.get(url);if(old&&Date.now()-old.at<300000)return old.data;const r=await fetch('/api/app-content/feed?'+new URLSearchParams({url,...(preview?{preview:'1'}:{})}));const j=await r.json();if(!r.ok)throw Error(j.error);feeds.set(url,{at:Date.now(),data:j});return j;}
+ function navigation(hash){if(!config.navigation)return;const root=document.querySelector('nav[aria-label="Hoofdnavigatie"]'),id=hash.split('?')[0],current=id.startsWith('station/')?'tijden':id;root.innerHTML=config.navigation.filter(n=>n.visible!==false).map(n=>`<a href="#${esc(n.page)}" ${n.page===current?'aria-current="page"':''}><span aria-hidden="true">${esc(n.icon)}</span>${esc(n.title)}</a>`).join('');}
  function applyLogo(p){const brand=document.querySelector('.brand');brand.hidden=p?.logo==='none';const image=brand.querySelector('img');image.src=p?.logo==='custom'&&p.logoUrl?p.logoUrl:'https://www.treinreiziger.nl/wp-content/themes/treinreiziger/img/logogrey.png';image.alt=p?.logo==='custom'?p.title:'Treinreiziger.nl';}
  function heading(s){return `<div class="section-heading">${s.title?`<h2>${esc(s.title)}</h2>`:'<span></span>'}${link(s.more)&&s.moreLabel?`<a href="${esc(link(s.more))}"${ext(s.more)}>${esc(s.moreLabel)} ${s.more.url?'↗':'→'}</a>`:''}</div>`;}
  function cards(items,s){return `<div class="cms-list cms-${esc(s.layout)}">`+items.map((t,i)=>{
@@ -31,7 +32,7 @@
  }
  window.cmsRender=async(hash,root,token,current)=>{
   try{await ready;}catch(e){root.textContent=e.message;return true;}if(!current(token))return true;
-  const [id,query='']=hash.split('?');const p=config.pages.find(p=>p.id===id);applyLogo(p);if(!p)return false;
+  navigation(hash);const [id,query='']=hash.split('?');const p=config.pages.find(p=>p.id===id);applyLogo(p);if(!p)return false;
   root.innerHTML=(preview?'<p class="cms-preview-banner">Voorbeeld van het opgeslagen concept — nog niet gepubliceerd</p>':'')+(p.showTitle?`<h1>${esc(p.title)}</h1>`:'');
   if(p.menu.length)root.insertAdjacentHTML('beforeend','<div class="topic-menu">'+p.menu.map(m=>`<a href="${esc(link(m))}"${ext(m)}><span class="topic-icon" aria-hidden="true">${esc(m.icon)}</span><span>${esc(m.title)}</span><span>${m.url?'↗':'›'}</span></a>`).join('')+'</div>');
   if(p.type==='embed'){root.insertAdjacentHTML('beforeend',p.embed?`<p class="source">Werkt de ingesloten pagina niet? <a href="${esc(p.embed)}" target="_blank" rel="noopener">Open in een nieuw venster ↗</a></p><iframe class="cms-embed" src="${esc(p.embed)}" title="${esc(p.title)}" sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer"></iframe>`:'<p>Er is nog geen embedadres ingesteld.</p>');return true;}

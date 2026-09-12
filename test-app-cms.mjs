@@ -11,6 +11,10 @@ async function call(path,body,auth=true,origin='https://example.test'){
  const req=Readable.from(body?[Buffer.from(JSON.stringify(body))]:[]);req.method=body?'POST':'GET';req.headers={host:'example.test',origin,'x-real-ip':'145.100.100.100',cookie:auth?'tr_admin_session=test-only':''};req.socket={};let status,out,headers={};const res={setHeader(k,v){headers[k]=v;},writeHead(s,h){status=s;Object.assign(headers,h);},end(v){try{out=JSON.parse(v);}catch{out=v;}}};await handleAppCms(req,res,new URL('https://example.test'+path));return {status,out,headers};
 }
 const draft=validateContent(defaultContent());assert.equal(draft.pages.length,8);
+assert.equal(draft.navigation.filter(n=>n.visible).length,5);
+const menuDraft=structuredClone(draft);menuDraft.navigation.find(n=>n.page==='posities').visible=false;menuDraft.navigation.unshift(menuDraft.navigation.splice(3,1)[0]);assert.equal(validateContent(menuDraft).navigation[0].page,'internationaal');assert.equal(validateContent(menuDraft).navigation.find(n=>n.page==='posities').visible,false);
+const legacy=structuredClone(draft);delete legacy.navigation;assert.equal(validateContent(legacy).navigation.length,5);
+const badMenu=structuredClone(draft);badMenu.navigation[0].page='missing';assert.throws(()=>validateContent(badMenu));badMenu.navigation=[];assert.throws(()=>validateContent(badMenu));
 assert.throws(()=>feedUrl('http://127.0.0.1/'));assert.throws(()=>feedUrl('https://localhost/'));assert.throws(()=>feedUrl('https://www.treinreiziger.nl.evil.test/feed'));
 const invalid=structuredClone(draft);invalid.pages[0].sections[0].count=0;assert.throws(()=>validateContent(invalid));
 assert.equal((await call('/api/app-content/draft',null,false)).status,401);

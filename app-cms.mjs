@@ -11,7 +11,8 @@ const layouts=['hero','medium','small','titles','slider'];
 const emptyLink={page:'',url:''};
 const decode=s=>String(s??'').replace(/&#(x[0-9a-f]+|[0-9]+);/gi,(_,n)=>{const v=n[0].toLowerCase()==='x'?parseInt(n.slice(1),16):Number(n);return v<=0x10ffff?String.fromCodePoint(v):'';}).replace(/&(nbsp|amp|quot|apos|lt|gt);/g,(_,n)=>({nbsp:' ',amp:'&',quot:'"',apos:"'",lt:'<',gt:'>'}[n]));
 const feed=(title,url,extra={})=>({kind:'feed',title,more:{page:'',url:''},moreLabel:'',feed:url,layout:'medium',count:6,start:1,field:'',equals:'',complete:false,...extra});
-export function defaultContent(){return {pages:[
+export const defaultNavigation=()=>[['nieuws','Nieuws','▤'],['tijden','Mijn treintijden','◷'],['tickets','Tickets','▱'],['internationaal','Internationaal','◎'],['posities','Treinposities','⌖']].map(([page,title,icon])=>({page,title,icon,visible:true}));
+export function defaultContent(){return {navigation:defaultNavigation(),pages:[
  {id:'nieuws',title:'Nieuws',showTitle:false,logo:'default',type:'feed',sections:[feed('',NEWS,{layout:'hero',count:30})],menu:[]},
  {id:'internationaal',title:'Ontdek Europa per trein',showTitle:true,logo:'default',type:'overview',menu:[['rondreizen','Rondreizen','◎'],['tickets','Tickets & Treinpassen','▱'],['internationaal-nieuws','Internationaal Nieuws','▤'],['bestemmingen','Bestemmingen','⌖'],['treinen','Treinen','⇄']].map(([page,title,icon])=>({title,icon,page,url:''})),sections:[feed('Rondreizen',TRIPS,{complete:true,more:{page:'rondreizen',url:''},moreLabel:'Alle rondreizen'}),feed('Internationaal nieuws',NEWS,{field:'categories',equals:'Internationaal',count:3,more:{page:'internationaal-nieuws',url:''},moreLabel:'Meer nieuws'})]},
  {id:'rondreizen',title:'Rondreizen',showTitle:true,logo:'default',type:'feed',menu:[],sections:[feed('',TRIPS,{count:100,countryFilter:true})]},
@@ -47,7 +48,13 @@ export function validateContent(input){
  if(new Set(pages.map(p=>p.id)).size!==pages.length)bad('Paginacodes moeten uniek zijn.');
  const ids=new Set([...pages.map(p=>p.id),'tijden']);
  for(const p of pages){for(const l of [...p.menu,...p.sections.flatMap(s=>[s.more,s.link||emptyLink])])if(l.page&&!ids.has(l.page))bad('Verwijzing naar ontbrekende pagina: '+l.page);for(const s of p.sections)if(s.reader&&!pages.some(p=>p.id===s.reader&&p.type==='reader'))bad('Selecteer een bestaande artikelreader.');}
- return {pages};
+ const raw=input.navigation??defaultNavigation().filter(n=>ids.has(n.page));
+ if(!Array.isArray(raw)||raw.length>30)bad('Maximaal 30 menu-items.');
+ const navigation=raw.map(n=>({page:text(n.page,80),title:text(n.title,32),icon:text(n.icon,8),visible:n.visible!==false}));
+ if(navigation.some(n=>!ids.has(n.page)||!n.title.trim()))bad('Kies een bestaande pagina en vul een menunaam in.');
+ const visible=navigation.filter(n=>n.visible);if(visible.length<1||visible.length>6)bad('Toon minimaal 1 en maximaal 6 items in de onderste menubalk.');
+ if(new Set(visible.map(n=>n.page)).size!==visible.length)bad('Toon elke pagina hoogstens één keer in het hoofdmenu.');
+ return {pages,navigation};
 }
 const cache=new Map();
 export async function getCmsFeed(raw){
