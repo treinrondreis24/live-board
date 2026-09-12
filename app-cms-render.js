@@ -17,7 +17,7 @@
   const href=s.reader?'#'+s.reader+'?'+new URLSearchParams({feed:s.feed,item:t.id||t.url}):t.url;
   const intro=(s.showIntro??!['small','titles','tiny'].includes(s.layout))?`<p class="cms-intro">${esc(t.summary)}</p>`:'';
   const date=s.showDate!==false&&t.date&&Number.isFinite(Date.parse(t.date))?`<time>${esc(new Date(t.date).toLocaleDateString('nl-NL'))}</time>`:'';
-  const title=`<h2>${esc(t.title)}</h2>`,overlay=s.layout==='overlay'&&t.image;
+  const title=`<h2>${esc(t.title)}</h2>`,overlay=s.layout==='slideshow'||s.layout==='overlay'&&t.image;
   const price=t.price?`<div class="trip-bottom">Vanaf <strong>${esc(new Intl.NumberFormat('nl-NL',{style:'currency',currency:'EUR',minimumFractionDigits:0,maximumFractionDigits:2}).format(t.price))}</strong> <small>${esc(t.priceType)}</small></div>`:'';
   return `<article class="cms-card ${t.image?'has-photo':''}"><a href="${esc(href)}"${s.reader?'':' target="_blank" rel="noopener"'}>${overlay?`<div class="cms-cover">${img(t.image)}<div class="cms-cover-title">${title}</div></div>`:s.layout!=='titles'?img(t.image):''}<div class="cms-copy">${t.country?`<small>${esc(countries.of(t.country))}${t.duration?' · '+esc(t.duration)+' '+esc(t.durationType):''}</small>`:''}${overlay?'':title}${date}${intro}${price}</div></a></article>`;
  }).join('')+'</div>';}
@@ -25,17 +25,18 @@
  function sliderControls(holder,s){
   holder.stopSlider?.();
   if(!['slider','slideshow'].includes(s.layout))return;
-  const list=holder.querySelector('.cms-list');if(!list||list.children.length<2)return;
+  holder.classList.toggle('cms-photo-slider',s.layout==='slideshow');const list=holder.querySelector('.cms-list');if(!list||list.children.length<2)return;
   const controls=document.createElement('div');controls.className='cms-slide-controls';const previous=document.createElement('button'),next=document.createElement('button');previous.textContent='← Vorige';next.textContent='Volgende →';previous.type=next.type='button';
   const move=direction=>{const step=list.children[0].getBoundingClientRect().width+18;list.scrollBy({left:direction*step,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});};
   previous.onclick=()=>move(-1);next.onclick=()=>move(1);controls.append(previous,next);holder.append(controls);
   if(s.layout!=='slideshow')return;
+  holder.classList.add('cms-photo-slider');previous.textContent='‹';next.textContent='›';previous.setAttribute('aria-label','Vorige bericht');next.setAttribute('aria-label','Volgende bericht');
   const reduced=matchMedia('(prefers-reduced-motion: reduce)'),dots=document.createElement('div');dots.className='cms-slide-dots';dots.setAttribute('aria-label','Kies een bericht');
   let paused=reduced.matches,hover=false,index=0;
   const go=i=>{index=(i+list.children.length)%list.children.length;list.scrollTo({left:list.children[index].offsetLeft-list.children[0].offsetLeft,behavior:reduced.matches?'instant':'smooth'});update();};
   const update=()=>{[...dots.children].forEach((d,i)=>d.setAttribute('aria-current',String(i===index)));};
   [...list.children].forEach((_,i)=>{const dot=document.createElement('button');dot.type='button';dot.setAttribute('aria-label','Ga naar bericht '+(i+1));dot.onclick=()=>go(i);dots.append(dot);});
-  const pause=document.createElement('button');pause.type='button';const label=()=>pause.textContent=paused?'Afspelen':'Pauzeren';pause.onclick=()=>{paused=!paused;label();};label();controls.insertBefore(pause,next);holder.append(dots);update();
+  const pause=document.createElement('button');pause.type='button';pause.className='cms-slide-pause';const label=()=>{pause.textContent=paused?'▶':'Ⅱ';pause.setAttribute('aria-label',paused?'Afspelen':'Pauzeren');};pause.onclick=()=>{paused=!paused;label();};label();controls.insertBefore(pause,next);holder.append(dots);update();
   previous.onclick=()=>go(index-1);next.onclick=()=>go(index+1);
   list.addEventListener('scroll',()=>{const step=list.children[1].offsetLeft-list.children[0].offsetLeft;index=Math.max(0,Math.min(list.children.length-1,Math.round(list.scrollLeft/step)));update();},{passive:true});
   holder.onmouseenter=()=>hover=true;holder.onmouseleave=()=>hover=false;
@@ -72,3 +73,4 @@
   if(current(token)){const sources=[...new Set(p.sections.filter(s=>s.kind==='feed'&&s.showSource!==false).map(s=>new URL(s.feed).hostname.replace(/^www\./,'')))];if(sources.length){const footer=document.createElement('p');footer.className='source cms-page-sources';footer.textContent='Bronnen: '+sources.join(' · ');root.append(footer);}}return true;
  };
 })();
+
