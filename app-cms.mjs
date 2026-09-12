@@ -64,10 +64,15 @@ export function validateContent(input){
  if(new Set(visible.map(n=>n.page)).size!==visible.length)bad('Toon elke pagina hoogstens één keer in het hoofdmenu.');
  return {pages,navigation};
 }
-const cache=new Map();
+const cache=new Map(),pending=new Map(),retryAfter=new Map();
 export async function getCmsFeed(raw){
  const url=feedUrl(raw),saved=cache.get(url);if(saved&&Date.now()-saved.at<300000)return saved;
- if(cache.size>100)cache.delete(cache.keys().next().value);
+ const refresh=()=>{if(!pending.has(url))pending.set(url,loadCmsFeed(url,saved).finally(()=>pending.delete(url)));return pending.get(url);};
+ if(saved&&Date.now()-saved.at<86400000){if(Date.now()>=(retryAfter.get(url)||0))void refresh().catch(()=>{});return {...saved,stale:true};}
+ return refresh();
+}
+async function loadCmsFeed(url,saved){
+ if(cache.size>100){const key=cache.keys().next().value;cache.delete(key);retryAfter.delete(key);}
  try{
   const r=await fetch(url,{redirect:'error',signal:AbortSignal.timeout(15000)});if(!r.ok)throw Error('Feed tijdelijk niet bereikbaar.');
   let xml='',length=0;const decoder=new TextDecoder();for await(const bytes of r.body){length+=bytes.length;if(length>2e6)throw Error('Feed te groot.');xml+=decoder.decode(bytes,{stream:true});}xml+=decoder.decode();
@@ -80,8 +85,8 @@ export async function getCmsFeed(raw){
    const article=String(i['content:encoded']||i.description||'').replace(/<\/(p|h[1-6]|li)>/gi,'\n\n').replace(/<br\s*\/?\s*>/gi,'\n').replace(/<[^>]*>/g,'').trim();
    return {id:url,url,title:plain(decode(i.title)),summary:plain(decode(i.description)).replace(/lees meer\s*\.\.\.\s*$/i,''),body:decode(article),blocks:articleBlocks(i['content:encoded']||i.description),image,date:plain(i.pubDate),categories:categories.map(decode)};
   }).filter(i=>i.url&&hosts.includes(new URL(i.url).hostname));}
-  const value={at:Date.now(),items};cache.set(url,value);return value;
- }catch(e){if(saved)return {...saved,stale:true};throw e;}
+  const value={at:Date.now(),items};cache.set(url,value);retryAfter.delete(url);return value;
+ }catch(e){retryAfter.set(url,Date.now()+30000);if(saved&&Date.now()-saved.at<86400000)return {...saved,stale:true};throw e;}
 }
 const json=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(data));};
 async function input(req){let size=0,parts=[];for await(const b of req){size+=b.length;if(size>500000)bad('Inhoud te groot.');parts.push(b);}return JSON.parse(Buffer.concat(parts).toString());}
