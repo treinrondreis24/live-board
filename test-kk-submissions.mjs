@@ -19,8 +19,10 @@ try{
  await assert.rejects(saveSubmission(b,data),/Geen toegang/);
  await assert.rejects(saveSubmission(a,{id:randomUUID(),kind:'proof',text:'Utrecht',media:[]}),/foto/);
  const video=randomUUID();await kkPut('media',video,a.id,{kind:'video'});
- await assert.rejects(saveSubmission(a,{id:randomUUID(),kind:'proof',text:'Utrecht',media:[video]}),/foto/);
+ await saveSubmission(a,{id:randomUUID(),kind:'proof',text:'Utrecht',media:[video]});
+ const noFile=await saveSubmission(a,{id:randomUUID(),kind:'proof',station:'Almelo',media:[],withoutAttachment:true});assert.equal(noFile.withoutAttachment,true);
+ await assert.rejects(saveSubmission({...b,manualRegistration:true,approval:'pending'},{id:randomUUID(),kind:'proof',media:[],withoutAttachment:true}),/goedkeuring/);
  await saveSubmission(a,{id:randomUUID(),kind:'update',text:'Update zonder foto',media:[]});
- assert.equal((await ownSubmissions(a)).length,3);
+ assert.equal((await ownSubmissions(a)).length,5);
  console.log('PASS: required media, location validation, ownership, private lists, retry deduplication');
 }finally{sqlite.close();}

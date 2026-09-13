@@ -67,8 +67,8 @@ export function validateSubmission(data){
  if(data.kind==='update'&&!text)fail('Voeg tekst toe aan je update.');
  let location=null;
  if(data.location){const {latitude,longitude,accuracy,timestamp}=data.location;if(![latitude,longitude,accuracy,timestamp].every(Number.isFinite)||Math.abs(latitude)>90||Math.abs(longitude)>180||accuracy<0||timestamp>Date.now()+60000||timestamp<0)fail('Ongeldige locatie.');location={latitude,longitude,accuracy,timestamp};}
- if(data.kind==='proof'&&!media.length)fail('Voeg minimaal één foto toe aan je bewijs.');
- const station=data.kind==='proof'?String(data.station||'').trim().slice(0,200):'';const stationId=data.kind==='proof'?String(data.stationId||''):'';if(stationId&&!/^nl-[a-z0-9-]{1,20}$/.test(stationId))fail('Ongeldig station.');return {kind:data.kind,title:data.kind==='update'?String(data.title||'').trim().slice(0,120):'',text,media,location,station,stationId};
+ if(data.kind==='proof'&&!media.length&&data.withoutAttachment!==true)fail('Bevestig dat je zonder foto wilt insturen.');
+ const station=data.kind==='proof'?String(data.station||'').trim().slice(0,200):'';const stationId=data.kind==='proof'?String(data.stationId||''):'';if(stationId&&!/^nl-[a-z0-9-]{1,20}$/.test(stationId))fail('Ongeldig station.');return {kind:data.kind,title:data.kind==='update'?String(data.title||'').trim().slice(0,120):'',text,media,location,station,stationId,withoutAttachment:data.kind==='proof'&&!media.length&&data.withoutAttachment===true};
 }
 export async function saveSubmission(user,data){
  const value=validateSubmission(data);if(value.kind==='proof'&&!canUseProof(user))fail('Privébewijs is beschikbaar na goedkeuring door de organisatie.',403);
@@ -76,7 +76,7 @@ export async function saveSubmission(user,data){
  const existing=await kkGet('submission',data.id);if(existing){if(existing.owner!==user.id)fail('Geen toegang.',403);return existing.value;}
  let images=0,videos=0;
  for(const id of value.media){const m=await kkGet('media',id);if(!m||m.owner!==user.id)fail('Een bestand is niet beschikbaar.',403);if(m.value.claimOnly||m.value.kind==='document')fail('Dit bestand is alleen bedoeld voor een eindclaim.');if(m.value.kind==='image')images++;else videos++;}
- if(value.kind==='proof'&&!images)fail('Voeg minimaal één foto toe aan je bewijs.');
+ 
  if(images>4||videos>1)fail('Maximaal vier foto’s en één video per inzending.');
  if(!await kkLimit('submission:'+user.id,60,3600000))fail('Te veel inzendingen. Probeer later opnieuw.',429);
  const submission={...value,id:data.id,displayName:user.displayName||'Deelnemer',createdAt:Date.now(),receivedAt:Date.now()};

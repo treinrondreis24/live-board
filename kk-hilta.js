@@ -2,7 +2,7 @@ window.kkHilta=async function(box,api,proofId){
  const make=(tag,text)=>{const n=document.createElement(tag);n.textContent=text||'';return n;};box.append(make('h2','Trajecten nakijken met Hilta'));const status=make('p','Vorige bewijs en scorekaart laden…');status.setAttribute('role','status');box.append(status);
  try{
  const context=await api('hilta?proofId='+encodeURIComponent(proofId));status.textContent='Je bewijs is opgeslagen. De route is pas door jou bevestigd nadat je die hieronder hebt nagekeken.';
- const notice=make('p',context.notice);notice.className='hilta-notice';box.append(notice);
+ const notice=make('p','Hildebrands Travel Assistent, Hilta, helpt je de afgelegde trajecten te berekenen. '+context.notice);notice.className='hilta-notice';box.append(notice);
  const info=make('p',context.previousProofId?'Vanaf het vorige ontvangen bewijs: '+context.from+' ('+new Date(context.previousReceivedAt).toLocaleString('nl-NL')+').':'Vanaf je startstation. Controleer of dit het begin van je reis is.');box.append(info,make('p','Naar: '+context.to));
  box.append(make('small','Hilta gebruikt de volgorde van ontvangen bewijs. Later ingestuurd bewijs kan van een eerdere reis zijn. Bevestig alleen als deze volgorde klopt. Bij een onjuiste volgorde: laat de organisatie dit controleren.'));
  const choices=make('datalist');choices.id='hilta-stations-'+proofId;for(const name of context.stations){const o=document.createElement('option');o.value=name;choices.append(o);}box.append(choices);
