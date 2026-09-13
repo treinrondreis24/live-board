@@ -13,10 +13,10 @@ try{
  await assert.rejects(registerPassword(user.email,{...data,password:'different-password'}),/Aanmelden niet mogelijk/);
  const media=randomUUID();await kkPut('media',media,user.id,{kind:'image'});
  await saveSubmission(user,{id:randomUUID(),kind:'update',text:'Hallo',media:[media]});
- await assert.rejects(saveSubmission(user,{id:randomUUID(),kind:'proof',text:'Bewijs',media:[]}),/goedkeuring/);
+ await assert.rejects(saveSubmission(user,{id:randomUUID(),kind:'proof',text:'Bewijs',media:[media]}),/goedkeuring/);
  await assert.rejects(mediaLink(user,media),/Geen toegang/);
  await setApproval(user.id,true);const approved=(await kkGet('participant',user.id)).value;assert.equal(canUseProof(approved),true);
- await saveSubmission(approved,{id:randomUUID(),kind:'proof',text:'Bewijs',media:[]});assert.equal((await ownSubmissions(approved)).length,2);
+ await saveSubmission(approved,{id:randomUUID(),kind:'proof',text:'Bewijs',media:[media]});assert.equal((await ownSubmissions(approved)).length,2);
  await setApproval(user.id,false);const revoked=await loginPassword(user.email,data.password);assert.equal((await ownSubmissions(revoked)).length,1);
  console.log('PASS: password login, duplicate rejection, pending updates, approval/revocation and private evidence denial');
 }finally{sqlite.close();}

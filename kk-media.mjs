@@ -1,7 +1,7 @@
 // Private Railway S3 storage adapter. Only call after authorization in a handler.
 // Upload URLs deliberately not exposed: completed, validated files are streamed
 // from the upload handler, so an expired/unvalidated upload cannot be published.
-import {S3Client,PutObjectCommand,GetObjectCommand,HeadObjectCommand} from '@aws-sdk/client-s3';
+import {S3Client,PutObjectCommand,GetObjectCommand,HeadObjectCommand,DeleteObjectCommand} from '@aws-sdk/client-s3';
 import {getSignedUrl} from '@aws-sdk/s3-request-presigner';
 let client;
 const names=['KK_S3_BUCKET','KK_S3_ENDPOINT','KK_S3_ACCESS_KEY_ID','KK_S3_SECRET_ACCESS_KEY'];
@@ -31,3 +31,5 @@ export async function inspectStoredMedia(owner,id){const {client,bucket}=connect
 export async function authorizedMediaUrl(owner,id){const {client,bucket}=connection();return getSignedUrl(client,new GetObjectCommand({Bucket:bucket,Key:mediaKey(owner,id),ResponseCacheControl:'private, no-store'}),{expiresIn:120});}
 
 export async function storedMediaStream(owner,id){const {client,bucket}=connection();const result=await client.send(new GetObjectCommand({Bucket:bucket,Key:mediaKey(owner,id)}),{abortSignal:AbortSignal.timeout(30000)});return result.Body;}
+
+export async function deleteStoredMedia(owner,id){const {client,bucket}=connection();await client.send(new DeleteObjectCommand({Bucket:bucket,Key:mediaKey(owner,id)}),{abortSignal:AbortSignal.timeout(30000)});}

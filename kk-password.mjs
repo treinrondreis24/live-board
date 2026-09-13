@@ -21,7 +21,7 @@ export async function loginPassword(email,password){
  const id=hash(email),credential=await kkGet('password',id);
  const actual=await passwordHash(password,credential?.value.salt||'00000000000000000000000000000000');
  if(!credential||!timingSafeEqual(actual,Buffer.from(credential.value.key,'hex')))fail('E-mailadres of wachtwoord klopt niet.',401);
- return (await kkGet('participant',id)).value;
+ const user=(await kkGet('participant',id))?.value;if(!user||user.deleting)fail('Dit account is niet beschikbaar.',403);return user;
 }
 export function canUseProof(user){return !!user&&(user.approval==='approved'||(!user.manualRegistration&&!user.approval));}
 export async function setApproval(id,approved){const row=await kkGet('participant',id);if(!row)fail('Deze aanmelding bestaat niet.',404);await kkPatchParticipant(id,{approval:approved?'approved':'pending',approvalChangedAt:Date.now()});}

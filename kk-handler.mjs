@@ -1,3 +1,4 @@
+import {editUpdate,deleteUpdate,deleteParticipant} from './kk-moderation.mjs';
 import {scoreboard,startTimestamp} from './kk-scoreboard.mjs';
 import {previewMedia} from './kk-preview.mjs';
 import {hiltaContext,proposeHilta,confirmHilta} from './kk-hilta.mjs';
@@ -21,13 +22,13 @@ function origin(req){return req.headers.origin==='https://'+req.headers.host;}
 async function body(req){let size=0;const chunks=[];for await(const chunk of req){size+=chunk.length;if(size>16384)fail('Het formulier is te groot.',413);chunks.push(chunk);}try{return JSON.parse(Buffer.concat(chunks).toString());}catch{fail('Ongeldig formulier.');}}
 const json=(res,status,value)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(value));};
 function cookie(res,value,maxAge){res.setHeader('Set-Cookie',`kk_session=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`);}
-async function participant(req){const id=String(req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith('kk_session='))?.slice(11);if(!id)return null;const s=await kkGet('session',hash(id));if(!s||Number(s.expires)<=Date.now())return null;return (await kkGet('participant',s.owner))?.value||null;}
+async function participant(req){const id=String(req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith('kk_session='))?.slice(11);if(!id)return null;const s=await kkGet('session',hash(id));if(!s||Number(s.expires)<=Date.now())return null;const user=(await kkGet('participant',s.owner))?.value;return user&&!user.deleting?user:null;}
 export function validateProfile(data,user,admin=false){
  const fullName=text(data.fullName),displayName=text(data.displayName,80),edition=Number(data.edition),startTime=!admin&&user.startTime?user.startTime:text(data.startTime,5),companion=text(data.companion),station=text(data.station),distance=data.distance===''||data.distance==null?null:Number(data.distance);
- if(!fullName||!displayName||![12,24].includes(edition)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime))fail('Vul naam, weergavenaam, editie en starttijd in.');
- const startDate=user.startDate||String(data.startDate||'2026-09-19');if(startTimestamp(startDate,startTime)===null)fail('Vul een geldige startdatum in.');
- const rotterdamTime=text(data.rotterdamTime,5);if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(rotterdamTime))fail('Vul de verwachte tijd bij meldpunt Rotterdam in.');
- if(distance===null)fail('Vul je verwachte aantal kilometers in.');
+ if(!fullName||!displayName||(!admin||data.edition)&&![12,24].includes(edition)||(!admin||startTime)&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime))fail('Vul naam, weergavenaam, editie en starttijd in.');
+ const startDate=(!admin&&user.startDate)||String(data.startDate||user.startDate||'2026-09-19');if((!admin||startTime)&&startTimestamp(startDate,startTime)===null)fail('Vul een geldige startdatum in.');
+ const rotterdamTime=text(data.rotterdamTime,5);if((!admin||rotterdamTime)&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(rotterdamTime))fail('Vul de verwachte tijd bij meldpunt Rotterdam in.');
+ if(!admin&&distance===null)fail('Vul je verwachte aantal kilometers in.');
  if(data.together&&!companion)fail('Vul de naam van je reisgenoot in.');
  if(distance!==null&&(!Number.isFinite(distance)||distance<0||distance>10000))fail('Vul een geldig aantal kilometers in.');
  return {...user,fullName,displayName,edition,startTime,startDate,rotterdamTime,together:!!data.together,companion:data.together?companion:'',station,distance,competition:'2026',updatedAt:Date.now()};
@@ -70,6 +71,10 @@ export async function handleKilometerkampioen(req,res,url){
  if(path==='/kilometerkampioen/api/upload'){const user=await participant(req);if(!user)fail('Log eerst in.',401);json(res,200,await upload(req,user));return true;}
  if(admin&&path==='/treinhuis/api/blog-upload'){json(res,200,await upload(req,{id:EDITOR_OWNER}));return true;}
  const data=await body(req);
+ if(admin&&path==='/treinhuis/api/participant-save'){const row=await kkGet('participant',data.id);if(!row||row.value.deleting)fail('Deelnemer niet beschikbaar.',404);const profile=validateProfile(data,row.value,true);const changes=Object.fromEntries(['fullName','displayName','edition','startTime','startDate','rotterdamTime','together','companion','station','distance','updatedAt'].map(k=>[k,profile[k]]));await kkPatchParticipant(data.id,changes);json(res,200,{ok:true});return true;}
+ if(admin&&path==='/treinhuis/api/participant-delete'){if(data.confirm!==true)fail('Bevestig het verwijderen.');await deleteParticipant(data.id);json(res,200,{ok:true});return true;}
+ if(admin&&path==='/treinhuis/api/update-save'){await editUpdate(data);json(res,200,{ok:true});return true;}
+ if(admin&&path==='/treinhuis/api/update-delete'){if(data.confirm!==true)fail('Bevestig het verwijderen.');await deleteUpdate(data.id);json(res,200,{ok:true});return true;}
  if(admin&&path==='/treinhuis/api/start-time'){const row=await kkGet('participant',data.id);if(!row)fail('Deelnemer niet gevonden.',404);if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(data.startTime||''))fail('Vul een geldige starttijd in.');const startDate=data.startDate||row.value.startDate||'2026-09-19';if(startTimestamp(startDate,data.startTime)===null)fail('Ongeldige startdatum.');await kkPatchParticipant(data.id,{startTime:data.startTime,startDate,updatedAt:Date.now()});json(res,200,{ok:true});return true;}
  if(admin&&path==='/treinhuis/api/approve-many'){if(!Array.isArray(data.ids)||!data.ids.length||data.ids.length>200||data.ids.some(id=>! /^[a-f0-9]{64}$/.test(id)))fail('Selecteer maximaal 200 accounts.');const approved=[],failed=[];for(const id of [...new Set(data.ids)]){try{await setApproval(id,true);approved.push(id);}catch{failed.push(id);}}json(res,200,{approved,failed});return true;}
  if(admin&&path==='/treinhuis/api/approval'){if(typeof data.approved!=='boolean')fail('Ongeldige goedkeuring.');await setApproval(data.id,data.approved);json(res,200,{ok:true});return true;}
