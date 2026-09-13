@@ -1,3 +1,4 @@
+import {assignTeam,updatePage,updateMedia} from './kk-updates.mjs';
 import {saveBlog,publishBlog,unpublishBlog,publicBlog,blogMedia,EDITOR_OWNER} from './kk-blog.mjs';
 import {readFile} from 'node:fs/promises';
 import {upload,saveSubmission,ownSubmissions,mediaLink} from './kk-submissions.mjs';
@@ -29,12 +30,12 @@ export async function sendCode(email,code){
  const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+process.env.RESEND_API_KEY,'Content-Type':'application/json'},signal:AbortSignal.timeout(15000),body:JSON.stringify({from:process.env.KK_EMAIL_FROM,to:[email],subject:'Je inlogcode voor Kilometer Kampioen',text:`Je inlogcode is ${code}. Deze code is 10 minuten geldig en werkt één keer. Heb je geen code aangevraagd? Dan kun je deze e-mail negeren.`})});
  if(!r.ok)fail('De e-mail kon niet worden verstuurd. Probeer later opnieuw.',503);
 }
-const assets={'/kilometerkampioen':'kk-app.html','/kilometerkampioen/':'kk-app.html','/kilometerkampioen/app.js':'kk-app.js','/kilometerkampioen/app.css':'kk-app.css','/treinhuis':'kk-admin.html','/treinhuis/':'kk-admin.html','/treinhuis/app.js':'kk-admin.js','/kilometerkampioen/forms.js':'kk-forms.js','/treinhuis/blog.js':'kk-blog-admin.js','/kilometerkampioen/liveblog':'kk-blog.html','/kilometerkampioen/liveblog.js':'kk-blog-public.js','/kilometerkampioen/rich.js':'kk-rich.js'};
+const assets={'/kilometerkampioen':'kk-app.html','/kilometerkampioen/':'kk-app.html','/kilometerkampioen/app.js':'kk-app.js','/kilometerkampioen/app.css':'kk-app.css','/treinhuis':'kk-admin.html','/treinhuis/':'kk-admin.html','/treinhuis/app.js':'kk-admin.js','/kilometerkampioen/forms.js':'kk-forms.js','/treinhuis/blog.js':'kk-blog-admin.js','/kilometerkampioen/liveblog':'kk-blog.html','/kilometerkampioen/liveblog.js':'kk-blog-public.js','/kilometerkampioen/rich.js':'kk-rich.js','/kilometerkampioen/community.js':'kk-community.js'};
 let cleanupAt=0;
 export async function handleKilometerkampioen(req,res,url){
  const path=url.pathname;if(!path.startsWith('/kilometerkampioen')&&!path.startsWith('/treinhuis'))return false;
  res.setHeader('Cache-Control','no-store');res.setHeader('X-Robots-Tag','noindex, nofollow, noarchive');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');res.setHeader('X-Frame-Options','DENY');
- res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' https://www.treinreiziger.nl; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+ res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' https://www.treinreiziger.nl; connect-src 'self'; frame-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
  try{
  const admin=path.startsWith('/treinhuis');
  if(path==='/kilometerkampioen/liveblog'){
@@ -53,11 +54,13 @@ export async function handleKilometerkampioen(req,res,url){
  if(req.method==='GET'&&path.endsWith('/api/media')){const user=admin?null:await participant(req);if(!admin&&!user)fail('Log eerst in.',401);json(res,200,{url:await mediaLink(user,url.searchParams.get('id'),admin)});return true;}
  if(admin&&req.method==='GET'&&path==='/treinhuis/api/submissions'){json(res,200,{submissions:(await kkList('submission')).map(r=>({...r.value,owner:r.owner}))});return true;}
  if(admin&&req.method==='GET'&&path==='/treinhuis/api/blog'){json(res,200,{drafts:(await kkList('blog-draft')).map(r=>r.value),published:(await publicBlog()).map(p=>p.id)});return true;}
+ if(req.method==='GET'&&['/kilometerkampioen/api/updates','/kilometerkampioen/api/update-media'].includes(path)){if(!await participant(req))fail('Log eerst in.',401);json(res,200,path.endsWith('/updates')?await updatePage({before:url.searchParams.get('before')||'',teams:url.searchParams.getAll('team')}):await updateMedia(url.searchParams.get('update'),url.searchParams.get('id')));return true;}
  if(req.method!=='POST')fail('Niet gevonden.',404);
  if(!origin(req))fail('Open dit formulier op de eigen website.',403);
  if(path==='/kilometerkampioen/api/upload'){const user=await participant(req);if(!user)fail('Log eerst in.',401);json(res,200,await upload(req,user));return true;}
  if(admin&&path==='/treinhuis/api/blog-upload'){json(res,200,await upload(req,{id:EDITOR_OWNER}));return true;}
  const data=await body(req);
+ if(admin&&path==='/treinhuis/api/team'){await assignTeam(data);json(res,200,{ok:true});return true;}
  if(admin&&path==='/treinhuis/api/blog-save'){json(res,200,{draft:await saveBlog(data)});return true;}
  if(admin&&path==='/treinhuis/api/blog-publish'){await publishBlog(data.id);json(res,200,{ok:true});return true;}
  if(admin&&path==='/treinhuis/api/blog-unpublish'){await unpublishBlog(data.id);json(res,200,{ok:true});return true;}

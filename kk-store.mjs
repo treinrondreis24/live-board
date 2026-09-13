@@ -16,3 +16,10 @@ export async function kkList(kind,owner=null){const args=[kind];let sql='SELECT 
 // Atomic fixed-window limiter, shared across replicas; no raw IP addresses stored.
 export async function kkLimit(id,max,windowMs){const now=Date.now();const rows=await query(`INSERT INTO kk_records(kind,id,owner,created,expires,payload) VALUES('limit',$1,'',$2,$3,'1') ON CONFLICT(kind,id) DO UPDATE SET payload=CASE WHEN kk_records.expires<=$2 THEN '1' ELSE CAST(CAST(kk_records.payload AS INTEGER)+1 AS TEXT) END,expires=CASE WHEN kk_records.expires<=$2 THEN $3 ELSE kk_records.expires END RETURNING payload`,[id,now,now+windowMs]);return Number(rows[0].payload)<=max;}
 export async function kkCleanup(){await query('DELETE FROM kk_records WHERE expires>0 AND expires<$1 RETURNING id',[Date.now()]);}
+export async function kkUpdateRows(before='',teams=[]){
+ const kind=db.pool?"r.payload::jsonb->>'kind'":"json_extract(r.payload,'$.kind')",member=db.pool?"m.payload::jsonb->>'teamId'":"json_extract(m.payload,'$.teamId')";
+ const args=[];let where="r.kind='submission' AND "+kind+"='update'";
+ if(before){const match=/^(\d{16}):([a-f0-9-]{36})$/.exec(before);if(!match)throw Object.assign(Error('Ongeldige pagina.'),{status:400});args.push(Number(match[1]),match[2]);where+=' AND (r.created<$1 OR (r.created=$1 AND r.id<$2))';}
+ if(teams.length){const slots=teams.map(t=>{args.push(t);return '$'+args.length;});where+=" AND COALESCE("+member+",'solo-' || r.owner) IN ("+slots.join(',')+")";}
+ return (await query("SELECT r.* FROM kk_records r LEFT JOIN kk_records m ON m.kind='team-member' AND m.id=r.owner WHERE "+where+" ORDER BY r.created DESC,r.id DESC LIMIT 31",args)).map(r=>({...r,value:JSON.parse(r.payload)}));
+}

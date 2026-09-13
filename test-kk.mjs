@@ -23,6 +23,9 @@ try{
  assert.equal((await request('/kilometerkampioen/api/session',null,cookie)).data.participant.fullName,'Jamie');
  assert.equal((await request('/treinhuis/api/participants')).status,401);
  assert.equal((await request('/treinhuis/api/blog')).status,401);
+ assert.equal((await request('/kilometerkampioen/api/updates')).status,401);
+ assert.equal((await request('/kilometerkampioen/api/update-media?id=x&update=y')).status,401);
+ assert.equal((await request('/treinhuis/api/team',{participantId:'x'})).status,401);
  assert.equal((await request('/treinhuis/api/blog-publish',{id:'test'})).status,401);
  assert.equal((await request('/treinhuis/api/blog-upload',{})).status,401);
  assert.equal((await request('/kilometerkampioen/api/liveblog')).status,200);
