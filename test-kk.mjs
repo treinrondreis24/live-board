@@ -22,6 +22,10 @@ try{
  r=await request('/kilometerkampioen/api/profile',{fullName:'Jamie',displayName:'Jamie op reis',edition:24,startTime:'06:00',distance:700,rotterdamTime:'12:00',station:'Utrecht'},cookie);assert.equal(r.status,200);assert.equal(r.data.participant.email,'person@example.org');
  assert.equal(validateProfile({fullName:'Jamie',displayName:'Jamie',edition:24,startTime:'09:00',distance:800,rotterdamTime:'13:00'},{startTime:'06:00'}).startTime,'06:00');
  assert.equal((await request('/kilometerkampioen/api/session',null,cookie)).data.participant.fullName,'Jamie');
+ assert.equal((await request('/kilometerkampioen/api/journey')).status,401);
+ await kkPut('participant','other','other',{id:'other',fullName:'Private Other'});
+ const journey=await request('/kilometerkampioen/api/journey?owner=other',null,cookie);assert.equal(journey.status,200);assert.equal(journey.data.summary.name,'Jamie');assert.ok(!JSON.stringify(journey.data).includes('Private Other'));
+
  assert.equal((await request('/treinhuis/api/participants')).status,401);
  assert.equal((await request('/treinhuis/api/blog')).status,401);
  assert.equal((await request('/kilometerkampioen/api/updates')).status,401);

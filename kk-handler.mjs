@@ -10,7 +10,7 @@ import {upload,saveSubmission,ownSubmissions,mediaLink} from './kk-submissions.m
 import {mediaReady} from './kk-media.mjs';
 import {randomBytes,randomInt,createHash,createHmac,timingSafeEqual} from 'node:crypto';
 import {adminAuthenticated,clientIP} from './admin-security.mjs';
-import {kkGet,kkPut,kkTake,kkDelete,kkList,kkLimit,kkCleanup,kkAdminSubmissions,kkPatchParticipant} from './kk-store.mjs';
+import {kkGet,kkPut,kkTake,kkDelete,kkList,kkLimit,kkCleanup,kkAdminSubmissions,kkPatchParticipant,kkJourneyRoutes} from './kk-store.mjs';
 const hash=s=>createHash('sha256').update(String(s)).digest('hex');
 const token=()=>randomBytes(32).toString('base64url');
 const fail=(message,status=400)=>{throw Object.assign(Error(message),{status});};
@@ -57,6 +57,7 @@ export async function handleKilometerkampioen(req,res,url){
  if(Date.now()>cleanupAt){cleanupAt=Date.now()+600000;await kkCleanup();}
  if(admin&&req.method==='GET'&&path==='/treinhuis/api/participants'){json(res,200,{participants:(await kkList('participant')).map(r=>r.value)});return true;}
  if(admin&&req.method==='GET'&&path==='/treinhuis/api/status'){json(res,200,{email:!!(process.env.RESEND_API_KEY&&process.env.KK_EMAIL_FROM),auth:!!secret(),media:mediaReady(),memory:process.memoryUsage()});return true;}
+ if(req.method==='GET'&&path==='/kilometerkampioen/api/journey'){const user=await participant(req);if(!user)fail('Log eerst in.',401);if(!canUseProof(user))fail('Mijn bewijs is beschikbaar na goedkeuring.',403);json(res,200,{summary:(await scoreboard(user.id))[0],routes:await kkJourneyRoutes(user.id)});return true;}
  if(req.method==='GET'&&path==='/kilometerkampioen/api/session'){json(res,200,{participant:await participant(req),emailReady:!!(process.env.RESEND_API_KEY&&process.env.KK_EMAIL_FROM)});return true;}
  if(req.method==='GET'&&path==='/kilometerkampioen/api/hilta'){const user=await participant(req);if(!user)fail('Log eerst in.',401);json(res,200,await hiltaContext(user,url.searchParams.get('proofId')));return true;}
  if(req.method==='GET'&&path==='/kilometerkampioen/api/submissions'){const user=await participant(req);if(!user)fail('Log eerst in.',401);json(res,200,{submissions:await ownSubmissions(user)});return true;}
