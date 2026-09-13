@@ -1,6 +1,8 @@
+import {initKKStore} from './kk-store.mjs';
 let db;
 export async function initBoardCache({backend,pool,sqlite}){
  db={backend,pool,sqlite};
+ await initKKStore(db);
  const cmsSql='CREATE TABLE IF NOT EXISTS app_content (id INTEGER PRIMARY KEY, revision INTEGER NOT NULL, payload TEXT NOT NULL)';
  if(pool)await pool.query(cmsSql);else sqlite.exec(cmsSql);
  const securitySql='CREATE TABLE IF NOT EXISTS admin_security (id INTEGER PRIMARY KEY, revision INTEGER NOT NULL, payload TEXT NOT NULL)';

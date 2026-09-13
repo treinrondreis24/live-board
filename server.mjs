@@ -3,6 +3,8 @@ import {createTreinreizigerHandler,activeAppStation,acceptAppRow} from './tr-app
 import {swedishStations,swedenState,swedishPayload,restoreSweden,startSweden} from './sweden.mjs';
 import {initBoardAdmin,handleBoardAdmin,applyBoardSettings,boardSource,duplicatePayload} from './board-admin.mjs';
 import {handleAdminSecurity,securityStatus,adminAuthenticated} from './admin-security.mjs';
+import {BoundedCache} from './bounded-cache.mjs';
+import {handleKilometerkampioen} from './kk-handler.mjs';
 import {rfiStations,rfiState,rfiPayload,restoreRfi,startRfi} from './rfi.mjs';
 import {frenchStations,franceState,frenchPayload,restoreFrance,startFrance} from './france.mjs';
 import {spanishStations,internationalState,internationalPayload,restoreInternational,startInternational} from './international.mjs';
@@ -48,9 +50,10 @@ const ITALY_BASES=[
   "http://www.viaggiatreno.it/viaggiatrenonew/resteasy/viaggiatreno"
 ];
 
-const italyJourneyCache=new Map();
-const stationCache=new Map();
-const planCache=new Map();
+const italyJourneyCache=new BoundedCache({max:500,ttl:86400000});
+const stationCache=new BoundedCache({max:500,ttl:7*86400000});
+const planCache=new BoundedCache({max:4000,ttl:36*3600000});
+setInterval(()=>{italyJourneyCache.prune();stationCache.prune();planCache.prune();},600000).unref();
 
 let italyState={scanning:false,lastScanAt:null,nextScanAt:null,currentIntervalMinutes:null,trains:[],warnings:[]};
 let dbState={scanning:false,lastScanAt:null,nextScanAt:null,currentIntervalMinutes:null,trains:[],warnings:[],stations:[]};
@@ -1038,6 +1041,7 @@ const server=http.createServer(async(req,res)=>{
   try{
     const url=new URL(req.url,`http://${req.headers.host}`);
     if(await handleAppCms(req,res,url))return;
+    if(await handleKilometerkampioen(req,res,url))return;
     if(await handleAdminSecurity(req,res,url))return;
     if(url.pathname==='/board-admin.js'){res.setHeader('X-Robots-Tag','noindex, nofollow');res.setHeader('Cache-Control','no-store');return sendFile(res,path.join(__dirname,'board-admin.js'));}
     if(['/beheer','/beheer/','/board-admin.html'].includes(url.pathname)){
