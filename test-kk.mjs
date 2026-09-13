@@ -26,6 +26,8 @@ try{
  assert.equal((await request('/kilometerkampioen/api/updates')).status,401);
  assert.equal((await request('/kilometerkampioen/api/update-media?id=x&update=y')).status,401);
  assert.equal((await request('/treinhuis/api/team',{participantId:'x'})).status,401);
+ assert.equal((await request('/treinhuis/api/approval',{id:'x',approved:true})).status,401);
+ assert.equal((await request('/kilometerkampioen/api/register',{email:'someone@example.org',password:'long-enough-password'},'','https://evil.example')).status,403);
  assert.equal((await request('/treinhuis/api/blog-publish',{id:'test'})).status,401);
  assert.equal((await request('/treinhuis/api/blog-upload',{})).status,401);
  assert.equal((await request('/kilometerkampioen/api/liveblog')).status,200);

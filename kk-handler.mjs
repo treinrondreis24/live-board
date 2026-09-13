@@ -1,3 +1,4 @@
+import {registerPassword,loginPassword,setApproval,canUseProof} from './kk-password.mjs';
 import {assignTeam,updatePage,updateMedia} from './kk-updates.mjs';
 import {saveBlog,publishBlog,unpublishBlog,publicBlog,blogMedia,EDITOR_OWNER} from './kk-blog.mjs';
 import {readFile} from 'node:fs/promises';
@@ -30,7 +31,7 @@ export async function sendCode(email,code){
  const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+process.env.RESEND_API_KEY,'Content-Type':'application/json'},signal:AbortSignal.timeout(15000),body:JSON.stringify({from:process.env.KK_EMAIL_FROM,to:[email],subject:'Je inlogcode voor Kilometer Kampioen',text:`Je inlogcode is ${code}. Deze code is 10 minuten geldig en werkt één keer. Heb je geen code aangevraagd? Dan kun je deze e-mail negeren.`})});
  if(!r.ok)fail('De e-mail kon niet worden verstuurd. Probeer later opnieuw.',503);
 }
-const assets={'/kilometerkampioen':'kk-app.html','/kilometerkampioen/':'kk-app.html','/kilometerkampioen/app.js':'kk-app.js','/kilometerkampioen/app.css':'kk-app.css','/treinhuis':'kk-admin.html','/treinhuis/':'kk-admin.html','/treinhuis/app.js':'kk-admin.js','/kilometerkampioen/forms.js':'kk-forms.js','/treinhuis/blog.js':'kk-blog-admin.js','/kilometerkampioen/liveblog':'kk-blog.html','/kilometerkampioen/liveblog.js':'kk-blog-public.js','/kilometerkampioen/rich.js':'kk-rich.js','/kilometerkampioen/community.js':'kk-community.js'};
+const assets={'/kilometerkampioen':'kk-app.html','/kilometerkampioen/':'kk-app.html','/kilometerkampioen/app.js':'kk-app.js','/kilometerkampioen/app.css':'kk-app.css','/treinhuis':'kk-admin.html','/treinhuis/':'kk-admin.html','/treinhuis/app.js':'kk-admin.js','/kilometerkampioen/forms.js':'kk-forms.js','/treinhuis/blog.js':'kk-blog-admin.js','/kilometerkampioen/liveblog':'kk-blog.html','/kilometerkampioen/liveblog.js':'kk-blog-public.js','/kilometerkampioen/rich.js':'kk-rich.js','/kilometerkampioen/community.js':'kk-community.js','/kilometerkampioen/login.js':'kk-login.js'};
 let cleanupAt=0;
 export async function handleKilometerkampioen(req,res,url){
  const path=url.pathname;if(!path.startsWith('/kilometerkampioen')&&!path.startsWith('/treinhuis'))return false;
@@ -60,6 +61,13 @@ export async function handleKilometerkampioen(req,res,url){
  if(path==='/kilometerkampioen/api/upload'){const user=await participant(req);if(!user)fail('Log eerst in.',401);json(res,200,await upload(req,user));return true;}
  if(admin&&path==='/treinhuis/api/blog-upload'){json(res,200,await upload(req,{id:EDITOR_OWNER}));return true;}
  const data=await body(req);
+ if(admin&&path==='/treinhuis/api/approval'){if(typeof data.approved!=='boolean')fail('Ongeldige goedkeuring.');await setApproval(data.id,data.approved);json(res,200,{ok:true});return true;}
+ if(['/kilometerkampioen/api/register','/kilometerkampioen/api/password-login'].includes(path)){
+ const email=emailOf(data.email),ip=digest(clientIP(req)||'unknown');
+ if(!await kkLimit('password-ip:'+ip,30,3600000)||!await kkLimit('password-email:'+hash(email),10,3600000))fail('Te veel pogingen. Probeer over een uur opnieuw.',429);
+ const user=path.endsWith('/register')?await registerPassword(email,data):await loginPassword(email,data.password);
+ const session=token();await kkPut('session',hash(session),user.id,{},Date.now()+7*86400000);cookie(res,session,7*86400);json(res,200,{participant:user});return true;
+ }
  if(admin&&path==='/treinhuis/api/team'){await assignTeam(data);json(res,200,{ok:true});return true;}
  if(admin&&path==='/treinhuis/api/blog-save'){json(res,200,{draft:await saveBlog(data)});return true;}
  if(admin&&path==='/treinhuis/api/blog-publish'){await publishBlog(data.id);json(res,200,{ok:true});return true;}

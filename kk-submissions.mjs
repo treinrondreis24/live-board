@@ -1,3 +1,4 @@
+import {canUseProof} from './kk-password.mjs';
 import {randomUUID} from 'node:crypto';
 import {mkdtemp,rm,stat} from 'node:fs/promises';
 import {createWriteStream,createReadStream} from 'node:fs';
@@ -49,7 +50,7 @@ export function validateSubmission(data){
  return {kind:data.kind,text,media,location};
 }
 export async function saveSubmission(user,data){
- const value=validateSubmission(data);
+ const value=validateSubmission(data);if(value.kind==='proof'&&!canUseProof(user))fail('Privébewijs is beschikbaar na goedkeuring door de organisatie.',403);
  if(!/^[a-f0-9-]{36}$/.test(data.id||''))fail('Ongeldige inzending.');
  const existing=await kkGet('submission',data.id);if(existing){if(existing.owner!==user.id)fail('Geen toegang.',403);return existing.value;}
  let images=0,videos=0;
@@ -59,5 +60,5 @@ export async function saveSubmission(user,data){
  const submission={...value,id:data.id,displayName:user.displayName||'Deelnemer',createdAt:Date.now()};
  if(!await kkInsert('submission',data.id,user.id,submission)){const saved=await kkGet('submission',data.id);if(saved.owner!==user.id)fail('Geen toegang.',403);return saved.value;}return submission;
 }
-export async function ownSubmissions(user){return (await kkList('submission',user.id)).map(r=>r.value);}
-export async function mediaLink(user,id,admin=false){const m=await kkGet('media',id);if(!m||(!admin&&m.owner!==user.id))fail('Geen toegang tot dit bestand.',403);return authorizedMediaUrl(m.owner,id);}
+export async function ownSubmissions(user){return (await kkList('submission',user.id)).filter(r=>r.value.kind==='update'||canUseProof(user)).map(r=>r.value);}
+export async function mediaLink(user,id,admin=false){const m=await kkGet('media',id);if(!m||(!admin&&(m.owner!==user.id||!canUseProof(user))))fail('Geen toegang tot dit bestand.',403);return authorizedMediaUrl(m.owner,id);}
