@@ -1,3 +1,5 @@
+import {scoreboard,startTimestamp} from './kk-scoreboard.mjs';
+import {previewMedia} from './kk-preview.mjs';
 import {hiltaContext,proposeHilta,confirmHilta} from './kk-hilta.mjs';
 import {registerPassword,loginPassword,setApproval,canUseProof} from './kk-password.mjs';
 import {assignTeam,updatePage,updateMedia} from './kk-updates.mjs';
@@ -23,11 +25,12 @@ async function participant(req){const id=String(req.headers.cookie||'').split(';
 export function validateProfile(data,user,admin=false){
  const fullName=text(data.fullName),displayName=text(data.displayName,80),edition=Number(data.edition),startTime=!admin&&user.startTime?user.startTime:text(data.startTime,5),companion=text(data.companion),station=text(data.station),distance=data.distance===''||data.distance==null?null:Number(data.distance);
  if(!fullName||!displayName||![12,24].includes(edition)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime))fail('Vul naam, weergavenaam, editie en starttijd in.');
+ const startDate=user.startDate||String(data.startDate||'2026-09-19');if(startTimestamp(startDate,startTime)===null)fail('Vul een geldige startdatum in.');
  const rotterdamTime=text(data.rotterdamTime,5);if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(rotterdamTime))fail('Vul de verwachte tijd bij meldpunt Rotterdam in.');
  if(distance===null)fail('Vul je verwachte aantal kilometers in.');
  if(data.together&&!companion)fail('Vul de naam van je reisgenoot in.');
  if(distance!==null&&(!Number.isFinite(distance)||distance<0||distance>10000))fail('Vul een geldig aantal kilometers in.');
- return {...user,fullName,displayName,edition,startTime,rotterdamTime,together:!!data.together,companion:data.together?companion:'',station,distance,competition:'2026',updatedAt:Date.now()};
+ return {...user,fullName,displayName,edition,startTime,startDate,rotterdamTime,together:!!data.together,companion:data.together?companion:'',station,distance,competition:'2026',updatedAt:Date.now()};
 }
 export async function sendCode(email,code){
  if(!process.env.RESEND_API_KEY||!process.env.KK_EMAIL_FROM)fail('E-mailcodes zijn nog niet beschikbaar. Probeer later opnieuw.',503);
@@ -39,7 +42,7 @@ let cleanupAt=0;
 export async function handleKilometerkampioen(req,res,url){
  const path=url.pathname;if(!path.startsWith('/kilometerkampioen')&&!path.startsWith('/treinhuis'))return false;
  res.setHeader('Cache-Control','no-store');res.setHeader('X-Robots-Tag','noindex, nofollow, noarchive');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');res.setHeader('X-Frame-Options','DENY');
- res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' https://www.treinreiziger.nl; connect-src 'self'; frame-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+ res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' https: blob:; media-src 'self' https: blob:; connect-src 'self'; frame-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
  try{
  const admin=path.startsWith('/treinhuis');
  if(path==='/kilometerkampioen/liveblog'){
@@ -56,17 +59,18 @@ export async function handleKilometerkampioen(req,res,url){
  if(req.method==='GET'&&path==='/kilometerkampioen/api/session'){json(res,200,{participant:await participant(req),emailReady:!!(process.env.RESEND_API_KEY&&process.env.KK_EMAIL_FROM)});return true;}
  if(req.method==='GET'&&path==='/kilometerkampioen/api/hilta'){const user=await participant(req);if(!user)fail('Log eerst in.',401);json(res,200,await hiltaContext(user,url.searchParams.get('proofId')));return true;}
  if(req.method==='GET'&&path==='/kilometerkampioen/api/submissions'){const user=await participant(req);if(!user)fail('Log eerst in.',401);json(res,200,{submissions:await ownSubmissions(user)});return true;}
- if(req.method==='GET'&&path.endsWith('/api/media')){const user=admin?null:await participant(req);if(!admin&&!user)fail('Log eerst in.',401);json(res,200,{url:await mediaLink(user,url.searchParams.get('id'),admin)});return true;}
+ if(req.method==='GET'&&path.endsWith('/api/media')){const user=admin?null:await participant(req);if(!admin&&!user)fail('Log eerst in.',401);const id=url.searchParams.get('id');const original=await mediaLink(user,id,admin);const row=await kkGet('media',id);json(res,200,url.searchParams.get('preview')==='1'?await previewMedia(row):{url:original,type:row.value.type});return true;}
  if(admin&&req.method==='GET'&&path==='/treinhuis/api/submissions'){json(res,200,await kkAdminSubmissions(Object.fromEntries(url.searchParams)));return true;}
+ if(admin&&req.method==='GET'&&path==='/treinhuis/api/scoreboard'){json(res,200,{rows:await scoreboard()});return true;}
  if(admin&&req.method==='GET'&&path==='/treinhuis/api/hilta'){json(res,200,{route:(await kkGet('hilta-current',url.searchParams.get('proofId')))?.value||null});return true;}
  if(admin&&req.method==='GET'&&path==='/treinhuis/api/blog'){json(res,200,{drafts:(await kkList('blog-draft')).map(r=>r.value),published:(await publicBlog()).map(p=>p.id)});return true;}
- if(req.method==='GET'&&['/kilometerkampioen/api/updates','/kilometerkampioen/api/update-media'].includes(path)){if(!await participant(req))fail('Log eerst in.',401);json(res,200,path.endsWith('/updates')?await updatePage({before:url.searchParams.get('before')||'',teams:url.searchParams.getAll('team')}):await updateMedia(url.searchParams.get('update'),url.searchParams.get('id')));return true;}
+ if(req.method==='GET'&&['/kilometerkampioen/api/updates','/kilometerkampioen/api/update-media'].includes(path)){if(!await participant(req))fail('Log eerst in.',401);json(res,200,path.endsWith('/updates')?await updatePage({before:url.searchParams.get('before')||'',teams:url.searchParams.getAll('team'),q:url.searchParams.get('q')||'',participantId:url.searchParams.get('participant')||'',after:url.searchParams.get('after')||''}):await updateMedia(url.searchParams.get('update'),url.searchParams.get('id'),url.searchParams.get('preview')==='1'));return true;}
  if(req.method!=='POST')fail('Niet gevonden.',404);
  if(!origin(req))fail('Open dit formulier op de eigen website.',403);
  if(path==='/kilometerkampioen/api/upload'){const user=await participant(req);if(!user)fail('Log eerst in.',401);json(res,200,await upload(req,user));return true;}
  if(admin&&path==='/treinhuis/api/blog-upload'){json(res,200,await upload(req,{id:EDITOR_OWNER}));return true;}
  const data=await body(req);
- if(admin&&path==='/treinhuis/api/start-time'){const row=await kkGet('participant',data.id);if(!row)fail('Deelnemer niet gevonden.',404);if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(data.startTime||''))fail('Vul een geldige starttijd in.');await kkPatchParticipant(data.id,{startTime:data.startTime,updatedAt:Date.now()});json(res,200,{ok:true});return true;}
+ if(admin&&path==='/treinhuis/api/start-time'){const row=await kkGet('participant',data.id);if(!row)fail('Deelnemer niet gevonden.',404);if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(data.startTime||''))fail('Vul een geldige starttijd in.');const startDate=data.startDate||row.value.startDate||'2026-09-19';if(startTimestamp(startDate,data.startTime)===null)fail('Ongeldige startdatum.');await kkPatchParticipant(data.id,{startTime:data.startTime,startDate,updatedAt:Date.now()});json(res,200,{ok:true});return true;}
  if(admin&&path==='/treinhuis/api/approve-many'){if(!Array.isArray(data.ids)||!data.ids.length||data.ids.length>200||data.ids.some(id=>! /^[a-f0-9]{64}$/.test(id)))fail('Selecteer maximaal 200 accounts.');const approved=[],failed=[];for(const id of [...new Set(data.ids)]){try{await setApproval(id,true);approved.push(id);}catch{failed.push(id);}}json(res,200,{approved,failed});return true;}
  if(admin&&path==='/treinhuis/api/approval'){if(typeof data.approved!=='boolean')fail('Ongeldige goedkeuring.');await setApproval(data.id,data.approved);json(res,200,{ok:true});return true;}
  if(['/kilometerkampioen/api/register','/kilometerkampioen/api/password-login'].includes(path)){
@@ -100,7 +104,7 @@ export async function handleKilometerkampioen(req,res,url){
  if(path==='/kilometerkampioen/api/hilta-propose'){json(res,200,{proposal:await proposeHilta(user,data)});return true;}
  if(path==='/kilometerkampioen/api/hilta-confirm'){json(res,200,{confirmation:await confirmHilta(user,data)});return true;}
  if(path==='/kilometerkampioen/api/submit'){json(res,200,{submission:await saveSubmission(user,data)});return true;}
- if(path==='/kilometerkampioen/api/profile'){const profile=validateProfile(data,user);const changes=Object.fromEntries(['fullName','displayName','edition','rotterdamTime','together','companion','station','distance','updatedAt'].map(k=>[k,profile[k]]));if(!user.startTime)changes.startTime=profile.startTime;const saved=await kkPatchParticipant(user.id,changes);json(res,200,{participant:saved});return true;}
+ if(path==='/kilometerkampioen/api/profile'){const profile=validateProfile(data,user);const changes=Object.fromEntries(['fullName','displayName','edition','rotterdamTime','together','companion','station','distance','updatedAt'].map(k=>[k,profile[k]]));if(!user.startTime)changes.startTime=profile.startTime;if(!user.startDate)changes.startDate=profile.startDate;const saved=await kkPatchParticipant(user.id,changes);json(res,200,{participant:saved});return true;}
  if(path==='/kilometerkampioen/api/logout'){const session=String(req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith('kk_session='))?.slice(11);if(session)await kkDelete('session',hash(session));cookie(res,'',0);json(res,200,{ok:true});return true;}
  fail('Dit onderdeel is nog niet beschikbaar.',404);
  }catch(e){json(res,e.status||500,{error:e.status?e.message:'Er ging iets mis. Je gegevens zijn nog niet bevestigd; probeer opnieuw.'});}return true;

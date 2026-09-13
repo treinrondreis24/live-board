@@ -12,3 +12,5 @@ dialog{width:min(760px,90vw);max-height:85vh;overflow:auto;border:1px solid #ddd
 .kk-admin main{max-width:1200px}.kk-admin .row{flex-wrap:wrap}.kk-admin .row>label{flex:1;min-width:150px}.kk-admin td button{background:transparent;color:#b31c2a;padding:0;margin:0;text-align:left;text-decoration:underline}.kk-admin .table-wrap{margin-top:16px}
 
 .hilta-notice{border-left:3px solid #cf2030;padding:12px;background:#fff5f5;font-size:14px}
+
+.timeline-item{position:relative;border-left:2px solid #dc2638;padding:6px 12px 22px 20px;margin:18px 0;background:white}.timeline-item:before{content:"";position:absolute;width:10px;height:10px;border-radius:50%;background:#dc2638;left:-6px;top:12px}.timeline-item h3,.timeline-item h2{font-size:16px;font-weight:700;margin:0 0 8px}.timeline-item p{margin:8px 0}.media-preview img,.media-preview video{max-width:100%;max-height:520px;border-radius:8px}.upload-previews{display:flex;flex-wrap:wrap;gap:12px}.upload-previews>div{width:140px;overflow-wrap:anywhere}.upload-previews img,.upload-previews video{width:140px;height:100px;object-fit:cover}.upload-previews button{padding:6px;font-size:14px}

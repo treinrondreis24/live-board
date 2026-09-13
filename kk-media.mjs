@@ -29,3 +29,5 @@ export async function putValidatedMedia({owner,id,type,size,stream}){
 export async function inspectStoredMedia(owner,id){const {client,bucket}=connection();return client.send(new HeadObjectCommand({Bucket:bucket,Key:mediaKey(owner,id)}),{abortSignal:AbortSignal.timeout(10000)});}
 // No public bucket; handlers grant short-lived links only to authorized viewers.
 export async function authorizedMediaUrl(owner,id){const {client,bucket}=connection();return getSignedUrl(client,new GetObjectCommand({Bucket:bucket,Key:mediaKey(owner,id),ResponseCacheControl:'private, no-store'}),{expiresIn:120});}
+
+export async function storedMediaStream(owner,id){const {client,bucket}=connection();const result=await client.send(new GetObjectCommand({Bucket:bucket,Key:mediaKey(owner,id)}),{abortSignal:AbortSignal.timeout(30000)});return result.Body;}

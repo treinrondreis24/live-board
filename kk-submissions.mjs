@@ -52,7 +52,8 @@ export async function upload(req,user){
   }
   }
   stage='store';const id=randomUUID();await putValidatedMedia({owner:user.id,id,type,size,stream:createReadStream(path)});
-  await kkPut('media',id,user.id,{id,type,size,kind:declaration.kind,createdAt:Date.now()});return {id,kind:declaration.kind};
+  let previewId=null;if(declaration.kind==='image'){try{const previewPath=join(dir,'preview.jpg');await sharp(path,{limitInputPixels:60000000}).timeout({seconds:20}).rotate().resize({width:1280,height:1280,fit:'inside',withoutEnlargement:true}).jpeg({quality:78}).toFile(previewPath);const preview=randomUUID();await putValidatedMedia({owner:user.id,id:preview,type:'image/jpeg',size:(await stat(previewPath)).size,stream:createReadStream(previewPath)});previewId=preview;}catch{}}
+  await kkPut('media',id,user.id,{id,type,size,kind:declaration.kind,previewId,createdAt:Date.now()});return {id,kind:declaration.kind};
  }catch(e){if(e.status)throw e;const ref=randomUUID().slice(0,8);console.error('KK_UPLOAD',ref,stage,String(e.code||e.name||'Error'));fail(stage==='validate'?'Het bestand kan niet worden gelezen. Sla de foto opnieuw op als JPEG of PNG, of kies een andere video. Foutcode: '+ref:stage==='receive'?'De upload is onderbroken. Controleer je verbinding en probeer opnieuw. Foutcode: '+ref:'Het bestand kon niet worden opgeslagen. Probeer opnieuw. Foutcode: '+ref,stage==='validate'?422:503);}finally{active--;if(dir)await rm(dir,{recursive:true,force:true});}
 }
 export function validateSubmission(data){
@@ -63,7 +64,7 @@ export function validateSubmission(data){
  let location=null;
  if(data.location){const {latitude,longitude,accuracy,timestamp}=data.location;if(![latitude,longitude,accuracy,timestamp].every(Number.isFinite)||Math.abs(latitude)>90||Math.abs(longitude)>180||accuracy<0||timestamp>Date.now()+60000||timestamp<0)fail('Ongeldige locatie.');location={latitude,longitude,accuracy,timestamp};}
  if(data.kind==='proof'&&!text&&!media.length&&!location)fail('Voeg een locatie, toelichting of bestand toe.');
- const station=data.kind==='proof'?String(data.station||'').trim().slice(0,200):'';const stationId=data.kind==='proof'?String(data.stationId||''):'';if(stationId&&!/^nl-[a-z0-9-]{1,20}$/.test(stationId))fail('Ongeldig station.');return {kind:data.kind,text,media,location,station,stationId};
+ const station=data.kind==='proof'?String(data.station||'').trim().slice(0,200):'';const stationId=data.kind==='proof'?String(data.stationId||''):'';if(stationId&&!/^nl-[a-z0-9-]{1,20}$/.test(stationId))fail('Ongeldig station.');return {kind:data.kind,title:data.kind==='update'?String(data.title||'').trim().slice(0,120):'',text,media,location,station,stationId};
 }
 export async function saveSubmission(user,data){
  const value=validateSubmission(data);if(value.kind==='proof'&&!canUseProof(user))fail('Privébewijs is beschikbaar na goedkeuring door de organisatie.',403);
