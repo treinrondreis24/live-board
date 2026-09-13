@@ -36,3 +36,6 @@ LIVE 2026-09-13: production main advanced to 1f8e2c8, Railway deployment afd0dfa
 - Thank-you screen and filtered own submission links after saving.
 - Sharp validates actual JPEG/PNG/WebP/AVIF content, originals retained, 60 MP limit, cache disabled, concurrency one. HEIC support depends on decoder; failures give actionable message and correlation code. Videos remain MP4/MOV/WebM 100 MB/60 seconds.
 - Signal-specific failure not reproduced without original file. Admin tables/filters/bulk approval remain next step.
+
+## 2026-09-13 Treinhuis tables
+Separate participants/proof/updates/blog/teams/settings panels. Admin submission queries filter in database, 50 rows/page with total, date/edition/owner/text/station/team filters. Details in dialog preserve list state; quote opens liveblog draft. Participant sorting and selected approval batches, including revocation for legacy verified accounts. Targeted JSON patches preserve approval when profile data is saved. Tested 3600 SQLite records plus browser details/quote flow.

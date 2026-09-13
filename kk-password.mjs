@@ -1,6 +1,6 @@
 import {scrypt,randomBytes,timingSafeEqual,createHash} from 'node:crypto';
 import {promisify} from 'node:util';
-import {kkGet,kkPut,kkInsert} from './kk-store.mjs';
+import {kkGet,kkPut,kkInsert,kkPatchParticipant} from './kk-store.mjs';
 const derive=promisify(scrypt),hash=s=>createHash('sha256').update(s).digest('hex');
 const fail=(message,status=400)=>{throw Object.assign(Error(message),{status});};
 let active=0;
@@ -23,5 +23,5 @@ export async function loginPassword(email,password){
  if(!credential||!timingSafeEqual(actual,Buffer.from(credential.value.key,'hex')))fail('E-mailadres of wachtwoord klopt niet.',401);
  return (await kkGet('participant',id)).value;
 }
-export function canUseProof(user){return !!user&&(!user.manualRegistration||user.approval==='approved');}
-export async function setApproval(id,approved){const row=await kkGet('participant',id);if(!row||!row.value.manualRegistration)fail('Deze aanmelding bestaat niet.',404);await kkPut('participant',id,id,{...row.value,approval:approved?'approved':'pending',approvalChangedAt:Date.now()});}
+export function canUseProof(user){return !!user&&(user.approval==='approved'||(!user.manualRegistration&&!user.approval));}
+export async function setApproval(id,approved){const row=await kkGet('participant',id);if(!row)fail('Deze aanmelding bestaat niet.',404);await kkPatchParticipant(id,{approval:approved?'approved':'pending',approvalChangedAt:Date.now()});}

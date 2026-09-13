@@ -23,3 +23,21 @@ export async function kkUpdateRows(before='',teams=[]){
  if(teams.length){const slots=teams.map(t=>{args.push(t);return '$'+args.length;});where+=" AND COALESCE("+member+",'solo-' || r.owner) IN ("+slots.join(',')+")";}
  return (await query("SELECT r.* FROM kk_records r LEFT JOIN kk_records m ON m.kind='team-member' AND m.id=r.owner WHERE "+where+" ORDER BY r.created DESC,r.id DESC LIMIT 31",args)).map(r=>({...r,value:JSON.parse(r.payload)}));
 }
+
+export async function kkAdminSubmissions(options={}){
+ const args=[],bind=v=>{args.push(v);return '$'+args.length;};
+ const field=(alias,key)=>db.pool?alias+".payload::jsonb->>'"+key+"'":"json_extract("+alias+".payload,'$."+key+"')";
+ if(!['proof','update'].includes(options.kind))throw Object.assign(Error('Kies bewijs of updates.'),{status:400});
+ let where="r.kind='submission' AND "+field('r','kind')+'='+bind(options.kind);
+ if(options.owner)where+=' AND r.owner='+bind(options.owner);
+ if(options.edition){if(!['12','24'].includes(String(options.edition)))throw Object.assign(Error('Ongeldige editie.'),{status:400});where+=' AND CAST('+field('p','edition')+' AS TEXT)='+bind(String(options.edition));}
+ for(const [key,op] of [['from','>='],['until','<=']])if(options[key]){const value=Number(options[key]);if(!Number.isSafeInteger(value)||value<0)throw Object.assign(Error('Ongeldig tijdstip.'),{status:400});where+=' AND r.created'+op+bind(value);}
+ for(const [key,columns] of [['q',[field('r','text'),field('r','displayName'),field('p','fullName')]],['station',[field('r','station')]]])if(options[key]){const needle=String(options[key]).slice(0,200).toLowerCase().replace(/[!%_]/g,x=>'!'+x);const slot=bind('%'+needle+'%');where+=' AND ('+columns.map(c=>"LOWER(COALESCE("+c+",'')) LIKE "+slot+" ESCAPE '!'").join(' OR ')+')';}
+ if(options.team)where+=' AND '+field('m','teamId')+'='+bind(String(options.team));
+ const joins=" FROM kk_records r LEFT JOIN kk_records p ON p.kind='participant' AND p.id=r.owner LEFT JOIN kk_records m ON m.kind='team-member' AND m.id=r.owner WHERE ";
+ const [count]=await query('SELECT COUNT(*) AS total'+joins+where,args);const total=Number(count.total),pages=Math.max(1,Math.ceil(total/50)),page=Math.min(pages,Math.max(1,Math.floor(Number(options.page)||1)));const order=options.order==='asc'?'ASC':'DESC';
+ const rows=await query('SELECT r.*,'+field('p','fullName')+' AS participant_name'+joins+where+' ORDER BY r.created '+order+',r.id '+order+' LIMIT 50 OFFSET '+((page-1)*50),args);
+ return {total,page,pages,submissions:rows.map(r=>({...JSON.parse(r.payload),id:r.id,owner:r.owner,participantName:r.participant_name,createdAt:Number(r.created)}))};
+}
+
+export async function kkPatchParticipant(id,changes){const merge=db.pool?"(payload::jsonb || $2::jsonb)::text":"json_patch(payload,$2)";const [row]=await query("UPDATE kk_records SET payload="+merge+" WHERE kind='participant' AND id=$1 RETURNING payload",[id,JSON.stringify(changes)]);return row?JSON.parse(row.payload):null;}
