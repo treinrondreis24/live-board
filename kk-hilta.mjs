@@ -7,7 +7,8 @@ export const hiltaNotice='Deze kilometerberekening is een inschatting van Hilta.
 export const hiltaStations=[...new Set(network.edges.flatMap(e=>[e.from,e.to]))].sort((a,b)=>a.localeCompare(b,'nl'));
 const normal=s=>String(s||'').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ');
 const fail=(message,status=400)=>{throw Object.assign(Error(message),{status});};
-function station(s){const found=hiltaStations.find(n=>normal(n)===normal(s));if(!found)fail('Hilta kan station "'+String(s||'onbekend').slice(0,100)+'" nog niet aan een scorekaarttraject koppelen. Je bewijs blijft bewaard; laat dit deel door de organisatie controleren.');return found;}
+const stationAliases=new Map([['den haag hs','Den Haag Hollands Spoor']]);
+function station(s){const canonical=stationAliases.get(normal(s))||s;const found=hiltaStations.find(n=>normal(n)===normal(canonical));if(!found)fail('Hilta kan station "'+String(s||'onbekend').slice(0,100)+'" nog niet aan een scorekaarttraject koppelen. Je bewijs blijft bewaard; laat dit deel door de organisatie controleren.');return found;}
 function shortest(from,to){
  const dist=new Map([[from,0]]),previous=new Map(),done=new Set();
  while(true){let at=null,best=Infinity;for(const [n,d] of dist)if(!done.has(n)&&d<best){at=n;best=d;}if(at===null)fail('Geen verbinding gevonden in de scorekaart.');if(at===to)break;done.add(at);
