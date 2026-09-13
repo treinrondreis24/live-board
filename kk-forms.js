@@ -1,8 +1,8 @@
 window.kkForms=function(content,api,participant){
- const area=document.createElement('div');content.append(area);window.kkCommunity(area,api);const live=document.createElement('a');live.href='/kilometerkampioen/liveblog';live.className='button';live.textContent='Liveblog volgen';area.append(live);
- if(participant.manualRegistration&&participant.approval!=='approved'){const note=document.createElement('p');note.textContent='Je kunt updates bekijken en delen. Privébewijs komt beschikbaar zodra de organisatie je aanmelding heeft goedgekeurd. Vernieuw deze pagina om je status bij te werken.';area.append(note);}
+ const area=document.createElement('div');content.append(area);window.kkCommunity(area,api);const live=document.createElement('a');live.href='#live';live.dataset.page='live';live.className='button';live.textContent='Liveblog volgen';area.append(live);
+ if(participant.manualRegistration&&participant.approval!=='approved'){const note=document.createElement('p');note.textContent='Je kunt updates bekijken en delen. Privébewijs komt beschikbaar zodra de organisatie je aanmelding heeft goedgekeurd. Vernieuw deze pagina om je status bij te werken.';note.dataset.page='bewijs';area.append(note);}
  for(const kind of (participant.manualRegistration&&participant.approval!=='approved'?['update']:['proof','update'])){
-  const section=document.createElement('section');area.append(section);
+  const section=document.createElement('section');section.dataset.page=kind==='proof'?'bewijs':'delen';area.append(section);
   section.innerHTML=`<h2>${kind==='proof'?'Bewijs insturen':'Update delen'}</h2><form><label>Hoe gaat je reis?<textarea rows="4" maxlength="10000" ${kind==='update'?'required':''}></textarea></label><label>Foto’s of video<input type="file" multiple accept="image/jpeg,image/png,image/webp,image/heic,image/heif,video/mp4,video/quicktime,video/webm"></label><small>Maximaal vier foto’s (15 MB per foto) en één video (100 MB, 60 seconden). ${kind==='update'?'Minimaal één bestand verplicht.':'Bewijs is alleen zichtbaar voor jou en het beheer.'}</small>${kind==='proof'?'<button type="button" class="secondary location">Locatie toevoegen</button>':''}<p class="locationNote"></p><progress max="100" value="0" hidden aria-label="Uploadvoortgang"></progress><p role="status" class="status"></p><button type="submit">${kind==='proof'?'Bewijs insturen':'Update insturen'}</button></form>`;
   const form=section.querySelector('form'),status=section.querySelector('.status'),progress=section.querySelector('progress'),files=form.querySelector('input'),textarea=form.querySelector('textarea');
   let location=null,id=crypto.randomUUID();const uploaded=new Map();
@@ -22,7 +22,7 @@ window.kkForms=function(content,api,participant){
    finally{progress.hidden=true;controls.forEach(el=>el.disabled=false);}
   };
  }
- const history=document.createElement('section');area.append(history);history.innerHTML='<h2>Mijn inzendingen</h2><button class="secondary">Inzendingen bekijken</button><div></div>';
+ const history=document.createElement('section');history.dataset.page='inzendingen';area.append(history);history.innerHTML='<h2>Mijn inzendingen</h2><button class="secondary">Inzendingen bekijken</button><div></div>';
  history.querySelector('button').onclick=async()=>{const list=history.querySelector('div');list.textContent='Laden…';try{const data=await api('submissions');list.replaceChildren();for(const item of data.submissions){const p=document.createElement('p');p.textContent=`${item.kind==='proof'?'Bewijs':'Update'} · ${new Date(item.createdAt).toLocaleString('nl-NL')} — ${item.text}`;list.append(p);for(const id of item.media){const button=document.createElement('button');button.textContent='Bestand bekijken';button.onclick=async()=>{try{const {url}=await api('media?id='+encodeURIComponent(id));window.location.assign(url);}catch(e){button.textContent=e.message;}};list.append(button);}}if(!data.submissions.length)list.textContent='Je hebt nog geen inzendingen.';}catch(e){list.textContent=e.message;}};
 };
 function uploadFile(file,progress,status){return new Promise((resolve,reject)=>{

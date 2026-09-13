@@ -1,0 +1,8 @@
+window.kkNavigation=function(content,participant){
+ const nav=document.createElement('nav');nav.className='kk-nav';nav.setAttribute('aria-label','Kilometer Kampioen');
+ for(const [id,label] of [['live','Live volgen'],['delen','Update delen'],['bewijs','Bewijs'],['reizen','Reizen'],['deelname','Mijn deelname']]){const a=document.createElement('a');a.href='#'+id;a.textContent=label;nav.append(a);}content.prepend(nav);
+ const live=document.createElement('section');live.dataset.page='live';live.innerHTML='<h1>Live volgen</h1><p>Deel je reis en volg de andere deelnemers.</p><a class="button" href="#delen">Update delen</a> <a class="button" href="#updates">Alle updates</a> <a class="button" href="#inzendingen">Mijn inzendingen</a><h2>Liveblog van de redactie</h2><iframe class="stations-frame" title="Liveblog Kilometer Kampioen"></iframe>';content.append(live);
+ let openedUpdates=false;
+ function route(){const requested=location.hash.slice(1),page=['live','delen','bewijs','reizen','deelname','updates','inzendingen'].includes(requested)?requested:(participant.edition?'live':'deelname');for(const panel of content.querySelectorAll('[data-page]'))panel.hidden=panel.dataset.page!==page;for(const a of nav.querySelectorAll('a')){if(a.hash==='#'+page)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');}if(page==='live'&&!live.querySelector('iframe').src)live.querySelector('iframe').src='/kilometerkampioen/liveblog';if(page==='updates'&&!openedUpdates){openedUpdates=true;content.querySelector('[data-page="updates"] button').click();}window.scrollTo(0,0);}
+ window.onhashchange=route;route();
+};
