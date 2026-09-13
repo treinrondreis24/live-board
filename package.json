@@ -20,6 +20,7 @@
     "gtfs-realtime-bindings": "^1.1.1",
     "pg": "^8.16.3",
     "qrcode": "1.5.4",
+    "sharp": "0.35.4",
     "zeromq": "6.7.0"
   }
 }

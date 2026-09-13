@@ -14,7 +14,7 @@ export function mediaConfig(env=process.env){
 function connection(){const c=mediaConfig();client??=new S3Client(c.config);return {client,bucket:c.bucket};}
 export function mediaKey(owner,id){if(!/^[a-f0-9]{64}$/.test(owner)||! /^[a-f0-9-]{36}$/.test(id))throw Error('Ongeldige mediaverwijzing.');return `kk/2026/${owner}/${id}`;}
 export function validateMediaDeclaration({type,size}){
- const image=['image/jpeg','image/png','image/webp','image/heic','image/heif'].includes(type);
+ const image=['image/jpeg','image/png','image/webp','image/heic','image/heif','image/avif'].includes(type);
  const video=['video/mp4','video/quicktime','video/webm'].includes(type);
  if(!image&&!video)throw Error('Gebruik een ondersteund foto- of videobestand.');
  const limit=image?15_000_000:100_000_000;

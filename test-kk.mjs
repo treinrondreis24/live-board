@@ -19,7 +19,8 @@ try{
  r=await request('/kilometerkampioen/api/request-code',{email:'person@example.org'},'','https://evil.example');assert.equal(r.status,403);assert.equal(requests,0);
  r=await request('/kilometerkampioen/api/request-code',{email:'Person@example.org'});assert.equal(r.status,200);const challenge=r.data.challenge,code=mail.text.match(/\b\d{6}\b/)[0];assert.equal(mail.to[0],'person@example.org');assert.ok(!(await kkGet('challenge',challenge)).payload.includes(code));
  r=await request('/kilometerkampioen/api/verify-code',{challenge,code});assert.equal(r.status,200);const cookie=r.headers['Set-Cookie'].split(';')[0];assert.match(r.headers['Set-Cookie'],/HttpOnly; Secure/);assert.equal((await request('/kilometerkampioen/api/verify-code',{challenge,code})).status,401);
- r=await request('/kilometerkampioen/api/profile',{fullName:'Jamie',displayName:'Jamie op reis',edition:24,startTime:'06:00',distance:'',station:'Utrecht'},cookie);assert.equal(r.status,200);assert.equal(r.data.participant.email,'person@example.org');
+ r=await request('/kilometerkampioen/api/profile',{fullName:'Jamie',displayName:'Jamie op reis',edition:24,startTime:'06:00',distance:700,rotterdamTime:'12:00',station:'Utrecht'},cookie);assert.equal(r.status,200);assert.equal(r.data.participant.email,'person@example.org');
+ assert.equal(validateProfile({fullName:'Jamie',displayName:'Jamie',edition:24,startTime:'09:00',distance:800,rotterdamTime:'13:00'},{startTime:'06:00'}).startTime,'06:00');
  assert.equal((await request('/kilometerkampioen/api/session',null,cookie)).data.participant.fullName,'Jamie');
  assert.equal((await request('/treinhuis/api/participants')).status,401);
  assert.equal((await request('/treinhuis/api/blog')).status,401);
