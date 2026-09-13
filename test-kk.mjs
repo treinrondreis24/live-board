@@ -22,6 +22,11 @@ try{
  r=await request('/kilometerkampioen/api/profile',{fullName:'Jamie',displayName:'Jamie op reis',edition:24,startTime:'06:00',distance:'',station:'Utrecht'},cookie);assert.equal(r.status,200);assert.equal(r.data.participant.email,'person@example.org');
  assert.equal((await request('/kilometerkampioen/api/session',null,cookie)).data.participant.fullName,'Jamie');
  assert.equal((await request('/treinhuis/api/participants')).status,401);
+ assert.equal((await request('/treinhuis/api/blog')).status,401);
+ assert.equal((await request('/treinhuis/api/blog-publish',{id:'test'})).status,401);
+ assert.equal((await request('/treinhuis/api/blog-upload',{})).status,401);
+ assert.equal((await request('/kilometerkampioen/api/liveblog')).status,200);
+ assert.equal((await request('/kilometerkampioen/api/blog-photo?post=test&id=private')).status,404);
  assert.throws(()=>validateProfile({fullName:'a',displayName:'b',edition:12,startTime:'29:00'},{}));
  await request('/kilometerkampioen/api/logout',{},cookie);assert.equal((await request('/kilometerkampioen/api/session',null,cookie)).data.participant,null);
  for(let i=0;i<3;i++)assert.equal(await kkLimit('test-limit',3,10000),true);assert.equal(await kkLimit('test-limit',3,10000),false);

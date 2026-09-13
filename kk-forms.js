@@ -1,5 +1,5 @@
 window.kkForms=function(content,api){
- const area=document.createElement('div');content.append(area);
+ const area=document.createElement('div');content.append(area);const live=document.createElement('a');live.href='/kilometerkampioen/liveblog';live.className='button';live.textContent='Liveblog volgen';area.append(live);
  for(const kind of ['proof','update']){
   const section=document.createElement('section');area.append(section);
   section.innerHTML=`<h2>${kind==='proof'?'Bewijs insturen':'Update delen'}</h2><form><label>Hoe gaat je reis?<textarea rows="4" maxlength="10000" ${kind==='update'?'required':''}></textarea></label><label>Foto’s of video<input type="file" multiple accept="image/jpeg,image/png,image/webp,image/heic,image/heif,video/mp4,video/quicktime,video/webm"></label><small>Maximaal vier foto’s (15 MB per foto) en één video (100 MB, 60 seconden). ${kind==='update'?'Minimaal één bestand verplicht.':'Bewijs is alleen zichtbaar voor jou en het beheer.'}</small>${kind==='proof'?'<button type="button" class="secondary location">Locatie toevoegen</button>':''}<p class="locationNote"></p><progress max="100" value="0" hidden aria-label="Uploadvoortgang"></progress><p role="status" class="status"></p><button type="submit">${kind==='proof'?'Bewijs insturen':'Update insturen'}</button></form>`;
