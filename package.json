@@ -15,6 +15,7 @@
     "@aws-sdk/s3-request-presigner": "3.1131.0",
     "fast-xml-parser": "5.11.1",
     "fflate": "0.8.3",
+    "ffprobe-static": "3.1.0",
     "geoip-lite": "2.0.3",
     "gtfs-realtime-bindings": "^1.1.1",
     "pg": "^8.16.3",

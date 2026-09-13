@@ -1,4 +1,6 @@
 import {readFile} from 'node:fs/promises';
+import {upload,saveSubmission,ownSubmissions,mediaLink} from './kk-submissions.mjs';
+import {mediaReady} from './kk-media.mjs';
 import {randomBytes,randomInt,createHash,createHmac,timingSafeEqual} from 'node:crypto';
 import {adminAuthenticated,clientIP} from './admin-security.mjs';
 import {kkGet,kkPut,kkTake,kkDelete,kkList,kkLimit,kkCleanup} from './kk-store.mjs';
@@ -26,7 +28,7 @@ export async function sendCode(email,code){
  const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+process.env.RESEND_API_KEY,'Content-Type':'application/json'},signal:AbortSignal.timeout(15000),body:JSON.stringify({from:process.env.KK_EMAIL_FROM,to:[email],subject:'Je inlogcode voor Kilometer Kampioen',text:`Je inlogcode is ${code}. Deze code is 10 minuten geldig en werkt één keer. Heb je geen code aangevraagd? Dan kun je deze e-mail negeren.`})});
  if(!r.ok)fail('De e-mail kon niet worden verstuurd. Probeer later opnieuw.',503);
 }
-const assets={'/kilometerkampioen':'kk-app.html','/kilometerkampioen/':'kk-app.html','/kilometerkampioen/app.js':'kk-app.js','/kilometerkampioen/app.css':'kk-app.css','/treinhuis':'kk-admin.html','/treinhuis/':'kk-admin.html','/treinhuis/app.js':'kk-admin.js'};
+const assets={'/kilometerkampioen':'kk-app.html','/kilometerkampioen/':'kk-app.html','/kilometerkampioen/app.js':'kk-app.js','/kilometerkampioen/app.css':'kk-app.css','/treinhuis':'kk-admin.html','/treinhuis/':'kk-admin.html','/treinhuis/app.js':'kk-admin.js','/kilometerkampioen/forms.js':'kk-forms.js'};
 let cleanupAt=0;
 export async function handleKilometerkampioen(req,res,url){
  const path=url.pathname;if(!path.startsWith('/kilometerkampioen')&&!path.startsWith('/treinhuis'))return false;
@@ -38,10 +40,14 @@ export async function handleKilometerkampioen(req,res,url){
  if(assets[path]&&req.method==='GET'){const f=assets[path];res.writeHead(200,{'Content-Type':f.endsWith('.js')?'text/javascript; charset=utf-8':f.endsWith('.css')?'text/css; charset=utf-8':'text/html; charset=utf-8'});res.end(await readFile(new URL(f,import.meta.url)));return true;}
  if(Date.now()>cleanupAt){cleanupAt=Date.now()+600000;await kkCleanup();}
  if(admin&&req.method==='GET'&&path==='/treinhuis/api/participants'){json(res,200,{participants:(await kkList('participant')).map(r=>r.value)});return true;}
- if(admin&&req.method==='GET'&&path==='/treinhuis/api/status'){json(res,200,{email:!!(process.env.RESEND_API_KEY&&process.env.KK_EMAIL_FROM),auth:!!secret(),media:false,memory:process.memoryUsage()});return true;}
+ if(admin&&req.method==='GET'&&path==='/treinhuis/api/status'){json(res,200,{email:!!(process.env.RESEND_API_KEY&&process.env.KK_EMAIL_FROM),auth:!!secret(),media:mediaReady(),memory:process.memoryUsage()});return true;}
  if(req.method==='GET'&&path==='/kilometerkampioen/api/session'){json(res,200,{participant:await participant(req),emailReady:!!(process.env.RESEND_API_KEY&&process.env.KK_EMAIL_FROM)});return true;}
+ if(req.method==='GET'&&path==='/kilometerkampioen/api/submissions'){const user=await participant(req);if(!user)fail('Log eerst in.',401);json(res,200,{submissions:await ownSubmissions(user)});return true;}
+ if(req.method==='GET'&&path.endsWith('/api/media')){const user=admin?null:await participant(req);if(!admin&&!user)fail('Log eerst in.',401);json(res,200,{url:await mediaLink(user,url.searchParams.get('id'),admin)});return true;}
+ if(admin&&req.method==='GET'&&path==='/treinhuis/api/submissions'){json(res,200,{submissions:(await kkList('submission')).map(r=>({...r.value,owner:r.owner}))});return true;}
  if(req.method!=='POST')fail('Niet gevonden.',404);
  if(!origin(req))fail('Open dit formulier op de eigen website.',403);
+ if(path==='/kilometerkampioen/api/upload'){const user=await participant(req);if(!user)fail('Log eerst in.',401);json(res,200,await upload(req,user));return true;}
  const data=await body(req);
  if(path==='/kilometerkampioen/api/request-code'){
   const email=emailOf(data.email),id=hash(email),ip=digest(clientIP(req)||'unknown');
@@ -61,6 +67,7 @@ export async function handleKilometerkampioen(req,res,url){
   const session=token();await kkPut('session',hash(session),user.id,{},Date.now()+7*86400000);cookie(res,session,7*86400);json(res,200,{participant:user});return true;
  }
  const user=await participant(req);if(!user)fail('Log eerst in.',401);
+ if(path==='/kilometerkampioen/api/submit'){json(res,200,{submission:await saveSubmission(user,data)});return true;}
  if(path==='/kilometerkampioen/api/profile'){const profile=validateProfile(data,user);await kkPut('participant',user.id,user.id,profile);json(res,200,{participant:profile});return true;}
  if(path==='/kilometerkampioen/api/logout'){const session=String(req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith('kk_session='))?.slice(11);if(session)await kkDelete('session',hash(session));cookie(res,'',0);json(res,200,{ok:true});return true;}
  fail('Dit onderdeel is nog niet beschikbaar.',404);

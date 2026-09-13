@@ -10,6 +10,7 @@ async function query(sql,args=[]){if(db.pool)return (await db.pool.query(sql,arg
 export async function kkGet(kind,id){const [r]=await query('SELECT * FROM kk_records WHERE kind=$1 AND id=$2',[kind,id]);return r?{...r,value:JSON.parse(r.payload)}:null;}
 export async function kkPut(kind,id,owner,value,expires=0){await query('INSERT INTO kk_records(kind,id,owner,created,expires,payload) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(kind,id) DO UPDATE SET payload=excluded.payload,expires=excluded.expires RETURNING id',[kind,id,owner,Date.now(),expires,JSON.stringify(value)]);}
 export async function kkDelete(kind,id){await query('DELETE FROM kk_records WHERE kind=$1 AND id=$2 RETURNING id',[kind,id]);}
+export async function kkInsert(kind,id,owner,value){return (await query('INSERT INTO kk_records(kind,id,owner,created,expires,payload) VALUES($1,$2,$3,$4,0,$5) ON CONFLICT(kind,id) DO NOTHING RETURNING id',[kind,id,owner,Date.now(),JSON.stringify(value)])).length===1;}
 export async function kkTake(kind,id){const [r]=await query('DELETE FROM kk_records WHERE kind=$1 AND id=$2 RETURNING *',[kind,id]);return r?{...r,value:JSON.parse(r.payload)}:null;}
 export async function kkList(kind,owner=null){const args=[kind];let sql='SELECT * FROM kk_records WHERE kind=$1';if(owner!==null){args.push(owner);sql+=' AND owner=$2';}sql+=' ORDER BY created DESC LIMIT 200';return (await query(sql,args)).map(r=>({...r,value:JSON.parse(r.payload)}));}
 // Atomic fixed-window limiter, shared across replicas; no raw IP addresses stored.
