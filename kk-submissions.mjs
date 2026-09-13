@@ -60,10 +60,10 @@ export function validateSubmission(data){
  if(!['proof','update'].includes(data.kind))fail('Kies bewijs of update.');
  const text=String(data.text||'').trim();if(text.length>10000)fail('Gebruik maximaal 10.000 tekens.');
  const media=Array.isArray(data.media)?[...new Set(data.media)]:[];if(media.length>5)fail('Maximaal vier foto’s en één video.');
- if(data.kind==='update'&&(!text||!media.length))fail('Voeg tekst en minimaal één foto of video toe.');
+ if(data.kind==='update'&&!text)fail('Voeg tekst toe aan je update.');
  let location=null;
  if(data.location){const {latitude,longitude,accuracy,timestamp}=data.location;if(![latitude,longitude,accuracy,timestamp].every(Number.isFinite)||Math.abs(latitude)>90||Math.abs(longitude)>180||accuracy<0||timestamp>Date.now()+60000||timestamp<0)fail('Ongeldige locatie.');location={latitude,longitude,accuracy,timestamp};}
- if(data.kind==='proof'&&!text&&!media.length&&!location)fail('Voeg een locatie, toelichting of bestand toe.');
+ if(data.kind==='proof'&&!media.length)fail('Voeg minimaal één foto toe aan je bewijs.');
  const station=data.kind==='proof'?String(data.station||'').trim().slice(0,200):'';const stationId=data.kind==='proof'?String(data.stationId||''):'';if(stationId&&!/^nl-[a-z0-9-]{1,20}$/.test(stationId))fail('Ongeldig station.');return {kind:data.kind,title:data.kind==='update'?String(data.title||'').trim().slice(0,120):'',text,media,location,station,stationId};
 }
 export async function saveSubmission(user,data){
@@ -72,6 +72,7 @@ export async function saveSubmission(user,data){
  const existing=await kkGet('submission',data.id);if(existing){if(existing.owner!==user.id)fail('Geen toegang.',403);return existing.value;}
  let images=0,videos=0;
  for(const id of value.media){const m=await kkGet('media',id);if(!m||m.owner!==user.id)fail('Een bestand is niet beschikbaar.',403);if(m.value.kind==='image')images++;else videos++;}
+ if(value.kind==='proof'&&!images)fail('Voeg minimaal één foto toe aan je bewijs.');
  if(images>4||videos>1)fail('Maximaal vier foto’s en één video per inzending.');
  if(!await kkLimit('submission:'+user.id,60,3600000))fail('Te veel inzendingen. Probeer later opnieuw.',429);
  const submission={...value,id:data.id,displayName:user.displayName||'Deelnemer',createdAt:Date.now(),receivedAt:Date.now()};
