@@ -1,0 +1,1195 @@
+{
+  "source": "scorekaart2026-aangepast.xlsx",
+  "sha256": "1d63402a698f391d8e630d56daa2a88e1015cade103984074887086c61d2aa75",
+  "sheet": "Scorekaart (leeg)",
+  "edges": [
+    {
+      "id": "score2026-8",
+      "row": 8,
+      "from": "Leeuwarden",
+      "to": "Harlingen Haven",
+      "label": "Leeuwarden - Harlingen Haven",
+      "km": 26.4,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-9",
+      "row": 9,
+      "from": "Leeuwarden",
+      "to": "Stavoren",
+      "label": "Leeuwarden - Stavoren",
+      "km": 50.2,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-10",
+      "row": 10,
+      "from": "Groningen",
+      "to": "Leeuwarden",
+      "label": "Groningen - Leeuwarden",
+      "km": 54.5,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-11",
+      "row": 11,
+      "from": "Eemshaven",
+      "to": "Sauwerd",
+      "label": "Eemshaven - Sauwerd",
+      "km": 26.5,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-12",
+      "row": 12,
+      "from": "Delfzijl",
+      "to": "Sauwerd",
+      "label": "Delfzijl - Sauwerd",
+      "km": 34.1,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-13",
+      "row": 13,
+      "from": "Sauwerd",
+      "to": "Groningen",
+      "label": "Sauwerd - Groningen",
+      "km": 11.0,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-14",
+      "row": 14,
+      "from": "Groningen",
+      "to": "Groningen Europapark",
+      "label": "Groningen - Groningen Europapark",
+      "km": 2.6,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-15",
+      "row": 15,
+      "from": "Groningen Europapark",
+      "to": "Zuidbroek",
+      "label": "Groningen Europapark - Zuidbroek",
+      "km": 19.0,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-16",
+      "row": 16,
+      "from": "Zuidbroek",
+      "to": "Veendam",
+      "label": "Zuidbroek - Veendam",
+      "km": 7.5,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-17",
+      "row": 17,
+      "from": "Zuidbroek",
+      "to": "Bad Nieuweschans",
+      "label": "Zuidbroek - Bad Nieuweschans",
+      "km": 24.6,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-18",
+      "row": 18,
+      "from": "Groningen Europapark",
+      "to": "Meppel",
+      "label": "Groningen Europapark - Meppel",
+      "km": 74.6,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-19",
+      "row": 19,
+      "from": "Leeuwarden",
+      "to": "Meppel",
+      "label": "Leeuwarden - Meppel",
+      "km": 66.5,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-20",
+      "row": 20,
+      "from": "Meppel",
+      "to": "Zwolle",
+      "label": "Meppel - Zwolle",
+      "km": 27.7,
+      "maxCount": 4
+    },
+    {
+      "id": "score2026-22",
+      "row": 22,
+      "from": "Zwolle",
+      "to": "Kampen",
+      "label": "Zwolle - Kampen",
+      "km": 13.3,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-23",
+      "row": 23,
+      "from": "Zwolle",
+      "to": "Mariënberg",
+      "label": "Zwolle - Mariënberg",
+      "km": 34.3,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-24",
+      "row": 24,
+      "from": "Mariënberg",
+      "to": "Emmen",
+      "label": "Mariënberg - Emmen",
+      "km": 41.2,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-25",
+      "row": 25,
+      "from": "Mariënberg",
+      "to": "Almelo",
+      "label": "Mariënberg - Almelo",
+      "km": 19.0,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-26",
+      "row": 26,
+      "from": "Zwolle",
+      "to": "Wierden",
+      "label": "Zwolle - Wierden",
+      "km": 39.8,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-27",
+      "row": 27,
+      "from": "Wierden",
+      "to": "Almelo",
+      "label": "Wierden - Almelo",
+      "km": 4.6,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-28",
+      "row": 28,
+      "from": "Zwolle",
+      "to": "Deventer",
+      "label": "Zwolle - Deventer",
+      "km": 29.7,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-29",
+      "row": 29,
+      "from": "Deventer",
+      "to": "Wierden",
+      "label": "Deventer - Wierden",
+      "km": 34.3,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-30",
+      "row": 30,
+      "from": "Almelo",
+      "to": "Hengelo",
+      "label": "Almelo - Hengelo",
+      "km": 14.6,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-31",
+      "row": 31,
+      "from": "Hengelo",
+      "to": "Oldenzaal",
+      "label": "Hengelo - Oldenzaal",
+      "km": 11.0,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-32",
+      "row": 32,
+      "from": "Hengelo",
+      "to": "Enschede",
+      "label": "Hengelo - Enschede",
+      "km": 7.6,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-33",
+      "row": 33,
+      "from": "Enschede",
+      "to": "Glanerbrug",
+      "label": "Enschede - Glanerbrug",
+      "km": 6.2,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-35",
+      "row": 35,
+      "from": "Amersfoort Centraal",
+      "to": "Zwolle",
+      "label": "Amersfoort Centraal - Zwolle",
+      "km": 66.5,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-36",
+      "row": 36,
+      "from": "Amersfoort Centraal",
+      "to": "Hoevelaken",
+      "label": "Amersfoort Centraal - Hoevelaken",
+      "km": 6.0,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-37",
+      "row": 37,
+      "from": "Hoevelaken",
+      "to": "Ede-Wageningen",
+      "label": "Hoevelaken - Ede-Wageningen",
+      "km": 27.7,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-38",
+      "row": 38,
+      "from": "Hoevelaken",
+      "to": "Apeldoorn",
+      "label": "Hoevelaken - Apeldoorn",
+      "km": 37.7,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-39",
+      "row": 39,
+      "from": "Apeldoorn",
+      "to": "Deventer",
+      "label": "Apeldoorn - Deventer",
+      "km": 14.6,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-40",
+      "row": 40,
+      "from": "Deventer",
+      "to": "Zutphen",
+      "label": "Deventer - Zutphen",
+      "km": 16.4,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-41",
+      "row": 41,
+      "from": "Apeldoorn",
+      "to": "Zutphen",
+      "label": "Apeldoorn - Zutphen",
+      "km": 17.5,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-42",
+      "row": 42,
+      "from": "Zutphen",
+      "to": "Hengelo",
+      "label": "Zutphen - Hengelo",
+      "km": 45.7,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-43",
+      "row": 43,
+      "from": "Zutphen",
+      "to": "Winterswijk",
+      "label": "Zutphen - Winterswijk",
+      "km": 43.7,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-44",
+      "row": 44,
+      "from": "Ede-Wageningen",
+      "to": "Arnhem Centraal",
+      "label": "Ede-Wageningen - Arnhem Centraal",
+      "km": 16.7,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-45",
+      "row": 45,
+      "from": "Arnhem Centraal",
+      "to": "Arnhem Velperpoort",
+      "label": "Arnhem Centraal - Arnhem Velperpoort",
+      "km": 1.9,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-46",
+      "row": 46,
+      "from": "Arnhem Velperpoort",
+      "to": "Zutphen",
+      "label": "Arnhem Velperpoort - Zutphen",
+      "km": 27.3,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-47",
+      "row": 47,
+      "from": "Arnhem Velperpoort",
+      "to": "Zevenaar",
+      "label": "Arnhem Velperpoort - Zevenaar",
+      "km": 12.5,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-48",
+      "row": 48,
+      "from": "Zevenaar",
+      "to": "Winterswijk",
+      "label": "Zevenaar - Winterswijk",
+      "km": 50.4,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-49",
+      "row": 49,
+      "from": "Tiel",
+      "to": "Elst",
+      "label": "Tiel - Elst",
+      "km": 32.6,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-50",
+      "row": 50,
+      "from": "Elst",
+      "to": "Arnhem Centraal",
+      "label": "Elst - Arnhem Centraal",
+      "km": 10.3,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-51",
+      "row": 51,
+      "from": "Nijmegen",
+      "to": "Elst",
+      "label": "Nijmegen - Elst",
+      "km": 8.3,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-53",
+      "row": 53,
+      "from": "Weesp",
+      "to": "Almere Poort",
+      "label": "Weesp - Almere Poort",
+      "km": 11.7,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-54",
+      "row": 54,
+      "from": "Naarden-Bussum",
+      "to": "Almere Poort",
+      "label": "Naarden-Bussum - Almere Poort",
+      "km": 17.2,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-55",
+      "row": 55,
+      "from": "Almere Poort",
+      "to": "Lelystad Centrum",
+      "label": "Almere Poort - Lelystad Centrum",
+      "km": 28.3,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-56",
+      "row": 56,
+      "from": "Lelystad Centrum",
+      "to": "Zwolle",
+      "label": "Lelystad Centrum - Zwolle",
+      "km": 50.0,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-58",
+      "row": 58,
+      "from": "Den Helder",
+      "to": "Heerhugowaard",
+      "label": "Den Helder - Heerhugowaard",
+      "km": 34.5,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-59",
+      "row": 59,
+      "from": "Heerhugowaard",
+      "to": "Hoorn",
+      "label": "Heerhugowaard - Hoorn",
+      "km": 16.9,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-60",
+      "row": 60,
+      "from": "Hoorn",
+      "to": "Enkhuizen",
+      "label": "Hoorn - Enkhuizen",
+      "km": 17.5,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-61",
+      "row": 61,
+      "from": "Hoorn",
+      "to": "Zaandam",
+      "label": "Hoorn - Zaandam",
+      "km": 32.8,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-62",
+      "row": 62,
+      "from": "Heerhugowaard",
+      "to": "Uitgeest",
+      "label": "Heerhugowaard - Uitgeest",
+      "km": 22.9,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-63",
+      "row": 63,
+      "from": "Uitgeest",
+      "to": "Zaandam",
+      "label": "Uitgeest - Zaandam",
+      "km": 13.0,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-64",
+      "row": 64,
+      "from": "Uitgeest",
+      "to": "Haarlem",
+      "label": "Uitgeest - Haarlem",
+      "km": 17.3,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-65",
+      "row": 65,
+      "from": "Zandvoort aan Zee",
+      "to": "Haarlem",
+      "label": "Zandvoort aan Zee - Haarlem",
+      "km": 7.9,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-66",
+      "row": 66,
+      "from": "Haarlem",
+      "to": "Leiden Centraal",
+      "label": "Haarlem - Leiden Centraal",
+      "km": 29.1,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-67",
+      "row": 67,
+      "from": "Haarlem",
+      "to": "Amsterdam Sloterdijk",
+      "label": "Haarlem - Amsterdam Sloterdijk",
+      "km": 14.6,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-68",
+      "row": 68,
+      "from": "Zaandam",
+      "to": "Amsterdam Sloterdijk",
+      "label": "Zaandam - Amsterdam Sloterdijk",
+      "km": 8.2,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-69",
+      "row": 69,
+      "from": "Leiden Centraal",
+      "to": "Hoofddorp",
+      "label": "Leiden Centraal - Hoofddorp",
+      "km": 22.2,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-70",
+      "row": 70,
+      "from": "Hoofddorp",
+      "to": "Schiphol",
+      "label": "Hoofddorp - Schiphol",
+      "km": 4.6,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-71",
+      "row": 71,
+      "from": "Schiphol",
+      "to": "Amsterdam Sloterdijk",
+      "label": "Schiphol - Amsterdam Sloterdijk",
+      "km": 12.4,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-72",
+      "row": 72,
+      "from": "Amsterdam Sloterdijk",
+      "to": "Amsterdam Centraal",
+      "label": "Amsterdam Sloterdijk - Amsterdam Centraal",
+      "km": 5.0,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-73",
+      "row": 73,
+      "from": "Amsterdam Centraal",
+      "to": "Amsterdam Muiderpoort",
+      "label": "Amsterdam Centraal - Amsterdam Muiderpoort",
+      "km": 3.6,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-74",
+      "row": 74,
+      "from": "Amsterdam Muiderpoort",
+      "to": "Duivendrecht",
+      "label": "Amsterdam Muiderpoort - Duivendrecht",
+      "km": 4.7,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-75",
+      "row": 75,
+      "from": "Duivendrecht",
+      "to": "Amsterdam Bijlmer Arena",
+      "label": "Duivendrecht - Amsterdam Bijlmer Arena",
+      "km": 1.0,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-76",
+      "row": 76,
+      "from": "Schiphol",
+      "to": "Amsterdam RAI",
+      "label": "Schiphol - Amsterdam RAI",
+      "km": 10.0,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-77",
+      "row": 77,
+      "from": "Amsterdam RAI",
+      "to": "Duivendrecht",
+      "label": "Amsterdam RAI - Duivendrecht",
+      "km": 4.3,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-78",
+      "row": 78,
+      "from": "Amsterdam RAI",
+      "to": "Amsterdam Bijlmer Arena",
+      "label": "Amsterdam RAI - Amsterdam Bijlmer Arena",
+      "km": 5.0,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-79",
+      "row": 79,
+      "from": "Amsterdam Bijlmer Arena",
+      "to": "Breukelen",
+      "label": "Amsterdam Bijlmer Arena - Breukelen",
+      "km": 17.4,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-80",
+      "row": 80,
+      "from": "Duivendrecht",
+      "to": "Weesp",
+      "label": "Duivendrecht - Weesp",
+      "km": 7.8,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-81",
+      "row": 81,
+      "from": "Amsterdam Muiderpoort",
+      "to": "Weesp",
+      "label": "Amsterdam Muiderpoort - Weesp",
+      "km": 9.8,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-83",
+      "row": 83,
+      "from": "Weesp",
+      "to": "Naarden-Bussum",
+      "label": "Weesp - Naarden-Bussum",
+      "km": 9.1,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-84",
+      "row": 84,
+      "from": "Naarden-Bussum",
+      "to": "Hilversum",
+      "label": "Naarden-Bussum - Hilversum",
+      "km": 6.4,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-85",
+      "row": 85,
+      "from": "Hilversum",
+      "to": "Baarn",
+      "label": "Hilversum - Baarn",
+      "km": 7.1,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-86",
+      "row": 86,
+      "from": "Baarn",
+      "to": "Amersfoort Centraal",
+      "label": "Baarn - Amersfoort Centraal",
+      "km": 8.9,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-87",
+      "row": 87,
+      "from": "Den Dolder",
+      "to": "Baarn",
+      "label": "Den Dolder - Baarn",
+      "km": 10.9,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-88",
+      "row": 88,
+      "from": "Den Dolder",
+      "to": "Amersfoort Centraal",
+      "label": "Den Dolder - Amersfoort Centraal",
+      "km": 9.5,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-89",
+      "row": 89,
+      "from": "Utrecht Overvecht",
+      "to": "Hilversum",
+      "label": "Utrecht Overvecht - Hilversum",
+      "km": 14.1,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-90",
+      "row": 90,
+      "from": "Utrecht Overvecht",
+      "to": "Den Dolder",
+      "label": "Utrecht Overvecht - Den Dolder",
+      "km": 8.5,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-91",
+      "row": 91,
+      "from": "Utrecht Centraal",
+      "to": "Utrecht Overvecht",
+      "label": "Utrecht Centraal - Utrecht Overvecht",
+      "km": 3.4,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-92",
+      "row": 92,
+      "from": "Breukelen",
+      "to": "Utrecht Centraal",
+      "label": "Breukelen - Utrecht Centraal",
+      "km": 13.3,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-93",
+      "row": 93,
+      "from": "Woerden",
+      "to": "Breukelen",
+      "label": "Woerden - Breukelen",
+      "km": 12.6,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-94",
+      "row": 94,
+      "from": "Woerden",
+      "to": "Utrecht Centraal",
+      "label": "Woerden - Utrecht Centraal",
+      "km": 15.9,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-95",
+      "row": 95,
+      "from": "Bilthoven",
+      "to": "Utrecht Maliebaan",
+      "label": "Bilthoven - Utrecht Maliebaan",
+      "km": 6.2,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-96",
+      "row": 96,
+      "from": "Utrecht Centraal",
+      "to": "Utrecht Vaartsche Rijn",
+      "label": "Utrecht Centraal - Utrecht Vaartsche Rijn",
+      "km": 1.5,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-97",
+      "row": 97,
+      "from": "Utrecht Vaartsche Rijn",
+      "to": "Maarn",
+      "label": "Utrecht Vaartsche Rijn - Maarn",
+      "km": 17.7,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-98",
+      "row": 98,
+      "from": "Maarn",
+      "to": "Rhenen",
+      "label": "Maarn - Rhenen",
+      "km": 21.9,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-99",
+      "row": 99,
+      "from": "Maarn",
+      "to": "Ede-Wageningen",
+      "label": "Maarn - Ede-Wageningen",
+      "km": 21.6,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-100",
+      "row": 100,
+      "from": "Utrecht Vaartsche Rijn",
+      "to": "Geldermalsen",
+      "label": "Utrecht Vaartsche Rijn - Geldermalsen",
+      "km": 24.5,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-101",
+      "row": 101,
+      "from": "Geldermalsen",
+      "to": "Tiel",
+      "label": "Geldermalsen - Tiel",
+      "km": 11.9,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-103",
+      "row": 103,
+      "from": "Dordrecht",
+      "to": "Geldermalsen",
+      "label": "Dordrecht - Geldermalsen",
+      "km": 48.1,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-104",
+      "row": 104,
+      "from": "Geldermalsen",
+      "to": "'s-Hertogenbosch",
+      "label": "Geldermalsen - 's-Hertogenbosch",
+      "km": 22.1,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-105",
+      "row": 105,
+      "from": "'s-Hertogenbosch",
+      "to": "Nijmegen",
+      "label": "'s-Hertogenbosch - Nijmegen",
+      "km": 43.5,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-106",
+      "row": 106,
+      "from": "Nijmegen",
+      "to": "Blerick",
+      "label": "Nijmegen - Blerick",
+      "km": 59.0,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-107",
+      "row": 107,
+      "from": "Blerick",
+      "to": "Venlo",
+      "label": "Blerick - Venlo",
+      "km": 1.7,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-108",
+      "row": 108,
+      "from": "Dordrecht",
+      "to": "Lage Zwaluwe",
+      "label": "Dordrecht - Lage Zwaluwe",
+      "km": 14.3,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-109",
+      "row": 109,
+      "from": "Roosendaal",
+      "to": "Lage Zwaluwe",
+      "label": "Roosendaal - Lage Zwaluwe",
+      "km": 22.8,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-110",
+      "row": 110,
+      "from": "Roosendaal",
+      "to": "Breda",
+      "label": "Roosendaal - Breda",
+      "km": 24.0,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-111",
+      "row": 111,
+      "from": "Lage Zwaluwe",
+      "to": "Breda Prinsenbeek",
+      "label": "Lage Zwaluwe - Breda Prinsenbeek",
+      "km": 10.1,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-112",
+      "row": 112,
+      "from": "Breda Prinsenbeek",
+      "to": "Breda",
+      "label": "Breda Prinsenbeek - Breda",
+      "km": 4.8,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-113",
+      "row": 113,
+      "from": "Breda",
+      "to": "Tilburg",
+      "label": "Breda - Tilburg",
+      "km": 21.6,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-114",
+      "row": 114,
+      "from": "Tilburg",
+      "to": "'s-Hertogenbosch",
+      "label": "Tilburg - 's-Hertogenbosch",
+      "km": 22.3,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-115",
+      "row": 115,
+      "from": "'s-Hertogenbosch",
+      "to": "Boxtel",
+      "label": "'s-Hertogenbosch - Boxtel",
+      "km": 12.2,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-116",
+      "row": 116,
+      "from": "Boxtel",
+      "to": "Tilburg",
+      "label": "Boxtel - Tilburg",
+      "km": 17.0,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-117",
+      "row": 117,
+      "from": "Boxtel",
+      "to": "Eindhoven Centraal",
+      "label": "Boxtel - Eindhoven Centraal",
+      "km": 19.9,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-118",
+      "row": 118,
+      "from": "Eindhoven Centraal",
+      "to": "Blerick",
+      "label": "Eindhoven Centraal - Blerick",
+      "km": 50.2,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-120",
+      "row": 120,
+      "from": "Eindhoven Centraal",
+      "to": "Roermond",
+      "label": "Eindhoven Centraal - Roermond",
+      "km": 53.6,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-121",
+      "row": 121,
+      "from": "Venlo",
+      "to": "Roermond",
+      "label": "Venlo - Roermond",
+      "km": 23.7,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-122",
+      "row": 122,
+      "from": "Roermond",
+      "to": "Sittard",
+      "label": "Roermond - Sittard",
+      "km": 24.4,
+      "maxCount": 4
+    },
+    {
+      "id": "score2026-123",
+      "row": 123,
+      "from": "Sittard",
+      "to": "Maastricht Noord",
+      "label": "Sittard - Maastricht Noord",
+      "km": 18.9,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-124",
+      "row": 124,
+      "from": "Maastricht Noord",
+      "to": "Maastricht",
+      "label": "Maastricht Noord - Maastricht",
+      "km": 3.0,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-125",
+      "row": 125,
+      "from": "Maastricht",
+      "to": "Eijsden",
+      "label": "Maastricht - Eijsden",
+      "km": 9.1,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-126",
+      "row": 126,
+      "from": "Sittard",
+      "to": "Heerlen",
+      "label": "Sittard - Heerlen",
+      "km": 18.5,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-127",
+      "row": 127,
+      "from": "Maastricht Noord",
+      "to": "Heerlen",
+      "label": "Maastricht Noord - Heerlen",
+      "km": 21.3,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-128",
+      "row": 128,
+      "from": "Heerlen",
+      "to": "Landgraaf",
+      "label": "Heerlen - Landgraaf",
+      "km": 3.2,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-129",
+      "row": 129,
+      "from": "Landgraaf",
+      "to": "Eygelshoven Markt",
+      "label": "Landgraaf - Eygelshoven Markt",
+      "km": 3.0,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-130",
+      "row": 130,
+      "from": "Landgraaf",
+      "to": "Kerkrade Centrum",
+      "label": "Landgraaf - Kerkrade Centrum",
+      "km": 5.6,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-132",
+      "row": 132,
+      "from": "Vlissingen",
+      "to": "Roosendaal",
+      "label": "Vlissingen - Roosendaal",
+      "km": 75.3,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-134",
+      "row": 134,
+      "from": "Hoofddorp",
+      "to": "Rotterdam Centraal",
+      "label": "Hoofddorp - Rotterdam Centraal (via HSL)",
+      "km": 47.8,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-135",
+      "row": 135,
+      "from": "Rotterdam Lombardijen",
+      "to": "Breda Prinsenbeek",
+      "label": "Rotterdam Lombardijen - Breda Prinsenbeek (via HSL)",
+      "km": 33.8,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-136",
+      "row": 136,
+      "from": "Leiden Centraal",
+      "to": "Alphen aan den Rijn",
+      "label": "Leiden Centraal - Alphen aan den Rijn",
+      "km": 15.3,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-137",
+      "row": 137,
+      "from": "Alphen aan den Rijn",
+      "to": "Woerden",
+      "label": "Alphen aan den Rijn - Woerden",
+      "km": 19.1,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-138",
+      "row": 138,
+      "from": "Alphen aan den Rijn",
+      "to": "Gouda",
+      "label": "Alphen aan den Rijn - Gouda",
+      "km": 16.9,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-139",
+      "row": 139,
+      "from": "Gouda",
+      "to": "Woerden",
+      "label": "Gouda - Woerden",
+      "km": 16.8,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-140",
+      "row": 140,
+      "from": "Den Haag Centraal",
+      "to": "Den Haag Laan van NOI",
+      "label": "Den Haag Centraal - Den Haag Laan van NOI",
+      "km": 1.5,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-141",
+      "row": 141,
+      "from": "Den Haag Laan van NOI",
+      "to": "Leiden Centraal",
+      "label": "Den Haag Laan van NOI - Leiden Centraal",
+      "km": 13.9,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-142",
+      "row": 142,
+      "from": "Den Haag Centraal",
+      "to": "Gouda",
+      "label": "Den Haag Centraal - Gouda",
+      "km": 28.2,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-143",
+      "row": 143,
+      "from": "Den Haag Centraal",
+      "to": "Den Haag Hollands Spoor",
+      "label": "Den Haag Centraal - Den Haag Hollands Spoor",
+      "km": 1.8,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-144",
+      "row": 144,
+      "from": "Den Haag Hollands Spoor",
+      "to": "Den Haag Laan van NOI",
+      "label": "Den Haag Hollands Spoor - Den Haag Laan van NOI",
+      "km": 1.9,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-145",
+      "row": 145,
+      "from": "Den Haag Hollands Spoor",
+      "to": "Rotterdam Centraal",
+      "label": "Den Haag Hollands Spoor - Rotterdam Centraal",
+      "km": 22.3,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-146",
+      "row": 146,
+      "from": "Rotterdam Centraal",
+      "to": "Gouda",
+      "label": "Rotterdam Centraal - Gouda",
+      "km": 23.8,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-147",
+      "row": 147,
+      "from": "Rotterdam Centraal",
+      "to": "Rotterdam Lombardijen",
+      "label": "Rotterdam Centraal - Rotterdam Lombardijen",
+      "km": 7.2,
+      "maxCount": 2
+    },
+    {
+      "id": "score2026-148",
+      "row": 148,
+      "from": "Rotterdam Lombardijen",
+      "to": "Dordrecht",
+      "label": "Rotterdam Lombardijen - Dordrecht",
+      "km": 13.1,
+      "maxCount": 2
+    }
+  ]
+}

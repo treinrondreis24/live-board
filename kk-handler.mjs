@@ -1,3 +1,4 @@
+import {hiltaContext,proposeHilta,confirmHilta} from './kk-hilta.mjs';
 import {registerPassword,loginPassword,setApproval,canUseProof} from './kk-password.mjs';
 import {assignTeam,updatePage,updateMedia} from './kk-updates.mjs';
 import {saveBlog,publishBlog,unpublishBlog,publicBlog,blogMedia,EDITOR_OWNER} from './kk-blog.mjs';
@@ -33,7 +34,7 @@ export async function sendCode(email,code){
  const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+process.env.RESEND_API_KEY,'Content-Type':'application/json'},signal:AbortSignal.timeout(15000),body:JSON.stringify({from:process.env.KK_EMAIL_FROM,to:[email],subject:'Je inlogcode voor Kilometer Kampioen',text:`Je inlogcode is ${code}. Deze code is 10 minuten geldig en werkt één keer. Heb je geen code aangevraagd? Dan kun je deze e-mail negeren.`})});
  if(!r.ok)fail('De e-mail kon niet worden verstuurd. Probeer later opnieuw.',503);
 }
-const assets={'/kilometerkampioen':'kk-app.html','/kilometerkampioen/':'kk-app.html','/kilometerkampioen/app.js':'kk-app.js','/kilometerkampioen/app.css':'kk-app.css','/treinhuis':'kk-admin.html','/treinhuis/':'kk-admin.html','/treinhuis/app.js':'kk-admin.js','/treinhuis/teams.js':'kk-admin-teams.js','/kilometerkampioen/forms.js':'kk-forms.js','/treinhuis/blog.js':'kk-blog-admin.js','/kilometerkampioen/liveblog':'kk-blog.html','/kilometerkampioen/liveblog.js':'kk-blog-public.js','/kilometerkampioen/rich.js':'kk-rich.js','/kilometerkampioen/community.js':'kk-community.js','/kilometerkampioen/login.js':'kk-login.js','/kilometerkampioen/navigation.js':'kk-navigation.js'};
+const assets={'/kilometerkampioen':'kk-app.html','/kilometerkampioen/':'kk-app.html','/kilometerkampioen/app.js':'kk-app.js','/kilometerkampioen/app.css':'kk-app.css','/treinhuis':'kk-admin.html','/treinhuis/':'kk-admin.html','/treinhuis/app.js':'kk-admin.js','/treinhuis/teams.js':'kk-admin-teams.js','/kilometerkampioen/forms.js':'kk-forms.js','/kilometerkampioen/hilta.js':'kk-hilta.js','/treinhuis/blog.js':'kk-blog-admin.js','/kilometerkampioen/liveblog':'kk-blog.html','/kilometerkampioen/liveblog.js':'kk-blog-public.js','/kilometerkampioen/rich.js':'kk-rich.js','/kilometerkampioen/community.js':'kk-community.js','/kilometerkampioen/login.js':'kk-login.js','/kilometerkampioen/navigation.js':'kk-navigation.js'};
 let cleanupAt=0;
 export async function handleKilometerkampioen(req,res,url){
  const path=url.pathname;if(!path.startsWith('/kilometerkampioen')&&!path.startsWith('/treinhuis'))return false;
@@ -53,9 +54,11 @@ export async function handleKilometerkampioen(req,res,url){
  if(admin&&req.method==='GET'&&path==='/treinhuis/api/participants'){json(res,200,{participants:(await kkList('participant')).map(r=>r.value)});return true;}
  if(admin&&req.method==='GET'&&path==='/treinhuis/api/status'){json(res,200,{email:!!(process.env.RESEND_API_KEY&&process.env.KK_EMAIL_FROM),auth:!!secret(),media:mediaReady(),memory:process.memoryUsage()});return true;}
  if(req.method==='GET'&&path==='/kilometerkampioen/api/session'){json(res,200,{participant:await participant(req),emailReady:!!(process.env.RESEND_API_KEY&&process.env.KK_EMAIL_FROM)});return true;}
+ if(req.method==='GET'&&path==='/kilometerkampioen/api/hilta'){const user=await participant(req);if(!user)fail('Log eerst in.',401);json(res,200,await hiltaContext(user,url.searchParams.get('proofId')));return true;}
  if(req.method==='GET'&&path==='/kilometerkampioen/api/submissions'){const user=await participant(req);if(!user)fail('Log eerst in.',401);json(res,200,{submissions:await ownSubmissions(user)});return true;}
  if(req.method==='GET'&&path.endsWith('/api/media')){const user=admin?null:await participant(req);if(!admin&&!user)fail('Log eerst in.',401);json(res,200,{url:await mediaLink(user,url.searchParams.get('id'),admin)});return true;}
  if(admin&&req.method==='GET'&&path==='/treinhuis/api/submissions'){json(res,200,await kkAdminSubmissions(Object.fromEntries(url.searchParams)));return true;}
+ if(admin&&req.method==='GET'&&path==='/treinhuis/api/hilta'){json(res,200,{route:(await kkGet('hilta-current',url.searchParams.get('proofId')))?.value||null});return true;}
  if(admin&&req.method==='GET'&&path==='/treinhuis/api/blog'){json(res,200,{drafts:(await kkList('blog-draft')).map(r=>r.value),published:(await publicBlog()).map(p=>p.id)});return true;}
  if(req.method==='GET'&&['/kilometerkampioen/api/updates','/kilometerkampioen/api/update-media'].includes(path)){if(!await participant(req))fail('Log eerst in.',401);json(res,200,path.endsWith('/updates')?await updatePage({before:url.searchParams.get('before')||'',teams:url.searchParams.getAll('team')}):await updateMedia(url.searchParams.get('update'),url.searchParams.get('id')));return true;}
  if(req.method!=='POST')fail('Niet gevonden.',404);
@@ -94,6 +97,8 @@ export async function handleKilometerkampioen(req,res,url){
   const session=token();await kkPut('session',hash(session),user.id,{},Date.now()+7*86400000);cookie(res,session,7*86400);json(res,200,{participant:user});return true;
  }
  const user=await participant(req);if(!user)fail('Log eerst in.',401);
+ if(path==='/kilometerkampioen/api/hilta-propose'){json(res,200,{proposal:await proposeHilta(user,data)});return true;}
+ if(path==='/kilometerkampioen/api/hilta-confirm'){json(res,200,{confirmation:await confirmHilta(user,data)});return true;}
  if(path==='/kilometerkampioen/api/submit'){json(res,200,{submission:await saveSubmission(user,data)});return true;}
  if(path==='/kilometerkampioen/api/profile'){const profile=validateProfile(data,user);const changes=Object.fromEntries(['fullName','displayName','edition','rotterdamTime','together','companion','station','distance','updatedAt'].map(k=>[k,profile[k]]));if(!user.startTime)changes.startTime=profile.startTime;const saved=await kkPatchParticipant(user.id,changes);json(res,200,{participant:saved});return true;}
  if(path==='/kilometerkampioen/api/logout'){const session=String(req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith('kk_session='))?.slice(11);if(session)await kkDelete('session',hash(session));cookie(res,'',0);json(res,200,{ok:true});return true;}

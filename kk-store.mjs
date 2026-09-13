@@ -41,3 +41,5 @@ export async function kkAdminSubmissions(options={}){
 }
 
 export async function kkPatchParticipant(id,changes){const merge=db.pool?"(payload::jsonb || $2::jsonb)::text":"json_patch(payload,$2)";const [row]=await query("UPDATE kk_records SET payload="+merge+" WHERE kind='participant' AND id=$1 RETURNING payload",[id,JSON.stringify(changes)]);return row?JSON.parse(row.payload):null;}
+
+export async function kkPreviousProof(row){const kind=db.pool?"payload::jsonb->>'kind'":"json_extract(payload,'$.kind')";const [p]=await query("SELECT * FROM kk_records WHERE kind='submission' AND owner=$1 AND "+kind+"='proof' AND (created<$2 OR (created=$2 AND id<$3)) ORDER BY created DESC,id DESC LIMIT 1",[row.owner,Number(row.created),row.id]);return p?{...p,value:JSON.parse(p.payload)}:null;}
