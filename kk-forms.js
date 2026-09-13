@@ -1,5 +1,5 @@
 window.kkForms=function(content,api,participant){
- const area=document.createElement('div');content.append(area);window.kkCommunity(area,api);
+ const area=document.createElement('div');content.append(area);window.kkClaims(area,api,participant);window.kkCommunity(area,api);
  if(participant.approval!=='approved'&&(participant.manualRegistration||participant.approval)){const note=document.createElement('p');note.textContent='Je kunt updates bekijken en delen. Privébewijs komt beschikbaar zodra de organisatie je aanmelding heeft goedgekeurd. Vernieuw deze pagina om je status bij te werken.';note.dataset.page='bewijs';area.append(note);}
  for(const kind of (participant.approval!=='approved'&&(participant.manualRegistration||participant.approval)?['update']:['proof','update'])){
   const section=document.createElement('section');section.dataset.page=kind==='proof'?'bewijs':'delen';area.append(section);
