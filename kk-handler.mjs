@@ -46,6 +46,10 @@ export async function handleKilometerkampioen(req,res,url){
  res.setHeader('Cache-Control','no-store');res.setHeader('X-Robots-Tag','noindex, nofollow, noarchive');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');res.setHeader('X-Frame-Options','DENY');
  res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' https: blob:; media-src 'self' https: blob:; connect-src 'self'; frame-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
  try{
+ if(req.method==='GET'&&path==='/kilometerkampioen/scorekaart.xlsx'){
+ const file=await readFile(new URL('./kk-scorekaart-leeg.xlsx',import.meta.url));
+ res.writeHead(200,{'Content-Type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','Content-Disposition':'attachment; filename="Hilta-scorekaart-2026.xlsx"','Content-Length':file.length});res.end(file);return true;
+ }
  const admin=path.startsWith('/treinhuis');
  if(path==='/kilometerkampioen/liveblog'){
  res.removeHeader('X-Frame-Options');

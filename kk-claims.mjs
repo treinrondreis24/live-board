@@ -20,4 +20,4 @@ export async function saveClaim(user,data){
 }
 export async function ownClaim(user){if(!canUseProof(user))fail('Je aanmelding moet eerst worden goedgekeurd.',403);return (await kkGet('claim',user.id))?.value||null;}
 export async function claimFile(user,claimId,fileId,admin=false){if(!admin&&(!canUseProof(user)||user.id!==claimId))fail('Geen toegang.',403);const claim=await kkGet('claim',claimId);if(!claim||!Object.values(claim.value.attachments).flat().some(f=>f.id===fileId))fail('Bijlage niet gevonden.',404);const m=await kkGet('media',fileId);if(!m||m.owner!==claim.owner)fail('Bijlage niet gevonden.',404);return authorizedMediaUrl(m.owner,m.id,m.value.filename||'bijlage');}
-export async function listClaims(){return (await kkList('claim')).map(r=>r.value);}
+export async function listClaims(){return (await kkList('claim')).map(r=>r.value).sort((a,b)=>b.km-a.km||a.receivedAt-b.receivedAt);}
