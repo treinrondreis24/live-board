@@ -9,7 +9,7 @@ test('Treinhuis enrollment, scope, TOTP replay, owner protection and revocation'
  const users='/stationschef/treinhuis-gebruikers/api',activation='/treinhuis/activeren/api';
  assert.equal((await call(handleTreinhuisAccess,users,{name:'Tester',email:'test@example.com'},{ })).status,403);
  assert.equal((await call(handleTreinhuisAccess,users,{name:'Tester',email:'test@example.com'},ownerJar,'https://evil.test')).status,403);
- const invite=await call(handleTreinhuisAccess,users,{name:'Tester',email:'test@example.com'});assert.equal(invite.status,200);const token=invite.data.activationPath.split('#')[1];
+ const invite=await call(handleTreinhuisAccess,users,{name:'Tester',email:'test@example.com'});assert.equal(invite.status,200);let token=invite.data.activationPath.split('#')[1];const oldToken=token;const renewed=await call(handleTreinhuisAccess,users,{action:'reinvite',name:'Tester'});assert.equal(renewed.status,200);token=renewed.data.activationPath.split('#')[1];assert.notEqual(token,oldToken);assert.equal((await call(handleTreinhuisAccess,activation,{token:oldToken,action:'start',password:'member-test-password-123'},memberJar)).status,400);
  const start=await call(handleTreinhuisAccess,activation,{token,action:'start',password:'member-test-password-123'},memberJar);assert.equal(start.status,200);
  const finish=await call(handleTreinhuisAccess,activation,{token,action:'finish',code:totp(start.data.secret)},memberJar);assert.equal(finish.status,200);
  assert.equal(await adminAuthenticated(reqFor(memberJar)),false);assert.equal(await adminAuthenticated(reqFor(memberJar),'treinhuis'),true);

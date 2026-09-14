@@ -19,6 +19,10 @@ export async function handleTreinhuisAccess(req,res,url){
  const ip=hash(clientIP(req)||'unknown'),attempt=s.attempts[ip];s.attempts[ip]=attempt&&attempt.start>now-15*60000?attempt:{start:now,count:0};if(s.attempts[ip].count>=12){json(429,{error:'Te veel pogingen. Wacht 15 minuten.'});return true;}s.attempts[ip].count++;record.revision=await writeAdminSecurity(s,record.revision);
  if(owner){
  const name=String(data.name||'').trim();if(data.action==='revoke'){if(!s.members[name]){json(404,{error:'Gebruiker niet gevonden.'});return true;}s.members[name].active=false;delete s.members[name].inviteHash;delete s.members[name].enrollment;for(const group of [s.sessions,s.devices])for(const [id,v] of Object.entries(group))if(v.username===name)delete group[id];await writeAdminSecurity(s,record.revision);json(200,{ok:true});return true;}
+ if(data.action==='reinvite'){
+ const user=Object.hasOwn(s.members,name)?s.members[name]:null;if(!user){json(404,{error:'Gebruiker niet gevonden.'});return true;}if(user.active){json(409,{error:'Dit account is al actief; een nieuwe activatielink is niet nodig.'});return true;}
+ const token=randomBytes(32).toString('base64url');user.inviteHash=hash(token);user.inviteExpires=now+48*3600000;delete user.enrollment;await writeAdminSecurity(s,record.revision);json(200,{name,activationPath:'/treinhuis/activeren#'+token});return true;
+ }
  const email=String(data.email||'').trim().toLowerCase();if(['__proto__','constructor','prototype'].includes(name)||!/^[a-zA-Z0-9_.@-]{3,80}$/.test(name)||! /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254){json(400,{error:'Vul een gebruikersnaam en geldig e-mailadres in.'});return true;}
  if([s.user,...Object.values(s.members)].some(u=>u.name.toLowerCase()===name.toLowerCase())){json(409,{error:'Deze gebruikersnaam bestaat al.'});return true;}
  if(Object.keys(s.members).length>=20){json(400,{error:'Maximaal 20 extra beheerders.'});return true;}
