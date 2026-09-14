@@ -7,7 +7,7 @@ const rows=['Köln Hbf','Basel SBB','Zürich HB','Wien Hbf','Milano Centrale','M
 rows.push({...rows[0],ruleId:'hidden',eligible:false,status:'not-planned'});
 const server=http.createServer((req,res)=>{
  if(req.url.startsWith('/api/connections')){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify({monitor:{lastRun:Date.now()},connections:rows}));}
- const name=req.url==='/'?'/connections.html':req.url;
+ const route=req.url.split('?')[0];const name=route==='/'?'/connections.html':route;
  if(!fs.existsSync('public'+name)){res.writeHead(404);return res.end();}
  res.setHeader('Content-Type',name.endsWith('.js')?'text/javascript':name.endsWith('.css')?'text/css':'text/html');res.end(fs.readFileSync('public'+name));
 }).listen(0,'127.0.0.1');
@@ -24,5 +24,6 @@ try{
  if(viewport.width===1672)await page.screenshot({path:'connections-preview.png'});
  await page.clock.fastForward(15000);assert.equal(await page.locator('#pages').textContent(),'2 / 2');assert.equal(await page.locator('.entry').count(),1);
  }
+ await page.goto('http://127.0.0.1:'+server.address().port+'/?screen=1',{waitUntil:'domcontentloaded'});await page.waitForSelector('.entry');await page.clock.fastForward(15000);assert.equal(await page.locator('.entry').count(),7);assert.equal(await page.locator('#pages').textContent(),'');assert.equal(await page.locator('.station small').first().textContent(),'225 - 371');
  assert.deepEqual(errors,[]);console.log('Browser checks passed: filtering, cancellation, pagination, two screen sizes, no overlap or script errors.');
 }finally{await browser.close();server.close();}

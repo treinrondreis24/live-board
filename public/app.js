@@ -19,7 +19,8 @@ let dbPageTimer = null;
 
 const screens = [
   document.getElementById("db-screen"),
-  document.getElementById("italy-milano-split")
+  document.getElementById("italy-milano-split"),
+  document.getElementById("connections-screen")
 ];
 
 const dbRowsEl = document.getElementById("db-rows");
