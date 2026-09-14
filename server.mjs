@@ -1,4 +1,6 @@
 import {handleAppCms} from './app-cms.mjs';
+import {startConnectionMonitor,handleConnections} from './connections-monitor.mjs';
+import {recordConnectionPlanHour,recordConnectionEvents} from './connections-store.mjs';
 import {connectionArrivalSelector} from './connection-collection.mjs';
 import {createTreinreizigerHandler,activeAppStation,acceptAppRow} from './tr-app-data.mjs';
 import {swedishStations,swedenState,swedishPayload,restoreSweden,startSweden} from './sweden.mjs';
@@ -159,7 +161,14 @@ function nextDelay(date,schedule=config.scanSchedule){
 async function getPlanHour(station,dateKey,hour){
   const hh=String(hour).padStart(2,"0"),key=`${station.eva}-${dateKey}-${hh}`;
   let cached=planCache.get(key);
-  if(!cached){cached=parseStops(await dbGet(`${BASE}/plan/${station.eva}/${dateKey}/${hh}`));planCache.set(key,cached);}
+  if(!cached){
+    cached=parseStops(await dbGet(`${BASE}/plan/${station.eva}/${dateKey}/${hh}`));
+    const planRows=[];
+    for(const stop of cached){const number=String(stop.tl?.n||'');for(const mode of ['arrival','departure']){if(!stop[mode==='arrival'?'ar':'dp'])continue;const row=normalize(stop,station,{arrivalTrainNumbers:mode==='arrival'?[number]:[],departureTrainNumbers:mode==='departure'?[number]:[]});if(row)planRows.push(row);}}
+    await recordConnectionEvents(planRows,'DB_PLAN');
+    await recordConnectionPlanHour(station.name,parseDbTime(dateKey+hh+'00')?.getTime());
+    planCache.set(key,cached);
+  }
   return cached;
 }
 async function getPlanWindow(station,{before,after}={}){
@@ -1043,6 +1052,7 @@ const handleTreinreiziger=createTreinreizigerHandler({stations:[...new Map(appSt
 const server=http.createServer(async(req,res)=>{
   try{
     const url=new URL(req.url,`http://${req.headers.host}`);
+    if(await handleConnections(req,res,url))return;
     if(await handleAppCms(req,res,url))return;
     if(await handleKilometerkampioen(req,res,url))return;
     if(await handleAdminSecurity(req,res,url))return;
@@ -1173,6 +1183,7 @@ const server=http.createServer(async(req,res)=>{
 });
 
 await initStorage();
+startConnectionMonitor(getStationPlatformLayout);
 await initBoardAdmin({config,swissStations,norwegianStations,belgianStations,rfiStations,frenchStations,spanishStations,swedishStations,matchDirection:stationDirectionMatches,getPayload:page=>
  internationalPayload(page,Object.hasOwn(swedishStations,page)?swedishPayload(page):Object.hasOwn(frenchStations,page)?frenchPayload(page):Object.hasOwn(spanishStations,page)?null:Object.hasOwn(rfiStations,page)?italianEmbedPayload(page):Object.hasOwn(swissStations,page)?swissPayload(page):Object.hasOwn(norwegianStations,page)?norwegianPayload(page):Object.hasOwn(belgianStations,page)?belgianPayload(page):stationPagePayload(page))});
 await Promise.all([restoreSwiss(),restoreEntur(),restoreBelgium(),restoreDutchPlan(),restoreRfi(),restoreFrance(),restoreInternational(),restoreSweden(),restoreDbBoards().catch(e=>console.error('DB-bordcache laden mislukt:',e.message))]);

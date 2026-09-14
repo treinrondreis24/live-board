@@ -1,12 +1,12 @@
 # Aansluitbord, aansluitarchief en dagverslagen
 
-Opdracht 14 september 2026. Nog geen actieve monitor: onderstaande onduidelijkheden
-moeten eerst worden opgelost. De aanvullende DB-aankomstcollectie kan zelfstandig werken.
+Opdracht 14 september 2026. Stap 1–2: aansluitregels, persistente beoordelingen en tests.
+Scherm, archiefweergave, dagverslagen en beheer volgen afzonderlijk.
 
-## Open punten
-- Voorbeeldafbeelding ontbreekt in het ontvangen bericht; gebruiker gevraagd deze mee te sturen.
-- Vervanger van 122: eerste opsomming zegt 152, Köln/Düsseldorf-regel zegt 1252.
-- Interpretatie grenzen ter bevestiging: ander perron >=7 haalbaar, 3–6 onzeker,
+## Bevestigde uitgangspunten
+- Voorbeeldafbeelding ontvangen: blauw aansluitbord, zonder aparte overstaptijdkolom.
+- Bevestigd door gebruiker: vervanger 122 is 152; vervanger 224 is 1254. Dit geldt ook in Düsseldorf.
+- Bevestigde grenzen: ander perron >=7 haalbaar, 3–6 onzeker,
   <=2 niet haalbaar. Perron onbekend >=7 haalbaar, 0–6 onzeker, negatief niet haalbaar.
 - Zelfde perron: >=1 minuut haalbaar, 0 onzeker, <=-1 niet haalbaar.
 - Geen waargenomen fysieke reizigersoverstap: registreer een beoordeling op basis van
@@ -24,7 +24,7 @@ moeten eerst worden opgelost. De aanvullende DB-aankomstcollectie kan zelfstandi
 | Berlin Hbf | 178 | 142 | 140 als 142 ontbreekt of aansluiting niet haalbaar is |
 | Köln Hbf | 106 | 224 | Vervanger 1254; Düsseldorf terugval |
 | Frankfurt(Main)Hbf | 372 | 124 | Vervanger 154 |
-| Köln Hbf | 108 | 122 | Vervanger nog bevestigen; Düsseldorf terugval |
+| Köln Hbf | 108 | 122 | Vervanger 152; Düsseldorf terugval |
 | Innsbruck Hbf | 421 | 81 | |
 | Innsbruck Hbf | 421 | 83 | |
 | Dresden Hbf | 178 | 2440 | Vanaf 2026-10-07 |
@@ -63,6 +63,19 @@ ontbrekende data. Planmatig ontbreken en realtime annuleren zijn verschillende z
 - Overzicht onzeker/niet haalbaar en ontbrekende meetgegevens, met link naar aansluitarchief.
 
 ## Gecontroleerd in bestaande data
+Implementatie stap 1–2: `connections-rules.mjs`, `connections-engine.mjs`,
+`connections-store.mjs`, `connections-monitor.mjs`. Monitor elke minuut; gebruikt
+bestaande DB-scans en ViaggiaTreno (679 toegevoegd). Geen extra DB-requests.
+De volledige opgehaalde planning wordt apart opgenomen, zodat afwezigheid niet
+wordt verward met een trein buiten het realtimevenster. Vervanging bij afwezigheid
+vereist volledige dagdekking; Berlin vereist beide stationsniveaus.
+Werkgegevens 7 dagen; beoordelingen en betekenisvolle revisies blijven bewaard.
+Bij meer dan 15 minuten oude verwachtingen: onbekend, met laatste geldige beoordeling
+apart bewaard. Geen definitieve claim dat een reiziger de aansluiting heeft gehaald.
+Leesroutes: `/api/connections?date=YYYY-MM-DD`, `/api/connections/status`,
+`/api/connections/revisions?key=...`. Tests: `node --test connections.test.mjs`.
+Datumaanname: "tot 5 oktober" is exclusief 5 oktober (laatste dag 4 oktober).
+
 Op 14 september bevatte 225 Mannheim een DB-vertrekmeting, geen aparte aankomstmeting.
 151 Milano heeft een aankomst uit ViaggiaTreno. Actual timestamps waren in deze
 steekproef leeg. DB-normalisatie ondersteunt aankomstselectie uit dezelfde opgehaalde

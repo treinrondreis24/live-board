@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import {recordConnectionEvents} from './connections-store.mjs';
 
 let backend="uninitialized";
 let pool=null;
@@ -638,6 +639,7 @@ function recordSqlite(rows,sourceId,observedAt,{migration=false}={}){
 
 export async function recordCanonicalObservations(trains,sourceId,observedAt=Date.now(),options={}){
   if(!Array.isArray(trains)||!trains.length)return;
+  if(!options.migration)await recordConnectionEvents(trains,sourceId,observedAt);
   if(backend==="postgresql")return recordPg(trains,sourceId,observedAt,options);
   if(backend==="sqlite")return recordSqlite(trains,sourceId,observedAt,options);
 }
