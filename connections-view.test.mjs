@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {boardRows,statusView,shortCity,destinationCity} from './public/connections-view.js';
+import {boardRows,statusView,shortCity,destinationCity,eventDelay,planningMark} from './public/connections-view.js';
 const pair={ruleId:'test',eligible:true,status:'feasible',incoming:{},outgoing:{planned:1},minutes:7};
 test('only planned possible connections are displayed, including cancellations',()=>{
  const cancelled={...pair,status:'missed',incoming:{cancelled:true}};
@@ -14,3 +14,5 @@ test('readable compact destinations and minute status',()=>{
 });
 
 test('origins and destinations use city names only',()=>{for(const [input,expected] of [['Budapest-Keleti','Budapest'],['Hamburg-Altona','Hamburg'],['Berlin Ost','Berlin'],['Milano Centrale','Milano'],['Frankfurt(main) Hnf','Frankfurt']])assert.equal(destinationCity(input),expected);assert.equal(shortCity('Berlin Ost'),'Berlin Ost');});
+
+test('planned time markings reflect measured delay and planned-only state',()=>{const e={planned:100000,expected:160000,realtime:true};assert.equal(eventDelay(e),1);assert.ok(planningMark(e).includes('+1'));assert.ok(planningMark({...e,expected:100000}).includes('✓'));assert.ok(planningMark({planned:100000}).includes('svg'));});

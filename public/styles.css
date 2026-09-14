@@ -473,3 +473,5 @@ html,body{
 .db-rows .db-train-row{min-height:0}
 
 .planning-clock{display:inline-block;width:.85em;height:.85em;vertical-align:-.08em;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+
+.db-from,.db-to{font-size:2.5vw}.time-delay{font-size:.55em;white-space:nowrap;margin-left:.2em}.time-delay.late{color:#c7192d}

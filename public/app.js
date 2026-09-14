@@ -85,24 +85,8 @@ function dbEventMarker(t){
   return "";
 }
 
-function dbTimeHtml(t){
-  const planned = escapeHtml(t.plannedTime || t.time || "--:--");
-  const current = escapeHtml(t.currentTime || t.time || planned);
-  const marker = dbEventMarker(t);
-
-  if(t.hasChangedTime && current !== planned){
-    return `
-      <span class="db-time-planned changed">${planned}</span>
-      <span class="db-time-current">${current}</span>
-      <span class="db-event-marker">${marker}</span>
-    `;
-  }
-
-  return `
-    <span class="db-time-current">${planned}</span>
-    <span class="db-event-marker">${marker}</span>
-  `;
-}
+function dbTimeHtml(t){const delay=Math.round(Number(t.delay)||0);return '<span class="db-time-current">'+escapeHtml(t.plannedTime||t.time||'--:--')+'</span>'+(!t.cancelled&&delay?'<span class="time-delay '+(delay>=30?'late':'')+'">'+(delay>0?'+':'')+delay+'</span>':'')+'<span class="db-event-marker">'+dbEventMarker(t)+'</span>';}
+function withinTrainWindow(t,now=Date.now()){return !t.plannedTimestamp||t.plannedTimestamp<=now+3*3600000||t.cancelled||t.type==='cancel'||Number(t.delay)>=10;}
 
 function shortStation(value,italian=false){
   let name=String(value||'').replace(/\bCentraal\b/gi,'C').replace(/(\bHbf\b).*$/i,'$1').replace(/(\bVenezia\b).*$/i,'$1');
@@ -117,10 +101,11 @@ function screenStatus(t){
   return t.hasRealtime?'<span class="on-time" title="Op tijd" aria-label="Op tijd">✓</span>':'<span class="planned-only" title="Gepland; geen actuele bevestiging" aria-label="Gepland"><svg class="planning-clock" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="12"/><path d="M16 7v9h8"/></svg></span>';
 }
 function dbPageItems(){
-  const cancelled=dbTrains.filter(t=>t.cancelled||t.type==='cancel');
-  const delayed=dbTrains.filter(t=>!cancelled.includes(t)&&Number(t.delay)>=20).sort((a,b)=>Number(b.delay)-Number(a.delay)).slice(0,4);
+  const trains=dbTrains.filter(t=>withinTrainWindow(t));
+  const cancelled=trains.filter(t=>t.cancelled||t.type==='cancel');
+  const delayed=trains.filter(t=>!cancelled.includes(t)&&Number(t.delay)>=20).sort((a,b)=>Number(b.delay)-Number(a.delay)).slice(0,4);
   const pinned=[...cancelled,...delayed];
-  const rotating=dbTrains.filter(t=>!pinned.includes(t));
+  const rotating=trains.filter(t=>!pinned.includes(t));
   const size=Math.max(CONFIG.dbRowsPerPage,pinned.length+(rotating.length?1:0));
   const slots=Math.max(1,size-pinned.length),pages=Math.max(1,Math.ceil(rotating.length/slots));
   return {pinned,rotating,size,slots,pages};
@@ -176,7 +161,7 @@ function renderDb(){
 function italyFullRowHtml(t){
   return `
     <div class="italy-train-row ${t.type === "cancel" ? "italy-cancelled-row" : ""}">
-      <div class="italy-cell italy-time">${escapeHtml(t.time)}</div>
+      <div class="italy-cell italy-time">${escapeHtml(t.plannedTime||t.time)}${Number(t.delay)&&!t.cancelled?`<span class="time-delay">${Number(t.delay)>0?'+':''}${Math.round(Number(t.delay))}</span>`:''}</div>
       <div class="italy-cell italy-train">${escapeHtml(t.number||t.train)}</div>
       <div class="italy-cell">${escapeHtml(shortStation(t.from))}</div>
       <div class="italy-cell">${escapeHtml(shortStation(t.to))}</div>
@@ -191,7 +176,7 @@ function italySplitRowHtml(t, kind){
   const mainPlace = kind === "departure" ? t.to : t.from;
   return `
     <div class="italy-train-row ${t.type === "cancel" ? "italy-cancelled-row" : ""}">
-      <div class="italy-cell italy-time">${escapeHtml(t.time)}</div>
+      <div class="italy-cell italy-time">${escapeHtml(t.plannedTime||t.time)}${Number(t.delay)&&!t.cancelled?`<span class="time-delay">${Number(t.delay)>0?'+':''}${Math.round(Number(t.delay))}</span>`:''}</div>
       <div class="italy-cell italy-train">${escapeHtml(t.number||t.train)}</div>
       <div class="italy-cell">${escapeHtml(shortStation(mainPlace,true))}</div>
       <div class="italy-cell italy-track">${escapeHtml(t.track || "—")}</div>
@@ -237,15 +222,15 @@ function renderItalyGroup(container, items, kind = "full"){
 }
 
 function renderItaly(){
-  const milanoDep = italyTrains.filter(t =>
+  const milanoDep = italyTrains.filter(t=>withinTrainWindow(t)).filter(t =>
     t.station === "Milano Centrale" && t.mode === "departure"
   );
 
-  const milanoArr = italyTrains.filter(t =>
+  const milanoArr = italyTrains.filter(t=>withinTrainWindow(t)).filter(t =>
     t.station === "Milano Centrale" && t.mode === "arrival"
   );
 
-  const romaDep = italyTrains.filter(t =>
+  const romaDep = italyTrains.filter(t=>withinTrainWindow(t)).filter(t =>
     t.station === "Roma Termini"
   );
 

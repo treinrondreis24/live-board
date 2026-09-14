@@ -13,3 +13,6 @@ export function statusView(row,stale=false){
 }
 
 export function destinationCity(value=''){return shortCity(value).replace(/\s*\(main\)/ig,'').replace(/[-\s]+(?:Keleti|Altona|Ost|Hbf|Hnf|HB|SBB|C|Centraal|Centrale|Central|Flughafen)\b.*$/i,'').trim();}
+
+export function eventDelay(e){return e&&e.planned&&(e.actual||e.expected)?Math.round(((e.actual||e.expected)-e.planned)/60000):0;}
+export function planningMark(e){if(e?.cancelled)return '<span class="late" title="Geannuleerd">×</span>';const delay=eventDelay(e);if(delay)return '<span class="'+(delay>=5?'late':'')+'">'+(delay>0?'+':'')+delay+'</span>';if(e?.realtime||e?.actual)return '<span class="on-time" title="Op tijd">✓</span>';return '<svg class="planning-clock" viewBox="0 0 32 32" role="img" aria-label="Gepland"><circle cx="16" cy="16" r="12"/><path d="M16 7v9h8"/></svg>';}

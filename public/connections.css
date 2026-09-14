@@ -8,3 +8,5 @@
 
 
 #archive-link{color:inherit;text-decoration:none}#archive-link:hover{text-decoration:underline}
+
+.city{font-size:2.35vw}.time-delay{font-size:1.3vw;white-space:nowrap}.time-delay.late{color:#c7192d}.journey-line{gap:.5vw}.journey time{font-size:2.1vw}

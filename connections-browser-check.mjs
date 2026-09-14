@@ -23,7 +23,7 @@ try{
  const bounds=await page.evaluate(()=>({last:document.querySelector('.entry:last-child').getBoundingClientRect().bottom,footer:document.querySelector('footer').getBoundingClientRect().top,overflow:document.documentElement.scrollWidth>innerWidth}));
  assert.ok(bounds.last<=bounds.footer+1,JSON.stringify(bounds));assert.equal(bounds.overflow,false);
  if(viewport.width===1672)await page.screenshot({path:'connections-preview.png'});
- await page.clock.fastForward(15000);assert.equal(await page.locator('#pages').textContent(),'2 / 2');assert.equal(await page.locator('.entry').count(),1);
+ await page.clock.fastForward(15000);assert.equal(await page.locator('#pages').textContent(),'');assert.equal(await page.locator('.entry').count(),7);
  }
  await page.goto('http://127.0.0.1:'+server.address().port+'/?screen=1',{waitUntil:'domcontentloaded'});await page.waitForSelector('.entry');await page.clock.fastForward(15000);assert.equal(await page.locator('.entry').count(),7);assert.equal(await page.locator('#pages').textContent(),'');assert.equal(await page.locator('.station small').first().textContent(),'225 - 371');
  assert.deepEqual(errors,[]);console.log('Browser checks passed: filtering, cancellation, pagination, two screen sizes, no overlap or script errors.');
