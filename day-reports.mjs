@@ -17,7 +17,7 @@ export function normalizeReportEvent(t,source,observedAt){
  if(!origin||!destination)identity.push(source,String(t.sourceTripId||t.trainKey||''));
  return {run:hash(identity.join('|')),date,number,category,station,mode,origin,destination,source,observedAt:Number(observedAt),planned,expected,actual,delay,realtime,cancelled:!!t.cancelled,country:String(t.countryCode||'').toUpperCase()};
 }
-export function mergePeaks(old=[],incoming=[]){const groups=new Map();for(const e of [...old,...incoming]){if(!e.realtime||e.cancelled||e.delay<=0)continue;const previous=groups.get(e.run);if(!previous||e.delay>previous.delay||(e.delay===previous.delay&&e.observedAt<previous.observedAt))groups.set(e.run,e);}return [...groups.values()].sort((a,b)=>b.delay-a.delay||a.observedAt-b.observedAt).slice(0,5);}
+export function mergePeaks(old=[],incoming=[]){const groups=new Map();for(const e of [...old,...incoming]){if(!e.realtime||e.cancelled||e.delay<=0)continue;const key=e.source==='RFI'?hash([e.date,e.category,e.number,normalized(e.destination)].join('|')):e.run;const previous=groups.get(key);if(!previous||e.delay>previous.delay||(e.delay===previous.delay&&e.observedAt<previous.observedAt))groups.set(key,e);}return [...groups.values()].sort((a,b)=>b.delay-a.delay||a.observedAt-b.observedAt).slice(0,5);}
 export function targetFor(e){
  if(e.number==='225'&&normalized(e.station)==='mannheim hbf'&&e.mode==='arrival')return '225-mannheim';
  if(e.number==='40421'&&normalized(e.station)==='wien hbf'&&e.mode==='arrival')return '40421-wien';

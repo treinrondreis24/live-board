@@ -17,3 +17,5 @@ test('durable summary, concurrent batches, history backfill and separate screen 
  await initDayReports({sqlite});assert.equal((await getDayReport('2026-09-14')).peaks[0].delay,60);
  const res={writeHead(code){this.code=code;},end(body){this.value=JSON.parse(body);}};await handleDayReports({method:'GET'},res,new URL('http://x/api/day-reports?date=2026-02-30'));assert.equal(res.code,400);await handleDayReports({method:'GET'},res,new URL('http://x/api/day-reports?date=2026-09-14'));assert.equal(res.code,200);assert.equal(res.value.peaks.length,2);sqlite.close();
 });
+
+test('RFI boarding station is not a separate service origin',()=>{const a=normalizeReportEvent({...base,number:'9802',category:'FR',station:'Rimini',from:'Rimini',to:'Milano Centrale'},'RFI',now),b=normalizeReportEvent({...base,number:'9802',category:'FR',station:'Bologna Centrale',from:'Bologna Centrale',to:'Milano Centrale'},'RFI',now+1);assert.equal(mergePeaks([],[a,b]).length,1);});
