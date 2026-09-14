@@ -73,7 +73,9 @@ test('persistent snapshots, deduplicated revisions, last assessment retention an
  for(let t=ts('00:00');connectionDate(t)===date;t+=3600000)await recordConnectionPlanHour('Berlin Hbf (tief)',t);
  assert.equal((await connectionInputs(date)).completeStations.has('berlin'),true);
  await cleanConnectionWorkingData(now+10*86400000);assert.equal((await connectionInputs(date)).events.length,0);assert.equal((await readConnections(date)).length,1);
+ await saveConnectionAssessment({...r,station:'duesseldorf',fallbackFor:'koeln',evaluatedAt:now+2});
  await runConnectionMonitor(async()=>null,now+3);assert.equal(connectionMonitorStatus.lastError,null);
+ assert.equal((await readConnections(date)).find(x=>x.fallbackFor==='koeln').reason,'alternative-no-longer-triggered');
  const response={writeHead(s){this.status=s;},end(s){this.body=JSON.parse(s);}};
  await handleConnections({method:'GET'},response,new URL('http://localhost/api/connections?date='+date));assert.equal(response.status,200);assert.ok(response.body.connections.length>0);
  await handleConnections({method:'GET'},response,new URL('http://localhost/api/connections?date=2026-02-30'));assert.equal(response.status,400);
