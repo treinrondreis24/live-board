@@ -2,7 +2,7 @@
 // Deliberately separate from departure-board selection; no additional DB calls.
 const arrivals={
  'Mannheim Hbf':['225','1255'],
- 'Wien Hbf':['66','146'],
+ 'Wien Hbf':['66','146','40421'],
  'Innsbruck Hbf':['82','421'],
  'Berlin Hbf':['178'],
  'Berlin Hbf (tief)':['178'],

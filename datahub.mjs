@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import {recordConnectionEvents} from './connections-store.mjs';
+import {recordDayReportEvents,dayReportStatus} from './day-reports.mjs';
 
 let backend="uninitialized";
 let pool=null;
@@ -640,6 +641,7 @@ function recordSqlite(rows,sourceId,observedAt,{migration=false}={}){
 export async function recordCanonicalObservations(trains,sourceId,observedAt=Date.now(),options={}){
   if(!Array.isArray(trains)||!trains.length)return;
   if(!options.migration)await recordConnectionEvents(trains,sourceId,observedAt);
+  if(!options.migration)try{await recordDayReportEvents(trains,sourceId,observedAt);}catch(e){dayReportStatus.lastError=e.message;console.error('Dagverslag opslaan:',e.message);}
   if(backend==="postgresql")return recordPg(trains,sourceId,observedAt,options);
   if(backend==="sqlite")return recordSqlite(trains,sourceId,observedAt,options);
 }

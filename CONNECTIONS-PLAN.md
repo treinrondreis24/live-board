@@ -9,7 +9,16 @@ Stap 4: `/aansluitarchief` met datum, station, status en treinnummerfilters,
 bronmetingen per aansluiting en op aanvraag gepagineerde wijzigingsgeschiedenis.
 Onbekend blijft onderscheiden van een laatste bruikbare beoordeling. Geen
 reconstructie van ontbrekende historie. De hoofdpagina bevat inmiddels ook één
-aansluitpagina in de schermrotatie. Dagverslagen en beheer volgen afzonderlijk.
+aansluitpagina in de schermrotatie.
+Stap 5: `/dagverslagen` en `/api/day-reports?date=YYYY-MM-DD` bewaren compacte
+samenvattingen buiten de bronretentie. Top 5 per herkenbare rit, met bron, meettijd
+en station; annuleringen zijn geen vertraging in minuten. Schermselectie wordt
+elke minuut vastgelegd met de actuele drie-uursregel, niet achteraf gereconstrueerd.
+Bij start wordt de nog beschikbare historie van vandaag en twee voorgaande dagen
+beperkt opgevraagd voor aanvulling van de algemene top en drie doelmetingen.
+Dit blijft expliciet onvolledig. Dienstregeling zonder actuele bevestiging blijft
+onbekend. Extra aankomstcollectie NJ 40421 Wien gebruikt bestaande DB-opvragen.
+Beheer volgt afzonderlijk.
 
 ## Bevestigde uitgangspunten
 - Voorbeeldafbeelding ontvangen: blauw aansluitbord, zonder aparte overstaptijdkolom.

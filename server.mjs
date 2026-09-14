@@ -1,4 +1,5 @@
 import {handleAppCms} from './app-cms.mjs';
+import {startDayReports,handleDayReports} from './day-reports.mjs';
 import {startConnectionMonitor,handleConnections} from './connections-monitor.mjs';
 import {recordConnectionPlanHour,recordConnectionEvents} from './connections-store.mjs';
 import {connectionArrivalSelector} from './connection-collection.mjs';
@@ -1027,6 +1028,7 @@ async function startNdov(){
 }
 
 const pageRoutes={
+  '/dagverslagen':'/day-reports.html','/dagverslagen/':'/day-reports.html',
   '/aansluitarchief':'/connections-archive.html','/aansluitarchief/':'/connections-archive.html',
   '/aansluitbord':'/connections.html','/aansluitbord/':'/connections.html',
   ...Object.fromEntries(Object.keys(swissStations).flatMap(id=>[[`/embed/${id}`,"/koeln-embed.html"],[`/embed/${id}/`,"/koeln-embed.html"]])),
@@ -1054,6 +1056,7 @@ const handleTreinreiziger=createTreinreizigerHandler({stations:[...new Map(appSt
 const server=http.createServer(async(req,res)=>{
   try{
     const url=new URL(req.url,`http://${req.headers.host}`);
+    if(await handleDayReports(req,res,url))return;
     if(await handleConnections(req,res,url))return;
     if(await handleAppCms(req,res,url))return;
     if(await handleKilometerkampioen(req,res,url))return;
@@ -1186,6 +1189,12 @@ const server=http.createServer(async(req,res)=>{
 
 await initStorage();
 startConnectionMonitor(getStationPlatformLayout);
+startDayReports(()=>{
+ const now=Date.now(),recent=iso=>Number.isFinite(Date.parse(iso))&&now-Date.parse(iso)<15*60000;
+ const dbRows=screenBoardTrains(now).filter(r=>r.countryCode==='NL'||recent(dbState.lastScanAt)).map(r=>({...r,source:r.source||(r.countryCode==='NL'?'NDOV':'DB')}));
+ const italyRows=recent(italyState.lastScanAt)?italyState.trains.filter(r=>r.station==='Milano Centrale').map(r=>({...r,source:'ViaggiaTreno'})):[];
+ return [...dbRows,...italyRows].filter(r=>!r.plannedTimestamp||r.plannedTimestamp<=now+3*3600000||r.cancelled||Number(r.delay)>=10);
+});
 await initBoardAdmin({config,swissStations,norwegianStations,belgianStations,rfiStations,frenchStations,spanishStations,swedishStations,matchDirection:stationDirectionMatches,getPayload:page=>
  internationalPayload(page,Object.hasOwn(swedishStations,page)?swedishPayload(page):Object.hasOwn(frenchStations,page)?frenchPayload(page):Object.hasOwn(spanishStations,page)?null:Object.hasOwn(rfiStations,page)?italianEmbedPayload(page):Object.hasOwn(swissStations,page)?swissPayload(page):Object.hasOwn(norwegianStations,page)?norwegianPayload(page):Object.hasOwn(belgianStations,page)?belgianPayload(page):stationPagePayload(page))});
 await Promise.all([restoreSwiss(),restoreEntur(),restoreBelgium(),restoreDutchPlan(),restoreRfi(),restoreFrance(),restoreInternational(),restoreSweden(),restoreDbBoards().catch(e=>console.error('DB-bordcache laden mislukt:',e.message))]);
