@@ -20,12 +20,12 @@ test('replacement requires complete planning; cancellation never selects replace
  assert.equal(result(rows).status,'unknown');assert.equal(result(rows,undefined,{completeStations:new Set(['koeln'])}).outgoing.number,'1254');
  rows.push(event('224','departure','13:10',{cancelled:true}));assert.equal(result(rows).status,'missed');assert.equal(result(rows).outgoing.number,'224');
 });
-test('missing, ambiguous, stale and planning-only stay unknown',()=>{
+test('missing and stale remain unknown; planning assumes punctuality',()=>{
  const a=event('106','arrival','13:00'),b=event('224','departure','13:10');
  assert.equal(result([a]).status,'unknown');
  assert.equal(result([a,b,{...b,planned:ts('14:00')}]).reason,'ambiguous-services');
  assert.equal(result([{...a,seenAt:now-16*60000},b]).reason,'stale-observation');
- assert.equal(result([{...a,realtime:false},b]).reason,'planning-only');
+ assert.equal(result([{...a,realtime:false},b]).reason,'assumed-on-time');assert.equal(result([{...a,realtime:false,seenAt:0,expected:null},{...b,realtime:false,seenAt:0,expected:null}]).status,'feasible');assert.equal(result([{...a,cancelled:true,seenAt:0},b]).status,'missed');
  assert.equal(result([a,b]).status,'feasible');
  assert.equal(result([a,{...b,source:'DB',expected:ts('13:12')},{...b,source:'DB_PLAN',seenAt:now+1,realtime:false}]).minutes,12);
 });

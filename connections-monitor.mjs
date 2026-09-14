@@ -4,16 +4,16 @@ import {connectionInputs,saveConnectionAssessment,readConnections,readConnection
 export const connectionMonitorStatus={running:false,lastRun:null,lastError:null,ruleCount:connectionRules.length,dates:[],basis:'Treinmetingen; geen bevestiging dat reizigers daadwerkelijk zijn overgestapt.'};
 export async function runConnectionMonitor(getLayout,now=Date.now()){
  if(connectionMonitorStatus.running)return;connectionMonitorStatus.running=true;
- try{const layouts={};for(const key of Object.keys(stationAliases))layouts[key]=await getLayout(key);
+ try{connectionMonitorStatus.ruleCount=connectionRules.filter(r=>r.enabled!==false).length;const layouts={};for(const key of Object.keys(stationAliases))layouts[key]=await getLayout(key);
  const dates=[-1,0,1].map(offset=>connectionDate(now+offset*86400000));
  for(const date of new Set(dates)){
  const input=await connectionInputs(date);const results=evaluateConnections({date,...input,layouts,now});
  for(const result of results)await saveConnectionAssessment(result);
  // Retain the history of alternatives, but stop presenting one as active when
  // the primary connection no longer triggers it (including missing live data).
- for(const old of await readConnections(date))if((old.fallbackFor||old.alternativeFor)&&!results.some(r=>r.ruleId===old.ruleId&&r.station===old.station&&r.alternativeFor===old.alternativeFor)){
+ for(const old of await readConnections(date))if(date>=connectionDate(now)&&!results.some(r=>r.ruleId===old.ruleId&&r.station===old.station&&r.alternativeFor===old.alternativeFor)){
  const {key,revision,updatedAt,...snapshot}=old;
- await saveConnectionAssessment({...snapshot,eligible:false,status:'not-applicable',reason:'alternative-no-longer-triggered',evaluatedAt:now});
+ await saveConnectionAssessment({...snapshot,eligible:false,status:'not-applicable',reason:connectionRules.some(r=>r.id===old.ruleId&&r.enabled!==false)?'alternative-no-longer-triggered':'rule-disabled',evaluatedAt:now});
  }
  }
  await cleanConnectionWorkingData(now);connectionMonitorStatus.dates=dates;connectionMonitorStatus.lastRun=now;connectionMonitorStatus.lastError=null;

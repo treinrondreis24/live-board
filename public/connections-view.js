@@ -9,7 +9,7 @@ export function statusView(row,stale=false){
  if(row.incoming?.cancelled||row.outgoing?.cancelled)return {kind:'missed',symbol:'×',label:'Geannuleerd',detail:'Aansluiting niet mogelijk'};
  if(stale||row.status==='unknown')return {kind:'unknown',symbol:'?',label:'Onbekend',detail:stale?'Metingen verouderd':'Geen actuele meting'};
  const min=Number.isFinite(row.minutes)?Math.round(row.minutes):null;
- return {kind:row.status,symbol:row.status==='feasible'?'✓':row.status==='missed'?'×':'?',label:min===null?'Onbekend':`${min} min`,detail:row.status==='feasible'?'Haalbaar':row.status==='missed'?'Niet haalbaar':'Onzeker'};
+ return {kind:row.status,symbol:row.status==='feasible'?'✓':row.status==='missed'?'×':'?',label:min===null?'Onbekend':`${min} min`,detail:row.status==='feasible'?(row.evidence==='planning-assumption'?'Kennelijk haalbaar':'Haalbaar'):row.status==='missed'?'Niet haalbaar':'Onzeker'};
 }
 
 export function destinationCity(value=''){return shortCity(value).replace(/\s*\(main\)/ig,'').replace(/[-\s]+(?:Keleti|Altona|Ost|Hbf|Hnf|HB|SBB|C|Centraal|Centrale|Central|Flughafen)\b.*$/i,'').trim();}

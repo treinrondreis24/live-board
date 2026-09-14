@@ -1,17 +1,19 @@
 import {createHash} from 'node:crypto';
-import {stationKey,connectionDate,relevantEvent} from './connections-rules.mjs';
+import {stationKey,connectionDate,relevantEvent,setConnectionRules,defaultConnectionRules} from './connections-rules.mjs';
 let db=null;
 const hash=s=>createHash('sha256').update(s).digest('hex');
 async function query(sql,args=[]){if(db.pool)return (await db.pool.query(sql,args)).rows;const bound=[];const text=sql.replace(/\$(\d+)/g,(_,n)=>{bound.push(args[Number(n)-1]);return '?';});return db.sqlite.prepare(text).all(...bound);}
 export async function initConnections(connection){
  db=connection;
- const sql=`CREATE TABLE IF NOT EXISTS connection_events (event_key TEXT PRIMARY KEY,event_date TEXT NOT NULL,station TEXT NOT NULL,seen_at BIGINT NOT NULL,payload TEXT NOT NULL);
+ const sql=`CREATE TABLE IF NOT EXISTS connection_settings(id INTEGER PRIMARY KEY,revision INTEGER NOT NULL,payload TEXT NOT NULL);
+ CREATE TABLE IF NOT EXISTS connection_events (event_key TEXT PRIMARY KEY,event_date TEXT NOT NULL,station TEXT NOT NULL,seen_at BIGINT NOT NULL,payload TEXT NOT NULL);
  CREATE INDEX IF NOT EXISTS connection_events_day ON connection_events(event_date,station);
  CREATE TABLE IF NOT EXISTS connection_plan_hours (station TEXT NOT NULL,hour_start BIGINT NOT NULL,seen_at BIGINT NOT NULL,PRIMARY KEY(station,hour_start));
  CREATE TABLE IF NOT EXISTS connection_assessments (connection_key TEXT PRIMARY KEY,event_date TEXT NOT NULL,rule_id TEXT NOT NULL,station TEXT NOT NULL,revision INTEGER NOT NULL,state_hash TEXT NOT NULL,updated_at BIGINT NOT NULL,payload TEXT NOT NULL);
  CREATE INDEX IF NOT EXISTS connection_assessments_day ON connection_assessments(event_date);
  CREATE TABLE IF NOT EXISTS connection_revisions (connection_key TEXT NOT NULL,revision INTEGER NOT NULL,recorded_at BIGINT NOT NULL,payload TEXT NOT NULL,PRIMARY KEY(connection_key,revision));`;
  if(db.pool)await db.pool.query(sql);else db.sqlite.exec(sql);
+ const settings=await readConnectionSettings();setConnectionRules(settings.rules,settings.revision);
 }
 export function normalizeConnectionEvent(t,source,seenAt){
  const station=stationKey(t.observedAt||t.station),number=String(t.number||t.trainNumber||''),category=String(t.category||'').toUpperCase(),planned=Number(t.plannedTimestamp),mode=t.eventMode||t.mode;
@@ -60,3 +62,6 @@ export async function cleanConnectionWorkingData(now=Date.now()){
  await query('DELETE FROM connection_events WHERE event_date<$1 RETURNING event_key',[connectionDate(now-7*86400000)]);
  await query('DELETE FROM connection_plan_hours WHERE hour_start<$1 RETURNING station',[now-7*86400000]);
 }
+
+export async function readConnectionSettings(){const row=(await query('SELECT revision,payload FROM connection_settings WHERE id=1'))[0];return row?{revision:Number(row.revision),rules:JSON.parse(row.payload)}:{revision:0,rules:structuredClone(defaultConnectionRules)};}
+export async function writeConnectionSettings(rules,revision){const row=(await query('INSERT INTO connection_settings(id,revision,payload) VALUES(1,1,$1) ON CONFLICT(id) DO UPDATE SET revision=connection_settings.revision+1,payload=excluded.payload WHERE connection_settings.revision=$2 RETURNING revision',[JSON.stringify(rules),revision]))[0];if(!row){const e=Error('De instellingen zijn ondertussen gewijzigd. Laad de pagina opnieuw.');e.status=409;throw e;}setConnectionRules(rules,Number(row.revision));return {revision:Number(row.revision),rules};}

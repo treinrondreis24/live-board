@@ -100,3 +100,13 @@ stops: connection-collection.mjs voegt die toe zonder extra stationrequests.
 Bronretentie is doorgaans 3 dagen, voor geselecteerde categorieën 30 dagen.
 Historische dagverslagen kunnen daarom alleen volledig worden gereconstrueerd waar
 de benodigde waarnemingen nog aanwezig zijn.
+
+## Stap 6 — 14 september 2026
+`/stationschef/aansluitingen`: eigenaar beheert maximaal 100 aansluitingen voor de
+bestaande aansluitstations, inclusief activering, datumgrenzen en uitzonderingen.
+Instellingen staan in connection_settings met versiecontrole en worden bij herstart
+hersteld. Nieuwe aankomstnummers gebruiken bestaande DB-scans. Milano ondersteunt
+vooralsnog alleen de reeds geconfigureerde ViaggiaTreno-nummers 151 -> 679/2832.
+Geen actuele melding: geplande tijd geldt als kennelijk op tijd, evidence
+planning-assumption; geen feitelijke overstapbevestiging. Een verouderde echte
+verwachting wordt niet overschreven door een aanname. Annulering gaat vóór ouderdom.

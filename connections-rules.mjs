@@ -1,4 +1,4 @@
-export const connectionRulesVersion=1;
+export let connectionRulesVersion=2;
 export const replacements={'225':'1255','224':'1254','122':'152','124':'154'};
 export const stationAliases={
  mannheim:['Mannheim Hbf'],wien:['Wien Hbf'],innsbruck:['Innsbruck Hbf'],berlin:['Berlin Hbf','Berlin Hbf (tief)'],
@@ -6,7 +6,7 @@ export const stationAliases={
  flughafen:['Frankfurt(M) Flughafen Fernbf','Frankfurt Flughafen Fernbf'],stuttgart:['Stuttgart Hbf'],
  dresden:['Dresden Hbf'],hannover:['Hannover Hbf'],osnabrueck:['Osnabrück Hbf'],milano:['Milano Centrale']
 };
-export const connectionRules=[
+export let connectionRules=[
  {id:'mannheim-225-5',station:'mannheim',incoming:'225',outgoing:'5'},
  {id:'mannheim-225-371',station:'mannheim',incoming:'225',outgoing:'371',alternativeDeparture:{from:'13:30',to:'14:00',destinations:['basel','zurich']}},
  {id:'wien-66-40490',station:'wien',incoming:'66',outgoing:'40490',departureBefore:'19:00',alternativeArrival:{from:'16:15',to:'16:45',categories:['RJ','RJX']}},
@@ -34,8 +34,11 @@ export const stationKey=name=>Object.keys(stationAliases).find(k=>stationAliases
 const dates=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit'});
 export const connectionDate=timestamp=>dates.format(new Date(timestamp));
 export const localClock=timestamp=>new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Berlin',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(timestamp));
-export function activeRule(rule,date){return (!rule.fromDate||date>=rule.fromDate)&&(!rule.untilDate||date<rule.untilDate);}
+export function activeRule(rule,date){return rule.enabled!==false&&(!rule.fromDate||date>=rule.fromDate)&&(!rule.untilDate||date<rule.untilDate);}
 export function relevantEvent(station,number,category){return connectionRules.some(r=>{
  if(r.station!==station&&r.fallbackStation!==station)return false;
  return [r.incoming,r.outgoing,replacements[r.incoming],replacements[r.outgoing],r.alternativeTrain].includes(number)||Boolean(r.alternativeDeparture)||Boolean(r.alternativeArrival?.categories.includes(category));
 });}
+
+export const defaultConnectionRules=structuredClone(connectionRules);
+export function setConnectionRules(rules,revision=0){connectionRules=structuredClone(rules);connectionRulesVersion=2+revision;}

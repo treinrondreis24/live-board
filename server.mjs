@@ -1,3 +1,5 @@
+import {handleTreinhuisAccess} from './treinhuis-access.mjs';
+import {handleConnectionAdmin} from './connections-admin.mjs';
 import {handleAppCms} from './app-cms.mjs';
 import {startDayReports,handleDayReports} from './day-reports.mjs';
 import {startConnectionMonitor,handleConnections} from './connections-monitor.mjs';
@@ -1057,8 +1059,10 @@ const server=http.createServer(async(req,res)=>{
   try{
     const url=new URL(req.url,`http://${req.headers.host}`);
     if(await handleDayReports(req,res,url))return;
+    if(await handleConnectionAdmin(req,res,url))return;
     if(await handleConnections(req,res,url))return;
     if(await handleAppCms(req,res,url))return;
+    if(await handleTreinhuisAccess(req,res,url))return;
     if(await handleKilometerkampioen(req,res,url))return;
     if(await handleAdminSecurity(req,res,url))return;
     if(url.pathname==='/board-admin.js'){res.setHeader('X-Robots-Tag','noindex, nofollow');res.setHeader('Cache-Control','no-store');return sendFile(res,path.join(__dirname,'board-admin.js'));}

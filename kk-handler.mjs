@@ -65,7 +65,7 @@ export async function handleKilometerkampioen(req,res,url){
  }
  if(req.method==='GET'&&path==='/kilometerkampioen/api/liveblog'){json(res,200,{posts:await publicBlog()});return true;}
  if(req.method==='GET'&&path==='/kilometerkampioen/api/blog-photo'){res.writeHead(302,{Location:await blogMedia(url.searchParams.get('post'),url.searchParams.get('id'))});res.end();return true;}
- if(admin&&!await adminAuthenticated(req)){if(req.method==='GET'&&!path.includes('/api/')){res.writeHead(303,{Location:'/stationschef'});res.end();}else json(res,401,{error:'Log in met je beheeraccount.'});return true;}
+ if(admin&&!await adminAuthenticated(req,'treinhuis')){if(req.method==='GET'&&!path.includes('/api/')){res.writeHead(303,{Location:'/stationschef'});res.end();}else json(res,401,{error:'Log in met je beheeraccount.'});return true;}
  if(assets[path]&&req.method==='GET'){const f=assets[path];res.writeHead(200,{'Content-Type':f.endsWith('.png')?'image/png':f.endsWith('.webmanifest')?'application/manifest+json':f.endsWith('.js')?'text/javascript; charset=utf-8':f.endsWith('.css')?'text/css; charset=utf-8':'text/html; charset=utf-8'});res.end(await readFile(new URL(f,import.meta.url)));return true;}
  if(Date.now()>cleanupAt){cleanupAt=Date.now()+600000;await kkCleanup();}
  if(admin&&req.method==='GET'&&path==='/treinhuis/api/participants'){json(res,200,{participants:(await kkList('participant')).map(r=>r.value)});return true;}

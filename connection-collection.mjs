@@ -1,3 +1,4 @@
+import {connectionRules,stationKey,replacements} from './connections-rules.mjs';
 // Collect arrivals needed for connections from already fetched station stops.
 // Deliberately separate from departure-board selection; no additional DB calls.
 const arrivals={
@@ -16,7 +17,8 @@ const arrivals={
  'Osnabrück Hbf':['145','143','141']
 };
 export function connectionArrivalSelector(name,stops){
- const numbers=new Set(arrivals[name]||[]);
+ const numbers=new Set(arrivals[name]||[]),station=stationKey(name);
+ for(const r of connectionRules)if(r.enabled!==false&&(r.station===station||r.fallbackStation===station)){numbers.add(r.incoming);if(replacements[r.incoming])numbers.add(replacements[r.incoming]);}
  if(name==='Wien Hbf')for(const stop of stops)if(['RJ','RJX'].includes(String(stop.tl?.c||'').toUpperCase())&&stop.tl?.n)numbers.add(String(stop.tl.n));
  return numbers.size?{trainNumbers:[...numbers],arrivalTrainNumbers:[...numbers],categories:[]}:null;
 }

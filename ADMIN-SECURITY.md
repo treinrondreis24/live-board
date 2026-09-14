@@ -25,3 +25,14 @@ Alleen via de bevoegde hostingconsole: `node admin-recovery.mjs`. Het script vra
 `node test-admin-security.mjs` test echte SQLite-persistentie, RFC TOTP-vector, activatie, replay, CSRF, trust, landcontrole, herstel, intrekken, CAS en throttling. Ook bestaande board/cache- en PWA-regressies uitvoeren. Node 24 is nodig voor actuele geoip-lite 2.x. Beheer is no-store/noindex, frame-ancestors none voor nieuwe beheerpagina's, niet toegevoegd aan openbare navigatie/sitemap. noindex is geen toegangsbeveiliging.
 
 Fase 1 heeft één persoonlijk eigenaaraccount. Meerdere accounts/rollen en selfservice-vervanging van de authenticator zijn vervolgwerk, geen onderdeel van deze eerste basis.
+
+## Treinhuis-rollen — 14 september 2026
+De eigenaar kan via /stationschef/treinhuis-gebruikers accounts aanmaken met alleen
+Treinhuis-toegang. Accounts activeren zichzelf met een eenmalige, gehashte link
+(48 uur), persoonlijk scrypt-wachtwoord en TOTP. Links worden niet per e-mail
+verstuurd. De eigenaar deelt ze zelf. De bestaande landenregels gelden ook hier.
+Sessies en vertrouwde browsers zijn gekoppeld aan de gebruiker. Alle overige
+beheer-API's vereisen standaard de eigenaar; alleen kk-handler vraagt expliciet
+scope treinhuis. Intrekken beëindigt sessies en vertrouwde browsers van dat account.
+Beperkte accounts kunnen geen landen/andere gebruikers/algemene beveiliging wijzigen.
+Test: node --test treinhuis-access.test.mjs; node test-admin-security.mjs.
