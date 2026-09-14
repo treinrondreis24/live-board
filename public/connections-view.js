@@ -1,4 +1,4 @@
-export function boardRows(rows=[]){return rows.filter(r=>r.eligible===true&&r.incoming&&r.outgoing&&!['not-planned','not-applicable'].includes(r.status)).sort((a,b)=>a.outgoing.planned-b.outgoing.planned||a.ruleId.localeCompare(b.ruleId));}
+export function boardRows(rows=[],now=Date.now(),capacity=7){const selected=rows.filter(r=>r.eligible===true&&r.incoming&&r.outgoing&&!['not-planned','not-applicable'].includes(r.status)).sort((a,b)=>a.outgoing.planned-b.outgoing.planned||a.ruleId.localeCompare(b.ruleId));return selected.length>capacity?selected.filter(r=>now<=r.incoming.planned+90*60000):selected;}
 export function shortCity(value=''){
  const name=String(value).trim();
  const aliases={'Frankfurt(Main)Hbf':'Frankfurt Hbf','Frankfurt(main) Hnf':'Frankfurt Hbf','Frankfurt(M) Flughafen Fernbf':'Frankfurt Flughafen','Milano Centrale':'Milano C','Amsterdam Centraal':'Amsterdam C','Berlin Hbf (tief)':'Berlin Hbf'};

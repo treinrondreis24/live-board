@@ -16,3 +16,5 @@ test('readable compact destinations and minute status',()=>{
 test('origins and destinations use city names only',()=>{for(const [input,expected] of [['Budapest-Keleti','Budapest'],['Hamburg-Altona','Hamburg'],['Berlin Ost','Berlin'],['Milano Centrale','Milano'],['Frankfurt(main) Hnf','Frankfurt']])assert.equal(destinationCity(input),expected);assert.equal(shortCity('Berlin Ost'),'Berlin Ost');});
 
 test('planned time markings reflect measured delay and planned-only state',()=>{const e={planned:100000,expected:160000,realtime:true};assert.equal(eventDelay(e),1);assert.ok(planningMark(e).includes('+1'));assert.ok(planningMark({...e,expected:100000}).includes('✓'));assert.ok(planningMark({planned:100000}).includes('svg'));});
+
+test('overflow expires connections strictly after 90 minutes from incoming plan',()=>{const now=10000000,rows=Array.from({length:8},(_,i)=>({...pair,ruleId:String(i),incoming:{planned:now-90*60000},outgoing:{planned:now+i}}));assert.equal(boardRows(rows,now).length,8);assert.equal(boardRows(rows,now+1).length,0);assert.equal(boardRows(rows.slice(0,7),now+1).length,7);});
