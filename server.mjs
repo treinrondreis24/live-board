@@ -1,4 +1,5 @@
 import {handleAppCms} from './app-cms.mjs';
+import {connectionArrivalSelector} from './connection-collection.mjs';
 import {createTreinreizigerHandler,activeAppStation,acceptAppRow} from './tr-app-data.mjs';
 import {swedishStations,swedenState,swedishPayload,restoreSweden,startSweden} from './sweden.mjs';
 import {initBoardAdmin,handleBoardAdmin,applyBoardSettings,boardSource,duplicatePayload} from './board-admin.mjs';
@@ -465,6 +466,8 @@ async function performScan(){
         boardRows.push(...selectedRows);
 
         const cRows=[...selectedRows];
+        const connectionArrivals=connectionArrivalSelector(name,fetched.stops);
+        if(connectionArrivals)collectorRows.push(...rowsForSelector(fetched.stops,fetched.station,connectionArrivals));
         for(const cfg of collectorSelectors){
           cRows.push(...rowsForSelector(fetched.stops,fetched.station,cfg));
         }

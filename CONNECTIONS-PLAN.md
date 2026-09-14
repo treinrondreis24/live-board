@@ -1,0 +1,72 @@
+# Aansluitbord, aansluitarchief en dagverslagen
+
+Opdracht 14 september 2026. Nog geen actieve monitor: onderstaande onduidelijkheden
+moeten eerst worden opgelost. De aanvullende DB-aankomstcollectie kan zelfstandig werken.
+
+## Open punten
+- Voorbeeldafbeelding ontbreekt in het ontvangen bericht; gebruiker gevraagd deze mee te sturen.
+- Vervanger van 122: eerste opsomming zegt 152, Köln/Düsseldorf-regel zegt 1252.
+- Interpretatie grenzen ter bevestiging: ander perron >=7 haalbaar, 3–6 onzeker,
+  <=2 niet haalbaar. Perron onbekend >=7 haalbaar, 0–6 onzeker, negatief niet haalbaar.
+- Zelfde perron: >=1 minuut haalbaar, 0 onzeker, <=-1 niet haalbaar.
+- Geen waargenomen fysieke reizigersoverstap: registreer een beoordeling op basis van
+  de laatste treinmetingen, inclusief voorlopige/definitieve gegevenskwaliteit.
+  Een verwachting mag geen feitelijke aankomst of bevestigde overstap worden.
+
+## Regels (alleen planmatig bestaande aansluitingen)
+| Station | Aankomende trein | Vertrekkende trein | Voorwaarden |
+|---|---|---|---|
+| Mannheim Hbf | 225 | EC 5 | 225 ->1255 alleen als 225 planmatig niet rijdt |
+| Mannheim Hbf | 225 | 371 | Anders trein richting Basel/Zürich, gepland vertrek 13:30–14:00 |
+| Wien Hbf | RJX 66 | NJ 40490 | NJ gepland vóór 19:00; bij ontbreken 66 andere RJ/RJX met geplande aankomst 16:15–16:45 |
+| Wien Hbf | EC 146 | NJ 40490 | NJ gepland na 19:00 |
+| Innsbruck Hbf | RJ 82 | NJ 420 | |
+| Berlin Hbf | 178 | 142 | 140 als 142 ontbreekt of aansluiting niet haalbaar is |
+| Köln Hbf | 106 | 224 | Vervanger 1254; Düsseldorf terugval |
+| Frankfurt(Main)Hbf | 372 | 124 | Vervanger 154 |
+| Köln Hbf | 108 | 122 | Vervanger nog bevestigen; Düsseldorf terugval |
+| Innsbruck Hbf | 421 | 81 | |
+| Innsbruck Hbf | 421 | 83 | |
+| Dresden Hbf | 178 | 2440 | Vanaf 2026-10-07 |
+| Hannover Hbf | 2440 | 142 | Vanaf 2026-10-07 |
+| Frankfurt(M) Flughafen Fernbf | ICE 28 | 224 | 28 moet uit Wien Hbf komen; vervanger 224 ->1254 |
+| Stuttgart Hbf | 225 | 2383 | Vervanger 225 ->1255 |
+| Milano Centrale | 151 | 679 | |
+| Milano Centrale | 151 | 2832 | |
+| Osnabrück Hbf | 145 | 202 | Tot 5 oktober (inclusiviteit nog expliciet vastleggen) |
+| Osnabrück Hbf | 143 | 204 | Tot 5 oktober (inclusiviteit nog expliciet vastleggen) |
+| Osnabrück Hbf | 141 | 206 | Tot 5 oktober (inclusiviteit nog expliciet vastleggen) |
+
+Köln/Düsseldorf: bij planmatig onmogelijke aansluiting in Köln de overeenkomstige
+aansluiting in Düsseldorf beoordelen. Bij ongepland mislukken Köln behouden in
+weergave/archief, Düsseldorf aanvullend beoordelen. Niet vervangen vanwege alleen
+ontbrekende data. Planmatig ontbreken en realtime annuleren zijn verschillende zaken.
+19:00 exact voldoet aan geen van beide opgegeven Wien-voorwaarden.
+
+## Opslag en presentatie
+- Aansluiting identificeren op datum, regel, station en beide ritidentiteiten;
+  nooit treinnummer alleen (225 bestaat ook bij andere bronnen/landen).
+- Aankomst en vertrek apart; dienstregeling, laatste verwachting, eventuele gerealiseerde
+  tijd, meettijd, bron, sporen en perrongroep bewaren met de beoordeling.
+- Perrongroepen bestaan al in station_platform_layouts. Alleen bekende indelingen
+  gebruiken; geen groep afleiden uit opeenvolgende spoornummers of ontbrekende sporen.
+- Registratie van wijzigingen plus laatste toestand; samenvattingen los van de
+  korte bronretentie bewaren. Geen gigantische ruwe payloads in een rapport.
+- Afzonderlijk /aansluitbord, /aansluitarchief en /dagverslagen, later ook schermrotatie
+  en stationschef-configuratie. Vormgeving na ontvangst afbeelding.
+- Geen aparte overstaptijdkolom. Stadnamen, zo mogelijk C/Hbf/HB/SBB behouden.
+- Rapport per lokale kalenderdag; huidige dag voorlopig, ontbrekende data expliciet.
+- Dagverslag: 40490 op Nederlandse stations, 40421 aankomst Wien, 225 aankomst Mannheim.
+- Top 5 grootste gemeten vertragingen van schermtreinen en afzonderlijk alle verzamelde
+  treinen; per rit ontdubbelen, met station/bron/meetmoment. Voor een echte scherm-top-5
+  schermselectie tijdens de dag vastleggen, niet achteraf uit huidige configuratie gokken.
+- Overzicht onzeker/niet haalbaar en ontbrekende meetgegevens, met link naar aansluitarchief.
+
+## Gecontroleerd in bestaande data
+Op 14 september bevatte 225 Mannheim een DB-vertrekmeting, geen aparte aankomstmeting.
+151 Milano heeft een aankomst uit ViaggiaTreno. Actual timestamps waren in deze
+steekproef leeg. DB-normalisatie ondersteunt aankomstselectie uit dezelfde opgehaalde
+stops: connection-collection.mjs voegt die toe zonder extra stationrequests.
+Bronretentie is doorgaans 3 dagen, voor geselecteerde categorieën 30 dagen.
+Historische dagverslagen kunnen daarom alleen volledig worden gereconstrueerd waar
+de benodigde waarnemingen nog aanwezig zijn.
