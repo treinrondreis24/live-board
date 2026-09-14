@@ -1,7 +1,11 @@
 # Aansluitbord, aansluitarchief en dagverslagen
 
 Opdracht 14 september 2026. Stap 1–2: aansluitregels, persistente beoordelingen en tests.
-Scherm, archiefweergave, dagverslagen en beheer volgen afzonderlijk.
+Stap 3: zelfstandig scherm op `/aansluitbord`, zeven regels per pagina,
+automatisch wisselen na 15 seconden, gegevens ophalen elke 30 seconden.
+Planmatig onmogelijke aansluitingen zijn verborgen. Een planmatig mogelijke
+aansluiting met geannuleerde trein blijft rood zichtbaar als niet mogelijk.
+Archiefweergave, dagverslagen, beheer en opname in de bestaande schermrotatie volgen afzonderlijk.
 
 ## Bevestigde uitgangspunten
 - Voorbeeldafbeelding ontvangen: blauw aansluitbord, zonder aparte overstaptijdkolom.
