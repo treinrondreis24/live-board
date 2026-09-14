@@ -114,7 +114,7 @@ function screenStatus(t){
   if(t.type==='partial')return '<span title="Gedeeltelijk geannuleerd">⚠</span>';
   const delay=Math.round(Number(t.delay)||0);
   if(delay)return (delay>0?'+':'')+delay;
-  return t.hasRealtime?'<span class="on-time" title="Op tijd" aria-label="Op tijd">✓</span>':'<span class="planned-only" title="Gepland; geen actuele bevestiging" aria-label="Gepland">◷</span>';
+  return t.hasRealtime?'<span class="on-time" title="Op tijd" aria-label="Op tijd">✓</span>':'<span class="planned-only" title="Gepland; geen actuele bevestiging" aria-label="Gepland"><svg class="planning-clock" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="12"/><path d="M16 7v9h8"/></svg></span>';
 }
 function dbPageItems(){
   const cancelled=dbTrains.filter(t=>t.cancelled||t.type==='cancel');

@@ -15,6 +15,7 @@ await new Promise(r=>server.on('listening',r));
 const browser=await chromium.launch({channel:'msedge',headless:true});
 try{
  const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.addInitScript(()=>{if(window.AbortSignal)Object.defineProperty(AbortSignal,'timeout',{value:undefined,configurable:true});});
  await page.clock.install();
  for(const viewport of [{width:1672,height:941},{width:1280,height:720}]){
  await page.setViewportSize(viewport);await page.goto('http://127.0.0.1:'+server.address().port,{waitUntil:'domcontentloaded'});await page.waitForSelector('.entry');

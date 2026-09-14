@@ -15,7 +15,8 @@ function render(){
  $('source').textContent=`Bronnen: ${sources.join(' · ')||'DB Timetables · ViaggiaTreno'}${data?.monitor?.lastRun?' · Laatste beoordeling '+time(data.monitor.lastRun):''} · Inschatting op basis van treinmetingen`;
  $('connection-state').textContent=failed?'Verbinding onderbroken · automatisch opnieuw proberen':stale&&data?'Metingen verouderd':'';
 }
-async function refresh(){try{const response=await fetch('/api/connections',{cache:'no-store',signal:AbortSignal.timeout(15000)});if(!response.ok)throw Error();data=await response.json();lastSuccess=Date.now();failed=false;}catch{failed=true;}render();}
+function loadConnections(){return new Promise((resolve,reject)=>{const request=new XMLHttpRequest();request.open('GET','/api/connections');request.timeout=15000;request.onload=()=>{try{if(request.status<200||request.status>=300)throw Error('HTTP '+request.status);resolve(JSON.parse(request.responseText));}catch(error){reject(error);}};request.onerror=()=>reject(Error('Verbindingsfout'));request.ontimeout=()=>reject(Error('Wachttijd verstreken'));request.send();});}
+async function refresh(){try{data=await loadConnections();lastSuccess=Date.now();failed=false;}catch{failed=true;}render();}
 function tick(){const now=new Date();$('clock').textContent=clock.format(now);$('date').textContent=dateFormat.format(now);}
 $('fullscreen').onclick=()=>{const action=document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();action?.catch(()=>{});};
 tick();refresh();setInterval(tick,1000);setInterval(refresh,30000);setInterval(()=>{page++;render();},15000);

@@ -471,3 +471,5 @@ html,body{
 .italy-train{font-size:clamp(17px,1.35vw,31px);font-weight:400;letter-spacing:0}
 .italy-time{padding-right:.3vw;font-size:clamp(25px,2.228125vw,50.3125px);letter-spacing:0;text-overflow:clip;overflow:visible;color:#ffe5ac}
 .db-rows .db-train-row{min-height:0}
+
+.planning-clock{display:inline-block;width:.85em;height:.85em;vertical-align:-.08em;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
