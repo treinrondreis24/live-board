@@ -1027,6 +1027,7 @@ async function startNdov(){
 }
 
 const pageRoutes={
+  '/aansluitarchief':'/connections-archive.html','/aansluitarchief/':'/connections-archive.html',
   '/aansluitbord':'/connections.html','/aansluitbord/':'/connections.html',
   ...Object.fromEntries(Object.keys(swissStations).flatMap(id=>[[`/embed/${id}`,"/koeln-embed.html"],[`/embed/${id}/`,"/koeln-embed.html"]])),
   ...Object.fromEntries(Object.keys(norwegianStations).flatMap(id=>[[`/embed/${id}`,"/koeln-embed.html"],[`/embed/${id}/`,"/koeln-embed.html"]])),

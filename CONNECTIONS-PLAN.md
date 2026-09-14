@@ -5,7 +5,11 @@ Stap 3: zelfstandig scherm op `/aansluitbord`, zeven regels per pagina,
 automatisch wisselen na 15 seconden, gegevens ophalen elke 30 seconden.
 Planmatig onmogelijke aansluitingen zijn verborgen. Een planmatig mogelijke
 aansluiting met geannuleerde trein blijft rood zichtbaar als niet mogelijk.
-Archiefweergave, dagverslagen, beheer en opname in de bestaande schermrotatie volgen afzonderlijk.
+Stap 4: `/aansluitarchief` met datum, station, status en treinnummerfilters,
+bronmetingen per aansluiting en op aanvraag gepagineerde wijzigingsgeschiedenis.
+Onbekend blijft onderscheiden van een laatste bruikbare beoordeling. Geen
+reconstructie van ontbrekende historie. De hoofdpagina bevat inmiddels ook één
+aansluitpagina in de schermrotatie. Dagverslagen en beheer volgen afzonderlijk.
 
 ## Bevestigde uitgangspunten
 - Voorbeeldafbeelding ontvangen: blauw aansluitbord, zonder aparte overstaptijdkolom.

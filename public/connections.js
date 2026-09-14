@@ -2,6 +2,7 @@ import {boardRows,shortCity,destinationCity,statusView} from './connections-view
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clock=new Intl.DateTimeFormat('nl-NL',{timeZone:'Europe/Berlin',hour:'2-digit',minute:'2-digit'}),dateFormat=new Intl.DateTimeFormat('nl-NL',{timeZone:'Europe/Berlin',weekday:'short',day:'numeric',month:'short',year:'numeric'});
 const singleScreen=new URLSearchParams(location.search).get('screen')==='1';
+if(singleScreen)document.getElementById('archive-link').hidden=true;
 let data=null,page=0,lastSuccess=0,failed=false;
 const time=ts=>ts?clock.format(new Date(ts)):'—';
 function journey(e,mode){const t=e.actual||e.expected||e.planned;return `<div class="journey"><div class="journey-line"><time>${time(t)}</time><span class="city" title="${esc(mode==='arrival'?e.origin:e.destination)}">${esc(destinationCity(mode==='arrival'?e.origin:e.destination)||'—')}</span></div><small>${t!==e.planned?`<del>${time(e.planned)}</del>`:''}${e.cancelled?'<span>Geannuleerd</span>':''}</small></div>`;}

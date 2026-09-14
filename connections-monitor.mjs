@@ -25,7 +25,7 @@ export async function handleConnections(req,res,url){
  const send=(status,value)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(value));};
  if(req.method!=='GET'){send(405,{error:'Alleen lezen toegestaan.'});return true;}
  if(url.pathname==='/api/connections/status'){send(200,connectionMonitorStatus);return true;}
- if(url.pathname==='/api/connections/revisions'){const key=url.searchParams.get('key')||'';if(key.length>200){send(400,{error:'Ongeldige sleutel.'});return true;}send(200,{revisions:await readConnectionRevisions(key)});return true;}
+ if(url.pathname==='/api/connections/revisions'){const key=url.searchParams.get('key')||'',before=Number(url.searchParams.get('before')||2147483647),limit=Number(url.searchParams.get('limit')||200);if(key.length>200||!Number.isInteger(before)||before<1||before>2147483647||!Number.isInteger(limit)||limit<1||limit>200){send(400,{error:'Ongeldige sleutel of paginering.'});return true;}send(200,{revisions:await readConnectionRevisions(key,{before,limit})});return true;}
  if(url.pathname!=='/api/connections'){send(404,{error:'Niet gevonden.'});return true;}
  const date=url.searchParams.get('date')||connectionDate(Date.now());if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date))||new Date(date).toISOString().slice(0,10)!==date){send(400,{error:'Ongeldige datum.'});return true;}
  send(200,{date,monitor:connectionMonitorStatus,connections:await readConnections(date)});return true;

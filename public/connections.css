@@ -6,3 +6,5 @@
 
 .station{font-size:1.6vw;line-height:1.05}.station small{line-height:1.2}
 
+
+#archive-link{color:inherit;text-decoration:none}#archive-link:hover{text-decoration:underline}
