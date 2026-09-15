@@ -1,4 +1,4 @@
-import {handleAnalytics} from './train-analytics.mjs';
+import {handleAnalytics,startAnalyticsBackfill} from './train-analytics.mjs';
 import {handleAdminHub} from './admin-hub.mjs';
 import {handlePlatformAdmin} from './platform-admin.mjs';
 import {handleTreinhuisAccess} from './treinhuis-access.mjs';
@@ -1200,6 +1200,7 @@ const server=http.createServer(async(req,res)=>{
 
 await initStorage();
 startConnectionMonitor(getStationPlatformLayout);
+startAnalyticsBackfill();
 startDayReports(()=>{
  const now=Date.now(),recent=iso=>Number.isFinite(Date.parse(iso))&&now-Date.parse(iso)<15*60000;
  const dbRows=screenBoardTrains(now).filter(r=>r.countryCode==='NL'||recent(dbState.lastScanAt)).map(r=>({...r,source:r.source||(r.countryCode==='NL'?'NDOV':'DB')}));

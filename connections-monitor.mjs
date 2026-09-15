@@ -1,3 +1,4 @@
+import {readConnectionPeriod} from './connections-store.mjs';
 import {connectionDate,connectionRules,stationAliases} from './connections-rules.mjs';
 import {evaluateConnections} from './connections-engine.mjs';
 import {connectionInputs,saveConnectionAssessment,readConnections,readConnectionRevisions,cleanConnectionWorkingData} from './connections-store.mjs';
@@ -26,6 +27,7 @@ export async function handleConnections(req,res,url){
  if(req.method!=='GET'){send(405,{error:'Alleen lezen toegestaan.'});return true;}
  if(url.pathname==='/api/connections/status'){send(200,connectionMonitorStatus);return true;}
  if(url.pathname==='/api/connections/revisions'){const key=url.searchParams.get('key')||'',before=Number(url.searchParams.get('before')||2147483647),limit=Number(url.searchParams.get('limit')||200);if(key.length>200||!Number.isInteger(before)||before<1||before>2147483647||!Number.isInteger(limit)||limit<1||limit>200){send(400,{error:'Ongeldige sleutel of paginering.'});return true;}send(200,{revisions:await readConnectionRevisions(key,{before,limit})});return true;}
+ if(url.pathname==='/api/connections/period'){const from=url.searchParams.get('from'),to=url.searchParams.get('to'),rule=url.searchParams.get('rule')||'';const valid=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||'')&&Number.isFinite(Date.parse(d))&&new Date(d).toISOString().slice(0,10)===d;if(!valid(from)||!valid(to)||to<from||Date.parse(to)-Date.parse(from)>366*86400000||rule.length>100){send(400,{error:'Kies een geldige periode van maximaal 367 dagen.'});return true}try{send(200,{connections:await readConnectionPeriod(from,to,rule),from,to});}catch(e){send(e.status||500,{error:e.status?e.message:'Periode kon niet worden geladen.'})}return true;}
  if(url.pathname!=='/api/connections'){send(404,{error:'Niet gevonden.'});return true;}
  const date=url.searchParams.get('date')||connectionDate(Date.now());if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date))||new Date(date).toISOString().slice(0,10)!==date){send(400,{error:'Ongeldige datum.'});return true;}
  send(200,{date,monitor:connectionMonitorStatus,connections:await readConnections(date)});return true;
