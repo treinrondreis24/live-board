@@ -4,7 +4,7 @@ import {kkGet,kkPut,kkInsert,kkPatchParticipant} from './kk-store.mjs';
 const derive=promisify(scrypt),hash=s=>createHash('sha256').update(s).digest('hex');
 const fail=(message,status=400)=>{throw Object.assign(Error(message),{status});};
 let active=0;
-async function passwordHash(password,salt){
+export async function passwordHash(password,salt){
  if(typeof password!=='string'||password.length<12||password.length>128)fail('Gebruik een wachtwoord van 12 tot 128 tekens.');
  if(active>=2)fail('Inloggen is even druk. Probeer zo opnieuw.',503);
  active++;try{return await derive(password,salt,64);}finally{active--;}
@@ -21,7 +21,7 @@ export async function loginPassword(email,password){
  const id=hash(email),credential=await kkGet('password',id);
  const actual=await passwordHash(password,credential?.value.salt||'00000000000000000000000000000000');
  if(!credential||!timingSafeEqual(actual,Buffer.from(credential.value.key,'hex')))fail('E-mailadres of wachtwoord klopt niet.',401);
- const user=(await kkGet('participant',id))?.value;if(!user||user.deleting)fail('Dit account is niet beschikbaar.',403);return user;
+ const user=(await kkGet('participant',id))?.value;if(!user||user.deleting)fail('Dit account is niet beschikbaar.',403);Object.defineProperty(user,'credentialVersion',{value:credential.value.version||''});return user;
 }
 export function canUseProof(user){return !!user&&(user.approval==='approved'||(!user.manualRegistration&&!user.approval));}
 export async function setApproval(id,approved){const row=await kkGet('participant',id);if(!row)fail('Deze aanmelding bestaat niet.',404);await kkPatchParticipant(id,{approval:approved?'approved':'pending',approvalChangedAt:Date.now()});}

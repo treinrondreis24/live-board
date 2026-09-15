@@ -1,3 +1,4 @@
+import {handlePasswordReset} from './password-reset.mjs';
 import {handleAnalytics,startAnalyticsBackfill} from './train-analytics.mjs';
 import {handleAdminHub} from './admin-hub.mjs';
 import {handlePlatformAdmin} from './platform-admin.mjs';
@@ -1067,6 +1068,7 @@ const server=http.createServer(async(req,res)=>{
     if(await handleConnectionAdmin(req,res,url))return;
     if(await handleConnections(req,res,url))return;
     if(await handleAppCms(req,res,url))return;
+    if(await handlePasswordReset(req,res,url))return;
     if(await handleTreinhuisAccess(req,res,url))return;
     if(await handleKilometerkampioen(req,res,url))return;
     if(await handleAdminHub(req,res,url))return;

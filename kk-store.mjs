@@ -56,3 +56,5 @@ export async function kkRemoveQuotes(ids){for(const kind of ['blog-draft','blog-
 
 export async function kkJourneyRoutes(owner){const rows=await query("SELECT s.id,h.payload FROM kk_records s LEFT JOIN kk_records h ON h.kind='hilta-current' AND h.id=s.id WHERE s.kind='submission' AND s.owner=$1",[owner]);return rows.map(r=>({proofId:r.id,status:r.payload?JSON.parse(r.payload).status:null}));}
 export async function kkScorecardProofs(owner){const rows=await query("SELECT s.id,s.created,s.payload,h.payload AS route FROM kk_records s LEFT JOIN kk_records h ON h.kind='hilta-current' AND h.id=s.id AND h.owner=s.owner WHERE s.kind='submission' AND s.owner=$1 ORDER BY s.created,s.id",[owner]);return rows.map(r=>({id:r.id,created:Number(r.created),proof:JSON.parse(r.payload),route:r.route?JSON.parse(r.route):null})).filter(r=>r.proof.kind==='proof');}
+
+export async function kkReplaceCredential(id,expected,value){return (await query("UPDATE kk_records SET payload=$3 WHERE kind='password' AND id=$1 AND payload=$2 RETURNING id",[id,expected,JSON.stringify(value)])).length===1;}

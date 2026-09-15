@@ -1,3 +1,4 @@
+import {createParticipantReset} from './password-reset.mjs';
 import {editUpdate,deleteUpdate,deleteParticipant} from './kk-moderation.mjs';
 import {personalScorecard,scorecardOptions} from './kk-scorecard.mjs';
 import {saveClaim,ownClaim,claimFile,listClaims} from './kk-claims.mjs';
@@ -24,7 +25,7 @@ function origin(req){return req.headers.origin==='https://'+req.headers.host;}
 async function body(req){let size=0;const chunks=[];for await(const chunk of req){size+=chunk.length;if(size>16384)fail('Het formulier is te groot.',413);chunks.push(chunk);}try{return JSON.parse(Buffer.concat(chunks).toString());}catch{fail('Ongeldig formulier.');}}
 const json=(res,status,value)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(value));};
 function cookie(res,value,maxAge){res.setHeader('Set-Cookie',`kk_session=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`);}
-async function participant(req){const id=String(req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith('kk_session='))?.slice(11);if(!id)return null;const s=await kkGet('session',hash(id));if(!s||Number(s.expires)<=Date.now())return null;const user=(await kkGet('participant',s.owner))?.value;return user&&!user.deleting?user:null;}
+async function participant(req){const id=String(req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith('kk_session='))?.slice(11);if(!id)return null;const s=await kkGet('session',hash(id));if(!s||Number(s.expires)<=Date.now())return null;const user=(await kkGet('participant',s.owner))?.value;const credential=await kkGet('password',s.owner);return user&&!user.deleting&&(s.value.credentialVersion||'')===(credential?.value.version||'')?user:null;}
 export function validateProfile(data,user,admin=false){
  const fullName=text(data.fullName),displayName=text(data.displayName,80),edition=Number(data.edition),startTime=!admin&&user.startTime?user.startTime:text(data.startTime,5),companion=text(data.companion),station=text(data.station),distance=data.distance===''||data.distance==null?null:Number(data.distance);
  if(!fullName||!displayName||(!admin||data.edition)&&![12,24].includes(edition)||(!admin||startTime)&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime))fail('Vul naam, weergavenaam, editie en starttijd in.');
@@ -89,6 +90,7 @@ export async function handleKilometerkampioen(req,res,url){
  if(path==='/kilometerkampioen/api/upload'){const user=await participant(req);if(!user)fail('Log eerst in.',401);json(res,200,await upload(req,user));return true;}
  if(admin&&path==='/treinhuis/api/blog-upload'){json(res,200,await upload(req,{id:EDITOR_OWNER}));return true;}
  const data=await body(req);
+ if(admin&&path==='/treinhuis/api/password-reset'){json(res,200,await createParticipantReset(data.id));return true;}
  if(admin&&path==='/treinhuis/api/participant-save'){const row=await kkGet('participant',data.id);if(!row||row.value.deleting)fail('Deelnemer niet beschikbaar.',404);const profile=validateProfile(data,row.value,true);const changes=Object.fromEntries(['fullName','displayName','edition','startTime','startDate','rotterdamTime','together','companion','station','distance','updatedAt'].map(k=>[k,profile[k]]));await kkPatchParticipant(data.id,changes);json(res,200,{ok:true});return true;}
  if(admin&&path==='/treinhuis/api/participant-delete'){if(data.confirm!==true)fail('Bevestig het verwijderen.');await deleteParticipant(data.id);json(res,200,{ok:true});return true;}
  if(admin&&path==='/treinhuis/api/update-save'){await editUpdate(data);json(res,200,{ok:true});return true;}
@@ -100,7 +102,7 @@ export async function handleKilometerkampioen(req,res,url){
  const email=emailOf(data.email),ip=digest(clientIP(req)||'unknown');
  if(!await kkLimit('password-ip:'+ip,30,3600000)||!await kkLimit('password-email:'+hash(email),10,3600000))fail('Te veel pogingen. Probeer over een uur opnieuw.',429);
  const user=path.endsWith('/register')?await registerPassword(email,data):await loginPassword(email,data.password);
- const session=token();await kkPut('session',hash(session),user.id,{},Date.now()+7*86400000);cookie(res,session,7*86400);json(res,200,{participant:user});return true;
+ const session=token();await kkPut('session',hash(session),user.id,{credentialVersion:user.credentialVersion||''},Date.now()+7*86400000);cookie(res,session,7*86400);json(res,200,{participant:user});return true;
  }
  if(admin&&path==='/treinhuis/api/team'){await assignTeam(data);json(res,200,{ok:true});return true;}
  if(admin&&path==='/treinhuis/api/blog-save'){json(res,200,{draft:await saveBlog(data)});return true;}
@@ -121,7 +123,7 @@ export async function handleKilometerkampioen(req,res,url){
   if(!c||Number(c.expires)<=Date.now()||!timingSafeEqual(Buffer.from(c.value.code),Buffer.from(actual)))fail('De code is ongeldig of verlopen. Vraag een nieuwe code aan.',401);
   let user=(await kkGet('participant',c.owner))?.value;
   if(!user){user={id:c.owner,email:c.value.email,createdAt:Date.now(),competition:'2026'};await kkPut('participant',user.id,user.id,user);}
-  const session=token();await kkPut('session',hash(session),user.id,{},Date.now()+7*86400000);cookie(res,session,7*86400);json(res,200,{participant:user});return true;
+  const session=token();await kkPut('session',hash(session),user.id,{credentialVersion:(await kkGet('password',user.id))?.value.version||''},Date.now()+7*86400000);cookie(res,session,7*86400);json(res,200,{participant:user});return true;
  }
  const user=await participant(req);if(!user)fail('Log eerst in.',401);
  if(path==='/kilometerkampioen/api/claim-save'){json(res,200,{claim:await saveClaim(user,data)});return true;}
