@@ -1,0 +1,16 @@
+export function transferRule(from,to,layout){
+ const clean=x=>String(x||'').toUpperCase().replace(/^(GLEIS|SPOOR|BINARIO)\s+/,'').replace(/\s+/g,'');
+ const groups=layout?.groups||layout?.platformGroups?.map(tracks=>({tracks,kind:'opposite',minutes:''}))||[];
+ const bases=groups.flatMap(g=>g.tracks).map(clean).sort((a,b)=>b.length-a.length);
+ function parse(v){v=clean(v);if(bases.includes(v))return{base:v};for(const base of bases){if(v.startsWith(base)){const m=v.slice(base.length).match(/^([A-Z])(?:[-–]([A-Z]))?$/);if(m&&(!m[2]||m[1]<=m[2]))return{base,range:[m[1],m[2]||m[1]]};}}return{base:v};}
+ const a=parse(from),b=parse(to),unknown={relation:'unknown',minimum:7,uncertain:0,explanation:'Ligging onbekend; standaardregel (geen reisplannertijd beschikbaar).'};
+ if(!a.base||!b.base||['?','—','-'].includes(a.base)||['?','—','-'].includes(b.base))return unknown;
+ const g=groups.find(g=>g.tracks.map(clean).includes(a.base)&&g.tracks.map(clean).includes(b.base));
+ if(g){const relation=['opposite','partial','same'].includes(g.kind)?'same':g.kind==='different'?'different':'unknown';
+ if(g.minutes!==''&&g.minutes!=null)return{relation,minimum:Number(g.minutes),uncertain:Math.max(0,Number(g.minutes)-1),explanation:'Specifieke overstaptijd; gaat voor standaardregels.',route:g.route,notes:g.notes};
+ if(relation==='same'){const overlap=!a.range||!b.range||a.range[0]<=b.range[1]&&b.range[0]<=a.range[1],minimum=g.kind==='same'||!overlap?2:1;return{relation,minimum,uncertain:minimum-1,explanation:minimum===1?'Tegenover elkaar of overlappende secties.':'Zelfde perron, niet direct tegenover elkaar.',route:g.route,notes:g.notes};}
+ if(relation==='different')return{relation,minimum:7,uncertain:3,explanation:'Verschillende perrons; standaardregel.',route:g.route,notes:g.notes};return unknown;}
+ if(a.base===b.base)return{relation:'same',minimum:1,uncertain:0,explanation:'Hetzelfde spoor.'};
+ if(bases.includes(a.base)&&bases.includes(b.base))return{relation:'different',minimum:7,uncertain:3,explanation:'Verschillende perrongroepen.'};return unknown;
+}
+export function ruleStatus(minutes,rule){return !Number.isFinite(minutes)?'unknown':minutes>=rule.minimum?'feasible':minutes>=rule.uncertain?'uncertain':'missed';}

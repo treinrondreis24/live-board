@@ -1,3 +1,4 @@
+import {handlePlatformAdmin} from './platform-admin.mjs';
 import {handleTreinhuisAccess} from './treinhuis-access.mjs';
 import {handleConnectionAdmin} from './connections-admin.mjs';
 import {handleAppCms} from './app-cms.mjs';
@@ -1059,6 +1060,7 @@ const server=http.createServer(async(req,res)=>{
   try{
     const url=new URL(req.url,`http://${req.headers.host}`);
     if(await handleDayReports(req,res,url))return;
+    if(await handlePlatformAdmin(req,res,url))return;
     if(await handleConnectionAdmin(req,res,url))return;
     if(await handleConnections(req,res,url))return;
     if(await handleAppCms(req,res,url))return;
@@ -1091,6 +1093,7 @@ const server=http.createServer(async(req,res)=>{
     const platformLayoutMatch=url.pathname.match(/^\/api\/stations\/([a-z0-9-]+)\/platforms\/?$/);
     if(platformLayoutMatch){
       const layout=await getStationPlatformLayout(platformLayoutMatch[1]);
+      if(layout){delete layout.photo;}
       return sendJson(res,layout?200:404,layout||{error:"Geen perronindeling opgeslagen voor dit station"});
     }
     if(url.pathname==="/api/health")return sendJson(res,200,{ok:true,credentialsConfigured:Boolean(CLIENT_ID&&API_KEY),api:BASE,storage:getStorageInfo(),config,dbState,collectorState:{lastScanAt:collectorState.lastScanAt,stations:Object.keys(collectorState.byStation)},italyState,nightjetPlanState:{dateKey:nightjetPlanState.dateKey,scanning:nightjetPlanState.scanning,lastUpdatedAt:nightjetPlanState.lastUpdatedAt,count:nightjetPlanState.rows.length,warnings:nightjetPlanState.warnings}});

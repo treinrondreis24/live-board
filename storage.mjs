@@ -892,8 +892,16 @@ async function initStationPlatformLayouts(){
   }
 }
 export async function getStationPlatformLayout(stationKey){
+  const edited=await readPlatformEdit(stationKey);if(edited)return {...edited,station:edited.name,stationKey,platformGroups:edited.groups.filter(g=>['opposite','partial','same'].includes(g.kind)).map(g=>g.tracks)};
   const sql='SELECT * FROM station_platform_layouts WHERE station_key=$1';
   const row=backend==='postgresql'?(await pool.query(sql,[stationKey])).rows[0]:sqlite.prepare(sql.replace('$1','?')).get(stationKey);
   if(!row)return null;
   return {stationKey:row.station_key,station:row.station_name,platformGroups:JSON.parse(row.platform_groups),notes:row.notes,source:row.source,verificationStatus:row.verification_status,recordedAt:new Date(Number(row.recorded_at)).toISOString()};
 }
+
+let platformSchema;
+async function platformQuery(sql,args=[]){if(backend==='postgresql')return(await pool.query(sql,args)).rows;const bound=[];sql=sql.replace(/\$(\d+)/g,(_,n)=>{bound.push(args[+n-1]);return '?'});return sqlite.prepare(sql).all(...bound);}
+async function platformReady(){if(!platformSchema)platformSchema=platformQuery('CREATE TABLE IF NOT EXISTS platform_edits(station_key TEXT PRIMARY KEY,revision INTEGER NOT NULL,payload TEXT NOT NULL)').catch(e=>{platformSchema=null;throw e});await platformSchema;}
+async function readPlatformEdit(key){await platformReady();const row=(await platformQuery('SELECT * FROM platform_edits WHERE station_key=$1',[key]))[0];return row?{...JSON.parse(row.payload),revision:row.revision}:null;}
+export async function listPlatformEdits(){await platformReady();const rows=await platformQuery('SELECT station_key FROM station_platform_layouts UNION SELECT station_key FROM platform_edits ORDER BY station_key');return Promise.all(rows.map(async row=>{const l=await getStationPlatformLayout(row.station_key);return {...l,name:l.name||l.station,revision:l.revision||0,groups:l.groups||l.platformGroups.map(tracks=>({tracks,kind:'opposite',route:'Geen bijzonderheden',minutes:'',notes:'',pockets:[]}))};}));}
+export async function savePlatformEdit(value,revision){await platformReady();const rows=await platformQuery('INSERT INTO platform_edits(station_key,revision,payload) VALUES($1,1,$2) ON CONFLICT(station_key) DO UPDATE SET revision=platform_edits.revision+1,payload=excluded.payload WHERE platform_edits.revision=$3 RETURNING revision',[value.stationKey,JSON.stringify(value),revision]);if(!rows.length){const e=Error('Deze indeling is intussen gewijzigd. Herlaad de pagina.');e.status=409;throw e;}return{...value,revision:rows[0].revision};}

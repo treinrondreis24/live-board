@@ -1,12 +1,7 @@
+import {transferRule,ruleStatus} from './platform-rules.mjs';
 import {connectionRules,connectionRulesVersion,replacements,normalized,localClock,activeRule} from './connections-rules.mjs';
 const validTrack=t=>!['','—','-','?','null','undefined'].includes(String(t||'').trim());
-export function platformRelation(a,b,layout){
- if(!validTrack(a)||!validTrack(b))return 'unknown';
- const clean=t=>String(t).trim().toUpperCase().replace(/^(GLEIS|SPOOR|BINARIO)\s+/,'');a=clean(a);b=clean(b);
- if(a===b)return 'same';
- const groups=layout?.platformGroups||[];const ai=groups.findIndex(g=>g.map(clean).includes(a)),bi=groups.findIndex(g=>g.map(clean).includes(b));
- return ai<0||bi<0?'unknown':ai===bi?'same':'different';
-}
+export function platformRelation(a,b,layout){return transferRule(a,b,layout).relation;}
 export function transferStatus(minutes,relation){
  if(!Number.isFinite(minutes))return 'unknown';
  if(relation==='same')return minutes>=1?'feasible':minutes>=0?'uncertain':'missed';
@@ -25,15 +20,16 @@ function select(events,number,mode,complete,allowReplacement=true){
 const inWindow=(e,window)=>localClock(e.planned)>=window.from&&localClock(e.planned)<=window.to;
 export function assessPair(rule,date,station,a,b,layout,now){
  const plannedRelation=platformRelation(a.plannedTrack,b.plannedTrack,layout),relation=platformRelation(a.currentTrack,b.currentTrack,layout);
- const plannedMinutes=(b.planned-a.planned)/60000,plannedStatus=transferStatus(plannedMinutes,plannedRelation);
- const result={ruleId:rule.id,rulesVersion:connectionRulesVersion,date,station,incoming:a,outgoing:b,plannedMinutes,plannedRelation,relation,layout:layout?{station:layout.station,platformGroups:layout.platformGroups,source:layout.source,verificationStatus:layout.verificationStatus,notes:layout.notes}:null,plannedStatus,eligible:plannedStatus!=='missed',evaluatedAt:now,minutes:null,status:'unknown',reason:null,evidence:'none',phase:'upcoming'};
+ const plannedMinutes=(b.planned-a.planned)/60000,plannedStatus=ruleStatus(plannedMinutes,transferRule(a.plannedTrack,b.plannedTrack,layout));
+ const transfer=transferRule(a.currentTrack,b.currentTrack,layout);
+ const result={transfer,ruleId:rule.id,rulesVersion:connectionRulesVersion,date,station,incoming:a,outgoing:b,plannedMinutes,plannedRelation,relation,layout:layout?{station:layout.station,platformGroups:layout.platformGroups,source:layout.source,verificationStatus:layout.verificationStatus,notes:layout.notes}:null,plannedStatus,eligible:plannedStatus!=='missed',evaluatedAt:now,minutes:null,status:'unknown',reason:null,evidence:'none',phase:'upcoming'};
  if(!result.eligible){result.reason='not-planned-feasible';result.status='not-planned';return result;}
  const measuredA=a.actual||a.expected||a.planned,measuredB=b.actual||b.expected||b.planned;
  result.phase=now>=measuredB+300000?'after-time':'upcoming';
  if(a.cancelled||b.cancelled){result.status='missed';result.reason='cancelled';result.evidence='cancellation';return result;}
  if((a.realtime&&!a.actual&&now-a.seenAt>15*60000)||(b.realtime&&!b.actual&&now-b.seenAt>15*60000)){result.reason='stale-observation';return result;}
  if(!measuredA||!measuredB){result.reason='missing-planning';return result;}
- result.minutes=(measuredB-measuredA)/60000;result.status=transferStatus(result.minutes,relation);result.evidence=a.actual&&b.actual?'actual-times':!a.realtime||!b.realtime?'planning-assumption':'latest-expectations';result.reason=result.evidence==='planning-assumption'?'assumed-on-time':'time-comparison';return result;
+ result.minutes=(measuredB-measuredA)/60000;result.status=ruleStatus(result.minutes,transfer);result.evidence=a.actual&&b.actual?'actual-times':!a.realtime||!b.realtime?'planning-assumption':'latest-expectations';result.reason=result.evidence==='planning-assumption'?'assumed-on-time':'time-comparison';return result;
 }
 // Complete means full-day station planning coverage, not just absence from a response.
 export function evaluateConnections({date,events,layouts={},completeStations=new Set(),now=Date.now()}){
