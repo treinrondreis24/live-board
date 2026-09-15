@@ -1,3 +1,4 @@
+import {handleAnalytics} from './train-analytics.mjs';
 import {handleAdminHub} from './admin-hub.mjs';
 import {handlePlatformAdmin} from './platform-admin.mjs';
 import {handleTreinhuisAccess} from './treinhuis-access.mjs';
@@ -1060,6 +1061,7 @@ const handleTreinreiziger=createTreinreizigerHandler({stations:[...new Map(appSt
 const server=http.createServer(async(req,res)=>{
   try{
     const url=new URL(req.url,`http://${req.headers.host}`);
+    if(await handleAnalytics(req,res,url))return;
     if(await handleDayReports(req,res,url))return;
     if(await handlePlatformAdmin(req,res,url))return;
     if(await handleConnectionAdmin(req,res,url))return;
