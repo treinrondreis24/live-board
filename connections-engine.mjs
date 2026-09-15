@@ -27,9 +27,10 @@ export function assessPair(rule,date,station,a,b,layout,now){
  const measuredA=a.actual||a.expected||a.planned,measuredB=b.actual||b.expected||b.planned;
  result.phase=now>=measuredB+300000?'after-time':'upcoming';
  if(a.cancelled||b.cancelled){result.status='missed';result.reason='cancelled';result.evidence='cancellation';return result;}
- if((a.realtime&&!a.actual&&now-a.seenAt>15*60000)||(b.realtime&&!b.actual&&now-b.seenAt>15*60000)){result.reason='stale-observation';return result;}
+ const stale=(a.realtime&&!a.actual&&now-a.seenAt>15*60000)||(b.realtime&&!b.actual&&now-b.seenAt>15*60000);
+ if(stale&&result.phase!=='after-time'){result.reason='stale-observation';return result;}
  if(!measuredA||!measuredB){result.reason='missing-planning';return result;}
- result.minutes=(measuredB-measuredA)/60000;result.status=ruleStatus(result.minutes,transfer);result.evidence=a.actual&&b.actual?'actual-times':!a.realtime||!b.realtime?'planning-assumption':'latest-expectations';result.reason=result.evidence==='planning-assumption'?'assumed-on-time':'time-comparison';return result;
+ result.minutes=(measuredB-measuredA)/60000;result.status=ruleStatus(result.minutes,transfer);result.evidence=a.actual&&b.actual?'actual-times':!a.realtime||!b.realtime?'planning-assumption':'latest-expectations';result.reason=stale?'archived-expectations':result.evidence==='planning-assumption'?'assumed-on-time':'time-comparison';return result;
 }
 // Complete means full-day station planning coverage, not just absence from a response.
 export function evaluateConnections({date,events,layouts={},completeStations=new Set(),now=Date.now()}){

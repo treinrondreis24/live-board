@@ -83,3 +83,4 @@ test('persistent snapshots, deduplicated revisions, last assessment retention an
  await handleConnections({method:'GET'},response,new URL('http://localhost/api/connections/revisions?before=-1'));assert.equal(response.status,400);
  await handleConnections({method:'POST'},response,new URL('http://localhost/api/connections'));assert.equal(response.status,405);sqlite.close();
 });
+test('past connection retains assessment when expected timestamps age',async()=>{const {assessPair}=await import('./connections-engine.mjs');const t=Date.now()-3600000;const a={planned:t,expected:t+43*60000,realtime:true,seenAt:t,plannedTrack:'11',currentTrack:'11'},b={planned:t+32*60000,expected:t+33*60000,realtime:true,seenAt:t,plannedTrack:'3',currentTrack:'3'};const r=assessPair({id:'past'},'2026-09-15','osnabrueck',a,b,null,Date.now());assert.equal(r.status,'missed');assert.equal(r.minutes,-10);assert.equal(r.reason,'archived-expectations');});
