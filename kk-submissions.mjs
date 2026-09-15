@@ -1,5 +1,5 @@
 import {canUseProof} from './kk-password.mjs';
-import {randomUUID} from 'node:crypto';
+import {randomUUID,createHash} from 'node:crypto';
 import {mkdtemp,rm,stat,open} from 'node:fs/promises';
 import {createWriteStream,createReadStream} from 'node:fs';
 import {tmpdir} from 'node:os';
@@ -11,11 +11,15 @@ import {promisify} from 'node:util';
 import ffprobe from 'ffprobe-static';
 import sharp from 'sharp';
 sharp.cache(false);sharp.concurrency(1);
-import {kkGet,kkPut,kkList,kkLimit,kkInsert} from './kk-store.mjs';
+import {kkGet,kkPut,kkList,kkLimit,kkInsert,kkAcquireUploadLease,kkReleaseUploadLease} from './kk-store.mjs';
 import {mediaReady,validateMediaDeclaration,putValidatedMedia,authorizedMediaUrl} from './kk-media.mjs';
 const fail=(message,status=400)=>{throw Object.assign(Error(message),{status});};
 const exec=promisify(execFile);
-let active=0;
+let active=0;const stats={started:0,succeeded:0,failed:0,busy:0,reused:0,bytes:0};
+export function uploadStatus(){return {...stats,active,limit:2};}
+function busy(){stats.busy++;throw Object.assign(Error('Het is druk. Je upload probeert het automatisch opnieuw.'),{status:503,retryAfter:4});}
+export function uploadIdentity(owner,claimOnly,key){const hex=createHash('sha256').update(owner+':'+claimOnly+':'+key).digest('hex').slice(0,32);return hex.slice(0,8)+'-'+hex.slice(8,12)+'-'+hex.slice(12,16)+'-'+hex.slice(16,20)+'-'+hex.slice(20);}
+async function existingUpload(id,user,claimOnly,size,declaredType,filename){const row=await kkGet('media',id);if(!row)return null;if(row.owner!==user.id||row.value.claimOnly!==claimOnly||row.value.size!==size||row.value.declaredType!==declaredType||row.value.filename!==filename)fail('Deze uploadcode hoort bij een ander bestand.',409);stats.reused++;return {id,kind:row.value.kind};}
 export async function inspectPhoto(path){
    const meta=await sharp(path,{limitInputPixels:60000000}).metadata();
    const actual={jpeg:'image/jpeg',png:'image/png',webp:'image/webp',heif:meta.compression==='av1'?'image/avif':'image/heic'}[meta.format];
@@ -30,11 +34,16 @@ export async function upload(req,user,claimOnly=false){
  let declaration;try{declaration=validateMediaDeclaration({type,size});}catch(e){fail(e.message);}
  if(declaration.kind==='document'&&!claimOnly)fail('Documenten kunnen alleen bij een eindclaim worden toegevoegd.');
  const filename=claimOnly?decodeURIComponent(String(req.headers['x-file-name']||'bestand')).replace(/[\\/\x00-\x1f]/g,'_').slice(0,180):'';
- if(active>=2)fail('Er worden nu andere bestanden verwerkt. Probeer zo opnieuw.',503);
- if(!await kkLimit('upload:'+user.id,40,3600000))fail('Te veel uploads. Probeer over een uur opnieuw.',429);
- if(active>=2)fail('Er worden nu andere bestanden verwerkt. Probeer zo opnieuw.',503);
- active++;let dir;let stage='receive';
+ const key=String(req.headers['x-upload-id']||'');if(key&&!/^[a-f0-9-]{36}$/.test(key))fail('Ongeldige uploadcode.');
+ const id=key?uploadIdentity(user.id,claimOnly,key):randomUUID(),declaredType=type,nonce=randomUUID();
+ const cached=key?await existingUpload(id,user,claimOnly,size,declaredType,filename):null;if(cached)return cached;
+ if(active>=2)busy();
+ active++;let dir,leased=false,started=false;let stage='receive';
  try{
+  if(!await kkAcquireUploadLease(id,user.id,nonce))busy();leased=true;
+  const done=key?await existingUpload(id,user,claimOnly,size,declaredType,filename):null;if(done)return done;
+  if(!await kkLimit('upload:'+user.id,40,3600000))fail('Te veel uploads. Probeer over een uur opnieuw.',429);
+  stats.started++;started=true;
   dir=await mkdtemp(join(tmpdir(),'kk-upload-'));const path=join(dir,'media');let received=0;
   await pipeline(req,new Transform({transform(chunk,encoding,done){received+=chunk.length;done(received>size?Object.assign(Error('Bestand is te groot.'),{status:413}):null,chunk);}}),createWriteStream(path),{signal:AbortSignal.timeout(120000)});
   if((await stat(path)).size!==size)fail('Upload is niet volledig ontvangen. Probeer opnieuw.');
@@ -55,10 +64,10 @@ export async function upload(req,user,claimOnly=false){
    if(!(type==='video/webm'?format.includes('webm'):format.includes('mov')))fail('Het bestand komt niet overeen met het videotype.');
   }
   }
-  stage='store';const id=randomUUID();await putValidatedMedia({owner:user.id,id,type,size,stream:createReadStream(path)});
-  let previewId=null;if(declaration.kind==='image'){try{const previewPath=join(dir,'preview.jpg');await sharp(path,{limitInputPixels:60000000}).timeout({seconds:20}).rotate().resize({width:1280,height:1280,fit:'inside',withoutEnlargement:true}).jpeg({quality:78}).toFile(previewPath);const preview=randomUUID();await putValidatedMedia({owner:user.id,id:preview,type:'image/jpeg',size:(await stat(previewPath)).size,stream:createReadStream(previewPath)});previewId=preview;}catch{}}
-  await kkPut('media',id,user.id,{id,type,size,kind:declaration.kind,claimOnly,filename,previewId,createdAt:Date.now()});return {id,kind:declaration.kind};
- }catch(e){if(e.status)throw e;const ref=randomUUID().slice(0,8);console.error('KK_UPLOAD',ref,stage,String(e.code||e.name||'Error'));fail(stage==='validate'?'Het bestand kan niet worden gelezen. Sla de foto opnieuw op als JPEG of PNG, of kies een andere video. Foutcode: '+ref:stage==='receive'?'De upload is onderbroken. Controleer je verbinding en probeer opnieuw. Foutcode: '+ref:'Het bestand kon niet worden opgeslagen. Probeer opnieuw. Foutcode: '+ref,stage==='validate'?422:503);}finally{active--;if(dir)await rm(dir,{recursive:true,force:true});}
+  stage='store';await putValidatedMedia({owner:user.id,id,type,size,stream:createReadStream(path)});
+  let previewId=null;if(declaration.kind==='image'){try{const previewPath=join(dir,'preview.jpg');await sharp(path,{limitInputPixels:60000000}).timeout({seconds:20}).rotate().resize({width:1280,height:1280,fit:'inside',withoutEnlargement:true}).jpeg({quality:78}).toFile(previewPath);const preview=key?uploadIdentity(user.id,claimOnly,key+':preview'):randomUUID();await putValidatedMedia({owner:user.id,id:preview,type:'image/jpeg',size:(await stat(previewPath)).size,stream:createReadStream(previewPath)});previewId=preview;}catch{}}
+  await kkPut('media',id,user.id,{id,type,size,declaredType,kind:declaration.kind,claimOnly,filename,previewId,createdAt:Date.now()});stats.succeeded++;stats.bytes+=size;return {id,kind:declaration.kind};
+ }catch(e){if(started)stats.failed++;if(e.status)throw e;const ref=randomUUID().slice(0,8);console.error('KK_UPLOAD',ref,stage,String(e.code||e.name||'Error'));fail(stage==='validate'?'Het bestand kan niet worden gelezen. Sla de foto opnieuw op als JPEG of PNG, of kies een andere video. Foutcode: '+ref:stage==='receive'?'De upload is onderbroken. Controleer je verbinding en probeer opnieuw. Foutcode: '+ref:'Het bestand kon niet worden opgeslagen. Probeer opnieuw. Foutcode: '+ref,stage==='validate'?422:503);}finally{active--;if(leased)await kkReleaseUploadLease(id,nonce).catch(()=>{});if(dir)await rm(dir,{recursive:true,force:true}).catch(()=>{});}
 }
 export function validateSubmission(data){
  if(!['proof','update'].includes(data.kind))fail('Kies bewijs of update.');
