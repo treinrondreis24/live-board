@@ -81,7 +81,7 @@ function loadDotEnv(filename){
 }
 function sendJson(res,status,obj){res.writeHead(status,{"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"});res.end(JSON.stringify(obj));}
 function sendFile(res,filename){
-  const types={".html":"text/html; charset=utf-8",".css":"text/css; charset=utf-8",".js":"text/javascript; charset=utf-8",".svg":"image/svg+xml"};
+  const types={".html":"text/html; charset=utf-8",".css":"text/css; charset=utf-8",".js":"text/javascript; charset=utf-8",".mjs":"text/javascript; charset=utf-8",".svg":"image/svg+xml"};
   fs.readFile(filename,(err,data)=>{
     if(err){res.writeHead(404);return res.end("Not found");}
 
