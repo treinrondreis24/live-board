@@ -1,3 +1,4 @@
+import {handleAdminHub} from './admin-hub.mjs';
 import {handlePlatformAdmin} from './platform-admin.mjs';
 import {handleTreinhuisAccess} from './treinhuis-access.mjs';
 import {handleConnectionAdmin} from './connections-admin.mjs';
@@ -1066,6 +1067,7 @@ const server=http.createServer(async(req,res)=>{
     if(await handleAppCms(req,res,url))return;
     if(await handleTreinhuisAccess(req,res,url))return;
     if(await handleKilometerkampioen(req,res,url))return;
+    if(await handleAdminHub(req,res,url))return;
     if(await handleAdminSecurity(req,res,url))return;
     if(url.pathname==='/board-admin.js'){res.setHeader('X-Robots-Tag','noindex, nofollow');res.setHeader('Cache-Control','no-store');return sendFile(res,path.join(__dirname,'board-admin.js'));}
     if(['/beheer','/beheer/','/board-admin.html'].includes(url.pathname)){

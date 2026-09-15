@@ -43,7 +43,7 @@ function countryList(input){if(!Array.isArray(input)||!input.length||input.lengt
 // accepting a reused TOTP/recovery code or reviving a revoked session.
 export async function handleAdminSecurity(req,res,url){
  const path=url.pathname;
- if(['/stationschef','/stationschef/','/seinhuis','/seinhuis/'].includes(path)){
+ if(['/stationschef','/stationschef/','/seinhuis','/seinhuis/','/seinhuis/beveiliging','/seinhuis/beveiliging/'].includes(path)){
   headers(res);res.setHeader('Content-Security-Policy',"default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
   res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});res.end(await readFile(new URL('./admin-security.html',import.meta.url)));return true;
  }
