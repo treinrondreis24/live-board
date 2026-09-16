@@ -58,6 +58,16 @@ test('actual timestamps cross midnight and remain distinct from expectations',()
  assert.equal(assessPair({id:'test'},date,'koeln',a,b,null,now+2*86400000).evidence,'actual-times');
  assert.equal(assessPair({id:'test'},date,'koeln',a,b,null,now+2*86400000).minutes,10);
 });
+test('Zwolle 1A to 1B uses two minutes despite separate platform groups',()=>{
+ const layout={groups:[{tracks:['1A','12'],kind:'opposite',minutes:''},{tracks:['1B','14'],kind:'opposite',minutes:''}]};
+ const arrival=event('1','arrival','13:00',{station:'zwolle',plannedTrack:'1A',currentTrack:'1A'});
+ const departure=event('2','departure','13:02',{station:'zwolle',plannedTrack:'1B',currentTrack:'1B'});
+ const feasible=assessPair({id:'test'},date,'zwolle',arrival,departure,layout,now);
+ assert.equal(feasible.transfer.minimum,2);
+ assert.equal(feasible.status,'feasible');
+ assert.equal(assessPair({id:'test'},date,'zwolle',arrival,{...departure,planned:ts('13:01'),expected:ts('13:01')},layout,now).status,'uncertain');
+ assert.equal(assessPair({id:'test'},date,'zwolle',arrival,{...departure,planned:ts('13:00'),expected:ts('13:00')},layout,now).status,'not-planned');
+});
 test('persistent snapshots, deduplicated revisions, last assessment retention and coverage',async()=>{
  const sqlite=new DatabaseSync(':memory:');await initConnections({sqlite});
  const raw={number:'106',category:'ICE',observedAt:'Köln Hbf',eventMode:'arrival',plannedTimestamp:ts('13:00'),expectedTimestamp:ts('13:01'),sourceEventId:'a',hasRealtime:true};

@@ -12,3 +12,23 @@ test('track notes persist, match sections and never change transfer times',()=>{
  assert.deepEqual(validatePlatform(layout).trackNotes,[]);
  for(const trackNotes of [[{track:'5',text:'x'},{track:'5',text:'y'}],[{track:'',text:'x'}],[{track:'A',text:'x'.repeat(2001)}]])assert.throws(()=>validatePlatform({...layout,trackNotes}));
 });
+test('same numeric track with different letters takes two minutes even across platform groups',()=>{
+ const zwolle={groups:[
+  {tracks:['1A','12'],kind:'opposite',minutes:''},
+  {tracks:['1B','14'],kind:'opposite',minutes:''},
+ ]};
+ for(const [from,to] of [['1A','1B'],['1B','1A'],['Spoor 1A','1B'],['5A','5B']]){
+  const rule=transferRule(from,to,zwolle);
+  assert.equal(rule.relation,'same');
+  assert.equal(rule.minimum,2);
+  assert.equal(ruleStatus(2,rule),'feasible');
+  assert.equal(ruleStatus(1,rule),'uncertain');
+  assert.equal(ruleStatus(0,rule),'missed');
+ }
+ assert.equal(transferRule('1A','12',zwolle).minimum,1);
+ assert.equal(transferRule('1B','14',zwolle).minimum,1);
+ assert.equal(transferRule('1A','1A',zwolle).minimum,1);
+ assert.equal(transferRule('1A','3A',zwolle).relation,'unknown');
+ const override={groups:[{tracks:['1A','1B'],kind:'opposite',minutes:4}]};
+ assert.equal(transferRule('1A','1B',override).minimum,4);
+});
