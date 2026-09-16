@@ -1,4 +1,10 @@
-export function transferRule(from,to,layout){
+export function transferRule(from,to,layout){return {...baseTransferRule(from,to,layout),fromNote:trackExplanation(from,layout),toNote:trackExplanation(to,layout)}}
+export function trackExplanation(track,layout){
+ const clean=v=>String(v||'').toUpperCase().replace(/^(GLEIS|SPOOR|BINARIO)\s+/,'').replace(/\s+/g,'');
+ const value=clean(track),notes=[...(layout?.trackNotes||[])].sort((a,b)=>clean(b.track).length-clean(a.track).length);
+ return notes.find(n=>value===clean(n.track))?.text || notes.find(n=>value.startsWith(clean(n.track))&&/^[A-Z](?:[-–][A-Z])?$/.test(value.slice(clean(n.track).length)))?.text || '';
+}
+function baseTransferRule(from,to,layout){
  const clean=x=>String(x||'').toUpperCase().replace(/^(GLEIS|SPOOR|BINARIO)\s+/,'').replace(/\s+/g,'');
  const groups=layout?.groups||layout?.platformGroups?.map(tracks=>({tracks,kind:'opposite',minutes:''}))||[];
  const bases=groups.flatMap(g=>g.tracks).map(clean).sort((a,b)=>b.length-a.length);
