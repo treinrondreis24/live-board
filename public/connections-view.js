@@ -1,4 +1,18 @@
-export function boardRows(rows=[],now=Date.now(),capacity=7){const selected=rows.filter(r=>r.eligible===true&&r.incoming&&r.outgoing&&!['not-planned','not-applicable'].includes(r.status)).sort((a,b)=>a.outgoing.planned-b.outgoing.planned||a.ruleId.localeCompare(b.ruleId));return selected.length>capacity?selected.filter(r=>now<=r.incoming.planned+90*60000):selected;}
+export function boardRows(rows=[],now=Date.now()){
+ const groups=new Map();
+ for(const row of rows){
+  if(row.eligible!==true||!row.incoming||!row.outgoing||['not-planned','not-applicable'].includes(row.status))continue;
+  if(Number.isFinite(row.incoming.planned)&&now>row.incoming.planned+150*60000)continue;
+  const key=[row.date||'',row.ruleId||row.key||`${row.incoming.number}|${row.outgoing.number}`].join('|');
+  if(!groups.has(key))groups.set(key,[]);
+  groups.get(key).push(row);
+ }
+ return [...groups.values()].map(group=>{
+  const main=group.find(row=>!row.fallbackFor&&!row.alternativeFor);
+  const alternative=group.find(row=>row.fallbackFor)||group.find(row=>row.alternativeFor);
+  return alternative&&(!main||main.status==='missed')?alternative:main||group[0];
+ }).sort((a,b)=>(a.incoming.planned||0)-(b.incoming.planned||0)||String(a.ruleId||'').localeCompare(String(b.ruleId||'')));
+}
 export function shortCity(value=''){
  const name=String(value).trim();
  const aliases={'Frankfurt(Main)Hbf':'Frankfurt Hbf','Frankfurt(main) Hnf':'Frankfurt Hbf','Frankfurt(M) Flughafen Fernbf':'Frankfurt Flughafen','Milano Centrale':'Milano C','Amsterdam Centraal':'Amsterdam C','Berlin Hbf (tief)':'Berlin Hbf'};

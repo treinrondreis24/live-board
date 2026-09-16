@@ -6,13 +6,15 @@ const CONFIG = {
   // Weergavetijden
   dbMinScreenMs: 10000,
   dbTargetMsPerPage: 10000,
-  italyScreenMs: 10000
+  italyScreenMs: 10000,
+  connectionScreenMs: 10000
 };
 
 let dbTrains = [];
 let italyTrains = [];
 let dbPage = 0;
 let activeIndex = 0;
+let connectionCount = 0;
 
 let screenTimer = null;
 let dbPageTimer = null;
@@ -350,6 +352,8 @@ function enterScreen(index){
 
     duration = dbScreenDuration();
     scheduleDbPages(duration);
+  }else if(index === 2){
+    duration = CONFIG.connectionScreenMs * (connectionCount >= 4 ? 2 : 1);
   }else{
     duration = CONFIG.italyScreenMs;
   }
@@ -358,6 +362,17 @@ function enterScreen(index){
     enterScreen((activeIndex + 1) % screens.length);
   }, duration);
 }
+
+window.addEventListener('message',event=>{
+  const frame=screens[2].querySelector('iframe');
+  if(event.origin!==location.origin||!frame||event.source!==frame.contentWindow||!event.data||event.data.type!=='connection-board-count')return;
+  const next=Math.max(0,Number(event.data.count)||0),wasLong=connectionCount>=4;
+  connectionCount=next;
+  if(activeIndex===2&&wasLong!==(next>=4)){
+    clearTimeout(screenTimer);
+    screenTimer=setTimeout(()=>enterScreen(0),CONFIG.connectionScreenMs*(next>=4?2:1));
+  }
+});
 
 renderClock();
 renderDb();
