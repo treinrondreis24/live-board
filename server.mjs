@@ -786,7 +786,12 @@ async function fetchItalyTrainDetail(candidate,number){
 function italyStops(data){return Array.isArray(data?.fermate)?data.fermate:[];}
 function findItalyStop(data,name){return italyStops(data).find(s=>sameStation(s?.stazione,name))||null;}
 async function resolveItalyJourney(cfg){
-  const key=`${italyDayKey()}|${cfg.number}|${cfg.station}`;if(italyJourneyCache.has(key))return italyJourneyCache.get(key);
+  const key=`${italyDayKey()}|${cfg.number}|${cfg.station}`;
+  const cachedCandidate=italyJourneyCache.get(key);
+  if(cachedCandidate){
+    try{return {candidate:cachedCandidate,data:await fetchItalyTrainDetail(cachedCandidate,cfg.number)};}
+    catch{ /* Ritnummer kan onderweg veranderen; zoek dan opnieuw. */ }
+  }
   const text=await italyFetch(`cercaNumeroTrenoTrenoAutocomplete/${encodeURIComponent(cfg.number)}`),items=parseAutocomplete(text);
   if(!items.length)throw new Error(`trein ${cfg.number} niet gevonden`);
   const candidates=[];
@@ -815,10 +820,10 @@ async function resolveItalyJourney(cfg){
     });
 
     const result={candidate:candidates[0].item,data:candidates[0].data};
-    italyJourneyCache.set(key,result);
+    italyJourneyCache.set(key,result.candidate);
     return result;
   }
-  if(items.length===1){const data=await fetchItalyTrainDetail(items[0],cfg.number),result={candidate:items[0],data};italyJourneyCache.set(key,result);return result;}
+  if(items.length===1){const data=await fetchItalyTrainDetail(items[0],cfg.number),result={candidate:items[0],data};italyJourneyCache.set(key,result.candidate);return result;}
   throw new Error(`geen rit van ${cfg.number} via ${cfg.station} gevonden`);
 }
 function msValue(...values){for(const v of values){const n=Number(v);if(Number.isFinite(n)&&n>0)return n;}return null;}
