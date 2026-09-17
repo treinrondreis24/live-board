@@ -46,7 +46,7 @@ let cleanupAt=0;
 export async function handleKilometerkampioen(req,res,url){
  const path=url.pathname;if(!path.startsWith('/kilometerkampioen')&&!path.startsWith('/treinhuis'))return false;
  res.setHeader('Cache-Control','no-store');res.setHeader('X-Robots-Tag','noindex, nofollow, noarchive');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');res.setHeader('X-Frame-Options','DENY');
- res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' https: blob:; media-src 'self' https: blob:; connect-src 'self'; frame-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+ res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' https: blob:; media-src 'self' https: blob:; connect-src 'self'; frame-src 'self' https://treinposities.nl; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
  try{
  if(req.method==='GET'&&path==='/kilometerkampioen/scorekaart.xlsx'){
  const file=await readFile(new URL('./kk-scorekaart-leeg.xlsx',import.meta.url));
@@ -69,7 +69,7 @@ export async function handleKilometerkampioen(req,res,url){
  if(admin&&!await adminAuthenticated(req,'treinhuis')){if(req.method==='GET'&&!path.includes('/api/')){res.writeHead(303,{Location:'/stationschef'});res.end();}else json(res,401,{error:'Log in met je beheeraccount.'});return true;}
  if(assets[path]&&req.method==='GET'){const f=assets[path];res.writeHead(200,{'Content-Type':f.endsWith('.png')?'image/png':f.endsWith('.webmanifest')?'application/manifest+json':f.endsWith('.js')?'text/javascript; charset=utf-8':f.endsWith('.css')?'text/css; charset=utf-8':'text/html; charset=utf-8'});res.end(await readFile(new URL(f,import.meta.url)));return true;}
  if(Date.now()>cleanupAt){cleanupAt=Date.now()+600000;await kkCleanup();}
- if(admin&&req.method==='GET'&&path==='/treinhuis/api/participants'){json(res,200,{participants:(await kkList('participant')).map(r=>r.value)});return true;}
+ if(admin&&req.method==='GET'&&path==='/treinhuis/api/participants'){const [participants,claims]=await Promise.all([kkList('participant'),kkList('claim')]);json(res,200,{participants:participants.map(r=>r.value),claims:claims.map(r=>({id:r.id,receivedAt:r.value.receivedAt,km:r.value.km}))});return true;}
  if(admin&&req.method==='GET'&&path==='/treinhuis/api/status'){json(res,200,{email:!!(process.env.RESEND_API_KEY&&process.env.KK_EMAIL_FROM),auth:!!secret(),media:mediaReady(),memory:process.memoryUsage(),uploads:uploadStatus()});return true;}
  if(req.method==='GET'&&path==='/kilometerkampioen/api/journey'){const user=await participant(req);if(!user)fail('Log eerst in.',401);if(!canUseProof(user))fail('Mijn bewijs is beschikbaar na goedkeuring.',403);json(res,200,{summary:(await scoreboard(user.id))[0],routes:await kkJourneyRoutes(user.id)});return true;}
  if(req.method==='GET'&&path==='/kilometerkampioen/api/claim'){const user=await participant(req);if(!user)fail('Log eerst in.',401);json(res,200,{claim:await ownClaim(user)});return true;}
