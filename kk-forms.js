@@ -13,7 +13,11 @@ window.kkForms=function(content,api,participant){
   form.addEventListener('input',saveDraft);
   const previews=document.createElement('div');previews.className='upload-previews';files.after(previews);let chosen=[],objectUrls=[];
   function showChosen(){for(const url of objectUrls)URL.revokeObjectURL(url);objectUrls=[];previews.replaceChildren();chosen.forEach((file,index)=>{const card=document.createElement('div'),url=URL.createObjectURL(file),media=document.createElement(file.type.startsWith('video/')?'video':'img');objectUrls.push(url);media.src=url;if(media.tagName==='VIDEO')media.controls=true;else media.alt=file.name;const remove=document.createElement('button');remove.type='button';remove.textContent='Verwijderen';remove.onclick=()=>{chosen.splice(index,1);showChosen();};card.append(media,document.createTextNode(file.name),remove);previews.append(card);});}
-  files.onchange=()=>{chosen=[...files.files];showChosen();};
+  let preparing=false,selectionError=null;
+  files.onchange=async()=>{const selected=[...files.files];preparing=true;selectionError=null;chosen=[];showChosen();files.disabled=true;form.querySelector('[type=submit]').disabled=true;status.textContent='Bestanden voorbereiden…';try{
+   let images=0,videos=0;for(const f of selected){const video=f.type.startsWith('video/')||/\.(mp4|mov|webm)$/i.test(f.name);video?videos++:images++;if(f.size>(video?100000000:15000000))throw Error('Een bestand is te groot. Foto maximaal 15 MB; video maximaal 100 MB.');}if(images>4||videos>1)throw Error('Kies maximaal vier foto’s en één video.');
+   for(const f of selected)chosen.push(await window.kkReliable.snapshotPhoto(f));showChosen();status.textContent=selected.length?'Bestanden klaar om te versturen.':'';
+  }catch(error){chosen=[];showChosen();selectionError=error;window.kkReliable.showError(status,error,kind==='proof'?'Bewijs':'Update',false,files);}finally{preparing=false;files.disabled=false;form.querySelector('[type=submit]').disabled=false;}};
   let stations=[];
   if(kind==='proof'){
    const label=textarea.parentElement,input=document.createElement('input'),choices=document.createElement('datalist'),note=document.createElement('small');input.type='text';input.value=textarea.value;input.required=true;input.maxLength=200;input.setAttribute('list','proof-stations');choices.id='proof-stations';note.textContent='Kies een station uit de suggesties of vul een andere locatie in.';textarea.hidden=true;label.append(input,choices,note);
@@ -28,8 +32,8 @@ window.kkForms=function(content,api,participant){
   function complete(saved){form.hidden=false;form.reset();chosen=[];showChosen();state.clear();location=null;section.querySelector('.locationNote').textContent='';status.textContent='Je inzending is opgeslagen.';const thanks=area.querySelector('[data-page="bedankt"]');thanks.replaceChildren();const title=document.createElement('h1'),note=document.createElement('p');title.textContent=kind==='proof'?'✓ Bewijs ontvangen':'✓ Update ontvangen';note.textContent='Je inzending is opgeslagen op '+window.kkDate(saved.submission.receivedAt||saved.submission.createdAt)+'.';thanks.append(title,note);if(kind==='proof'){const hilta=document.createElement('section');thanks.append(hilta);window.kkHilta(hilta,api,saved.submission.id);}for(const [label,target] of (kind==='proof'?[['Nieuw bewijs insturen','bewijs'],['Mijn reis en bewijs bekijken','mijn-reis']]:[['Nieuwe update insturen','delen'],['Alle updates bekijken','updates'],['Mijn updates bekijken','mijn-updates']])){const link=document.createElement('a');link.className='button';link.textContent=label;link.href='#'+target;link.onclick=()=>{history.dataset.kind=kind;};thanks.append(link);}locationHash('bedankt');}
   const recovery=window.kkReliable.recovery(section,form,state,'submit',complete);
   form.onsubmit=async e=>{
-   e.preventDefault();const selected=[...chosen];let images=0,videos=0;
-   for(const f of selected){const video=f.type.startsWith('video/');video?videos++:images++;if(f.size>(video?100000000:15000000)){status.textContent='Een bestand is te groot. Foto maximaal 15 MB; video maximaal 100 MB.';return;}}
+   e.preventDefault();saveDraft();if(preparing)return;if(selectionError){window.kkReliable.showError(status,selectionError,kind==='proof'?'Bewijs':'Update',false,files);return;}const selected=[...chosen];let images=0,videos=0;
+   for(const f of selected){const video=f.type.startsWith('video/')||/\.(mp4|mov|webm)$/i.test(f.name);video?videos++:images++;if(f.size>(video?100000000:15000000)){status.textContent='Een bestand is te groot. Foto maximaal 15 MB; video maximaal 100 MB.';return;}}
    if(images>4||videos>1){status.textContent='Kies maximaal vier foto’s en één video.';return;}
    if(kind==='proof'&&!selected.length&&!await confirmWithoutAttachment(files))return;
    const controls=[...form.querySelectorAll('input,textarea,button')];controls.forEach(el=>el.disabled=true);status.textContent='Bezig met versturen…';
@@ -39,7 +43,7 @@ window.kkForms=function(content,api,participant){
     state.value.pending={id:state.value.id,kind,title:form.elements.title?.value||'',text:textarea.value,station:kind==='proof'?textarea.value:'',stationId:station?.id||'',location,media,withoutAttachment:kind==='proof'&&!selected.length};saveDraft();
     const saved=await window.kkReliable.send('submit',state.value.pending,status);complete(saved);
 
-   }catch(error){if([400,413,415,422].includes(error.status)){delete state.value.pending;state.save();}status.textContent=error.message+' Je gegevens blijven behouden. Kies hieronder voor afronden als de bevestiging ontbreekt.';recovery.refresh();}
+   }catch(error){if([400,413,415,422].includes(error.status)){delete state.value.pending;state.save();}recovery.refresh();if(state.value.pending)recovery.report(error);else window.kkReliable.showError(status,error,kind==='proof'?'Bewijs':'Update',false,files);}
 
    finally{progress.hidden=true;controls.forEach(el=>el.disabled=false);}
   };
