@@ -10,6 +10,10 @@ const toggleFull=document.getElementById("toggle-full");
 const scanStatus=document.getElementById("scan-status");
 
 function esc(v){return String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;")}
+function trainLabel(t){
+  const stationPart=stationPageId==='tirano'?(t.source==='OJP'?'RhB-station':t.source==='RFI'?'Italiaans station':''):'';
+  return esc(t.train||'—')+(stationPart?`<span class="station-part">${stationPart}</span>`:'');
+}
 function statusClass(t){
   if(t.partialCancellation)return Number(t.delay||0)>30?"major-delay":"delay";
   if(t.cancelled||t.type==="cancel")return "cancel";
@@ -32,7 +36,7 @@ function compactRow(t){
   return `<div class="direction-main">
     <div class="where-line"></div>
     <div class="time">${esc(t.plannedTime||t.time||"--:--")}</div>
-    <div class="train">${esc(t.train||"—")}</div>
+    <div class="train">${trainLabel(t)}</div>
     <div class="destination">${esc(t.to||"—")}</div>
     <div class="track">${t.transportMode==='water'?'steiger':'spoor'} <strong>${esc(t.track||"—")}</strong></div>
     <div class="status ${statusClass(t)}">${esc(statusText(t))}</div>
@@ -60,7 +64,7 @@ function renderQuick(){
         ${rest.length?`<button class="more" type="button" aria-expanded="${expanded}">${expanded?"toon minder":"toon meer"}</button>`:""}
       </div>
       <div class="time">${esc(first.plannedTime||first.time||"--:--")}</div>
-      <div class="train">${esc(first.train||"—")}</div>
+      <div class="train">${trainLabel(first)}</div>
       <div class="destination">${esc(first.to||"—")}</div>
       <div class="track">${first.transportMode==='water'?'steiger':'spoor'} <strong>${esc(first.track||"—")}</strong></div>
       <div class="status ${statusClass(first)}">${esc(statusText(first))}</div>
@@ -83,7 +87,7 @@ function renderFull(){
   const rows=data?.departures?.[activeTab]||[];
   fullRowsEl.innerHTML=rows.length?rows.map(t=>`<div class="full-row">
     <div class="time">${esc(t.plannedTime||t.time||"--:--")}</div>
-    <div class="train">${esc(t.train||"—")}</div>
+    <div class="train">${trainLabel(t)}</div>
     <div class="destination">${esc(t.to||"—")}</div>
     <div class="track"><span class="mobile-track-label">${t.transportMode==='water'?'steiger':'spoor'} </span><strong>${esc(t.track||"—")}</strong></div>
     <div class="status ${statusClass(t)}">${esc(statusText(t))}</div>

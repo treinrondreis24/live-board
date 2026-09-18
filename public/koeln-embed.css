@@ -28,6 +28,7 @@ h2{margin:0;color:var(--red);font-size:22px;line-height:1.2;font-weight:700;lett
 .destination{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
 .track{font-size:12px;color:var(--muted)}
 .track strong{color:var(--text);font-size:13px}
+.station-part{display:block;margin-top:2px;color:var(--muted);font-size:10px;font-weight:600;line-height:1.2}
 .status{text-align:right;font-size:12px;font-weight:700;color:var(--green)}
 .status.delay{color:var(--delay)}
 .status.major-delay,.status.cancel{color:var(--major)!important}
