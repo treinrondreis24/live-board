@@ -9,6 +9,7 @@ export async function saveClaim(user,data){
  const existing=await kkGet('claim',user.id);if(existing?.value.submissionKey===data.submissionKey)return existing.value;
  const startDate=user.startDate||'2026-09-19',startTime=user.startTime,startStation=user.station||'',start=startTimestamp(startDate,startTime);
  if(start===null||!startStation.trim())fail('Vul eerst je startstation en starttijd in bij Mijn deelname.');
+ if(start>Date.now())fail('Je kunt je eindclaim pas indienen nadat je starttijd is verstreken. Controleer je starttijd bij Mijn deelname.');
  const km=Number(data.km),endDate=String(data.endDate||''),endTime=String(data.endTime||''),end=startTimestamp(endDate,endTime),endStation=String(data.endStation||'').trim().slice(0,200),phone=String(data.phone||'').trim();
  if(data.km===''||data.km==null||!Number.isFinite(km)||km<0||km>10000)fail('Vul geldige geclaimde kilometers in.');
  if(end===null||end<start||!endStation)fail('Vul een eindstation en geldige einddatum en eindtijd na de start in.');

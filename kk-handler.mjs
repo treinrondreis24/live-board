@@ -1,3 +1,4 @@
+import {liveboard} from './kk-liveboard.mjs';
 import {createParticipantReset} from './password-reset.mjs';
 import {editUpdate,deleteUpdate,deleteParticipant} from './kk-moderation.mjs';
 import {personalScorecard,scorecardOptions} from './kk-scorecard.mjs';
@@ -80,6 +81,7 @@ export async function handleKilometerkampioen(req,res,url){
  if(req.method==='GET'&&path==='/kilometerkampioen/api/submissions'){const user=await participant(req);if(!user)fail('Log eerst in.',401);json(res,200,{submissions:await ownSubmissions(user)});return true;}
  if(req.method==='GET'&&path.endsWith('/api/media')){const user=admin?null:await participant(req);if(!admin&&!user)fail('Log eerst in.',401);const id=url.searchParams.get('id');const original=await mediaLink(user,id,admin);const row=await kkGet('media',id);json(res,200,url.searchParams.get('preview')==='1'?await previewMedia(row):{url:original,type:row.value.type});return true;}
  if(admin&&req.method==='GET'&&path==='/treinhuis/api/submissions'){json(res,200,await kkAdminSubmissions(Object.fromEntries(url.searchParams)));return true;}
+ if(admin&&req.method==='GET'&&path==='/treinhuis/api/liveboard'){json(res,200,await liveboard());return true;}
  if(admin&&req.method==='GET'&&path==='/treinhuis/api/scoreboard'){json(res,200,{rows:await scoreboard()});return true;}
  if(admin&&req.method==='GET'&&path==='/treinhuis/api/hilta'){json(res,200,{route:(await kkGet('hilta-current',url.searchParams.get('proofId')))?.value||null});return true;}
  if(admin&&req.method==='GET'&&path==='/treinhuis/api/blog'){json(res,200,{drafts:(await kkList('blog-draft')).map(r=>r.value),published:(await publicBlog()).map(p=>p.id)});return true;}
