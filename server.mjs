@@ -1045,6 +1045,7 @@ const pageRoutes={
   ...Object.fromEntries(Object.keys(swissStations).flatMap(id=>[[`/embed/${id}`,"/koeln-embed.html"],[`/embed/${id}/`,"/koeln-embed.html"]])),
   ...Object.fromEntries(Object.keys(norwegianStations).flatMap(id=>[[`/embed/${id}`,"/koeln-embed.html"],[`/embed/${id}/`,"/koeln-embed.html"]])),
   ...Object.fromEntries(Object.keys(belgianStations).flatMap(id=>[[`/embed/${id}`,"/koeln-embed.html"],[`/embed/${id}/`,"/koeln-embed.html"]])),
+  ...Object.fromEntries(Object.keys(rfiStations).flatMap(id=>[[`/embed/${id}`,"/koeln-embed.html"],[`/embed/${id}/`,"/koeln-embed.html"]])),
   ...Object.fromEntries(Object.keys(config.stationPages||{}).flatMap(id=>[[`/embed/${id}`,"/koeln-embed.html"],[`/embed/${id}/`,"/koeln-embed.html"]])),
   "/beheer":"/board-admin.html","/beheer/":"/board-admin.html","/mobile":"/mobile.html","/mobile/":"/mobile.html",
   "/embed/duesseldorf":"/koeln-embed.html","/embed/duesseldorf/":"/koeln-embed.html",

@@ -6,7 +6,13 @@ export const rfiStations={
  verona:{name:'Verona Porta Nuova',id:3025},levanto:{name:'Levanto',id:278},roma:{name:'Roma Termini',id:2416},
  venezia:{name:'Venezia Santa Lucia',monitorName:'Venezia S.Lucia',id:3009},'venezia-mestre':{name:'Venezia Mestre',id:3002},
  bolzano:{name:'Bolzano',id:685},napoli:{name:'Napoli Centrale',id:1888},bologna:{name:'Bologna Centrale',id:683},rimini:{name:'Rimini',id:2358},
- monterosso:{name:'Monterosso',id:286},vernazza:{name:'Vernazza',id:341},corniglia:{name:'Corniglia',id:233},manarola:{name:'Manarola',id:280},riomaggiore:{name:'Riomaggiore',id:309}
+ monterosso:{name:'Monterosso',id:286},vernazza:{name:'Vernazza',id:341},corniglia:{name:'Corniglia',id:233},manarola:{name:'Manarola',id:280},riomaggiore:{name:'Riomaggiore',id:309},
+ siena:{name:'Siena',id:2730},lucca:{name:'Lucca',id:1591},'firenze-smn':{name:'Firenze Santa Maria Novella',id:1325},
+ arezzo:{name:'Arezzo',id:458},pisa:{name:'Pisa Centrale',id:2156},pistoia:{name:'Pistoia',id:2161},
+ 'firenze-rifredi':{name:'Firenze Rifredi',id:1315},'firenze-campo-di-marte':{name:'Firenze Campo di Marte',monitorName:'Firenze Campo Marte',id:1312},
+ catania:{name:'Catania Centrale',id:1032},taormina:{name:'Taormina-Giardini',id:2810},
+ agrigento:{name:'Agrigento Centrale',id:384},palermo:{name:'Palermo Centrale',id:2018},
+ cefalu:{name:'Cefalù',monitorName:"Cefalu'",id:1053}
 };
 export const rfiState={source:'RFI',stations:Object.fromEntries(Object.entries(rfiStations).map(([k,s])=>[k,{...s,status:'starting',lastSuccessAt:null}]))};
 const cache=new Map(),zone='Europe/Rome',maxAge=300000;
@@ -24,10 +30,10 @@ export function parseRfi(page,html){
  if(title.toUpperCase()!==(station.monitorName||station.name).toUpperCase())throw Error('RFI-station komt niet overeen');
  const date=clean(html).match(/aggiornato il (\d{2})\/(\d{2})\/(\d{4}) alle ore (\d{2}):(\d{2}):(\d{2})/i);
  if(!date||!html.includes('RTreno')&&!html.includes('HTreno'))throw Error('RFI-monitor niet herkend');
- const [,dd,mm,yy,hh,mi,ss]=date.map(Number),at=localTimestamp(yy,mm,dd,hh,mi,ss),rows=[];
+ const [,dd,mm,yy,hh,mi,ss]=date.map(Number),at=localTimestamp(yy,mm,dd,hh,mi,ss),rows=[];let busCount=0;
  for(const match of html.matchAll(/<tr\b[^>]*name="treno"[^>]*>([\s\S]*?)<\/tr>/gi)){
   const block=match[1],cell=id=>block.match(new RegExp('<td\\b[^>]*id="'+id+'"[^>]*>([\\s\\S]*?)<\\/td>','i'))?.[1]||'';
-  if(/alt="Categoria\s+BUS"/i.test(cell('RCategoria')))continue;
+  if(/alt="Categoria\s+BUS"/i.test(cell('RCategoria'))){busCount++;continue;}
   const number=clean(cell('RTreno')),time=clean(cell('ROrario')),to=clean(cell('RStazione'));if(!number&&!time&&!to)continue;if(!/^\d+$/.test(number)||!/^\d{2}:\d{2}$/.test(time)||!to)throw Error('Onvolledige RFI-trein');
   const [hour,minute]=time.split(':').map(Number);let planned=localTimestamp(yy,mm,dd,hour,minute);
   // A monitor spans midnight; large positive gaps are yesterday's delayed trains.
@@ -44,7 +50,7 @@ export function parseRfi(page,html){
   const id=['RFI',station.id,serviceDate,number,time].join('|'),expected=planned+delay*60000;
   rows.push({id,source:'RFI',sourceTripId:serviceDate+'|'+number,sourceEventId:id,serviceDate,trainKey:serviceDate+'|'+number,number,train:category+' '+number,category,operatorName,transportMode:'rail',countryCode:'IT',observedAt:station.name,stationCode:String(station.id),eventMode:'departure',plannedTimestamp:planned,expectedTimestamp:expected,plannedTime:time,time,currentTime:fmt.format(expected),plannedTrack:'',currentTrack:track,track:cancelled?'—':track||'—',delay,cancelled,hasRealtime:true,status:cancelled?'Geannuleerd':delay?'+'+delay+' min':delayText,from:station.name,to,route:futureRoute,futureRoute,routeComplete:false,stops,messageTimestamp:at});
  }
- return {at,rows};
+ return {at,rows,busCount};
 }
 let busy=false;
 export async function scanRfi(){
@@ -63,5 +69,5 @@ export function rfiPayload(page,swiss=null,now=Date.now()){
  const rows=(saved?.rows||[]).map(r=>stale?{...r,hasRealtime:false,delay:0,status:'',cancelled:false,currentTrack:'',track:'—',expectedTimestamp:r.plannedTimestamp,currentTime:r.plannedTime}:r).filter(r=>r.expectedTimestamp>=now-60000);
  const all=[...rows,...(swiss?.departures?.all||[])].sort((a,b)=>a.plannedTimestamp-b.plannedTimestamp);
  const fern=r=>/^(FR|FA|FB|AV|IC|ICN|EC|ECE|EN|NJ|ITALO|GEX|BEX|PE)$/i.test(r.category)||/freccia|italo|intercity/i.test(r.category+' '+r.operatorName);
- return {title:'Vertrektijden '+rfiStations[page].name,country:'IT',source:swiss?'RFI + OJP':'RFI',lastScanAt:state.lastSuccessAt,status:stale?'stale':swiss&&swiss.status!=='ready'?'partial':'ready',notice:(swiss?'Italiaanse treinen: RFI. RhB-treinen: OJP. ':'')+'RFI toont de komende vertrekken; de informatie kan tot drie minuten achterlopen.'+(stale?' RFI-actualisatie tijdelijk niet beschikbaar.':''),quick:swiss?.quick||[],departures:{all,fernverkehr:all.filter(fern),regional:all.filter(r=>!fern(r))}};
+ return {title:'Vertrektijden '+rfiStations[page].name,country:'IT',source:swiss?'RFI + OJP':'RFI',lastScanAt:state.lastSuccessAt,status:stale?'stale':swiss&&swiss.status!=='ready'?'partial':'ready',notice:(swiss?'Italiaanse treinen: RFI. RhB-treinen: OJP. ':'')+'RFI toont de komende vertrekken; de informatie kan tot drie minuten achterlopen.'+(stale?' RFI-actualisatie tijdelijk niet beschikbaar.':'')+(!saved?.rows?.length&&saved?.busCount?' RFI toont hier nu alleen busritten; die staan niet op dit treinvertrekbord.':''),quick:swiss?.quick||[],departures:{all,fernverkehr:all.filter(fern),regional:all.filter(r=>!fern(r))}};
 }
