@@ -7,6 +7,7 @@ export function liveRow(row,claim,now){
  return {id:p.id,name:p.fullName||p.displayName||p.email,edition:p.edition,startTime:p.startTime,startDate:p.startDate||'2026-09-19',start,
  elapsed:start===null?null:Math.max(0,Math.floor(((end??now)-start)/60000)),
  state:claim?'finished':start===null?'unknown':start>now?'waiting':'travelling',
+ hiltaKm:row.km??0,pendingRoutes:row.pending??0,
  km:claim?.km??null,distance:p.distance??null,rotterdamTime:p.rotterdamTime||'',proofs:row.proofs,
  claim:claim?{receivedAt:claim.receivedAt,endDate:claim.endDate,endTime:claim.endTime}:null};
 }

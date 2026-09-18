@@ -21,3 +21,14 @@ test('liveboard includes participants without proof or claim; server blocks futu
  const board=await liveboard();assert.equal(board.rows.length,1);assert.equal(board.rows[0].proofs,0);assert.equal(board.rows[0].km,null);
  await assert.rejects(saveClaim({...p,startDate:'2099-09-19'},{submissionKey:'12345678-1234-1234-1234-123456789abc'}),/pas indienen nadat je starttijd/);
 });
+test('Hilta totals count confirmed routes once per proof, including repeated journeys, separately from claim',async()=>{
+ await initKKStore({sqlite:new DatabaseSync(':memory:')});
+ await kkPut('participant','p','p',p);
+ for(const id of ['a','b','c'])await kkPut('submission',id,'p',{kind:'proof'});
+ for(const id of ['a','b'])await kkPut('hilta-current',id,'p',{status:'participant-confirmed',km:25});
+ await kkPut('hilta-current','c','p',{status:'proposed',km:100});
+ let result=(await liveboard()).rows[0];assert.equal(result.hiltaKm,50);assert.equal(result.pendingRoutes,1);assert.equal(result.km,null);
+ await kkPut('hilta-current','a','p',{status:'participant-confirmed',km:30});
+ await kkPut('claim','p','p',{km:48,endDate:'2026-09-20',endTime:'02:59'});
+ result=(await liveboard()).rows[0];assert.equal(result.hiltaKm,55);assert.equal(result.km,48);
+});
