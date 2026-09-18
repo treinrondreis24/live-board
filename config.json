@@ -755,6 +755,12 @@
         }
       ]
     },
+    "osnabrueck": {
+      "station": "Osnabrück Hbf",
+      "title": "Vertrektijden Osnabrück Hbf",
+      "country": "DE",
+      "quickDirections": []
+    },
     "mannheim": {
       "station": "Mannheim Hbf",
       "title": "Vertrektijden Mannheim Hbf",
