@@ -1,3 +1,4 @@
+import {withdrawalDetails} from './kk-withdrawal.mjs';
 import {liveboard} from './kk-liveboard.mjs';
 import {createParticipantReset} from './password-reset.mjs';
 import {editUpdate,deleteUpdate,deleteParticipant} from './kk-moderation.mjs';
@@ -128,6 +129,7 @@ export async function handleKilometerkampioen(req,res,url){
   const session=token();await kkPut('session',hash(session),user.id,{credentialVersion:(await kkGet('password',user.id))?.value.version||''},Date.now()+7*86400000);cookie(res,session,7*86400);json(res,200,{participant:user});return true;
  }
  const user=await participant(req);if(!user)fail('Log eerst in.',401);
+ if(path==='/kilometerkampioen/api/withdrawal'){const withdrawal=withdrawalDetails(user,data);await kkPatchParticipant(user.id,{withdrawal});json(res,200,{withdrawal});return true;}
  if(path==='/kilometerkampioen/api/claim-save'){json(res,200,{claim:await saveClaim(user,data)});return true;}
  if(path==='/kilometerkampioen/api/hilta-propose'){json(res,200,{proposal:await proposeHilta(user,data)});return true;}
  if(path==='/kilometerkampioen/api/hilta-confirm'){json(res,200,{confirmation:await confirmHilta(user,data)});return true;}

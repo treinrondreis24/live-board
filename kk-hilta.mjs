@@ -4,7 +4,10 @@ import {kkGet,kkPut,kkInsert,kkLimit,kkPreviousProof} from './kk-store.mjs';
 import {canUseProof} from './kk-password.mjs';
 const network=JSON.parse(readFileSync(new URL('./hilta-network.json',import.meta.url),'utf8').replace(/^\uFEFF/,''));
 export const hiltaNotice='Deze kilometerberekening is een inschatting van Hilta. Hilta kan fouten maken. Aan deze inschatting kunnen geen rechten worden ontleend. Controleer de trajecten altijd zelf. De organisatie stelt de definitieve score vast.';
-export const hiltaStations=[...new Set(network.edges.flatMap(e=>[e.from,e.to]))].sort((a,b)=>a.localeCompare(b,'nl'));
+const parent=network.edges.find(e=>e.id==='score2026-76');
+export const hiltaEdges=network.edges.flatMap(e=>e.id!==parent.id?[e]:[{...e,id:e.id+'-zuid-west',scorecardId:e.id,to:'Amsterdam Zuid',km:9.2},{...e,id:e.id+'-zuid-oost',scorecardId:e.id,from:'Amsterdam Zuid',km:0.8}]);
+export const hiltaScoreEdges=[...network.edges,...hiltaEdges.filter(e=>e.scorecardId)];
+export const hiltaStations=[...new Set(hiltaEdges.flatMap(e=>[e.from,e.to]))].sort((a,b)=>a.localeCompare(b,'nl'));
 const normal=s=>String(s||'').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ');
 const fail=(message,status=400)=>{throw Object.assign(Error(message),{status});};
 const stationAliases=new Map([['den haag hs','Den Haag Hollands Spoor'],['schiphol airport','Schiphol'],['breda-prinsenbeek','Breda Prinsenbeek'],['alphen a/d rijn','Alphen aan den Rijn'],['den haag laan v noi','Den Haag Laan van NOI']]);
@@ -12,7 +15,7 @@ function station(s){const canonical=stationAliases.get(normal(s))||s;const found
 function shortest(from,to){
  const dist=new Map([[from,0]]),previous=new Map(),done=new Set();
  while(true){let at=null,best=Infinity;for(const [n,d] of dist)if(!done.has(n)&&d<best){at=n;best=d;}if(at===null)fail('Geen verbinding gevonden in de scorekaart.');if(at===to)break;done.add(at);
- for(const edge of network.edges){const next=edge.from===at?edge.to:edge.to===at?edge.from:null;if(!next)continue;const d=best+Math.round(edge.km*10);if(d<(dist.get(next)??Infinity)){dist.set(next,d);previous.set(next,{edge,from:at,to:next});}}
+ for(const edge of hiltaEdges){const next=edge.from===at?edge.to:edge.to===at?edge.from:null;if(!next)continue;const d=best+Math.round(edge.km*10);if(d<(dist.get(next)??Infinity)){dist.set(next,d);previous.set(next,{edge,from:at,to:next});}}
  }
  const path=[];for(let at=to;at!==from;){const step=previous.get(at);path.unshift({...step.edge,from:step.from,to:step.to});at=step.from;}return path;
 }
