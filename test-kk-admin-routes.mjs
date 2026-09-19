@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {DatabaseSync} from 'node:sqlite';
+import {initKKStore,kkPut,kkGet,kkScoreRows} from './kk-store.mjs';
+import {adminRoutePreview,adminRouteConfirm} from './kk-hilta-admin.mjs';
+import {calculateHilta} from './kk-hilta.mjs';
+import {pendingRoutes} from './kk-pending-routes.mjs';
+import {buildScorecard} from './kk-scorecard.mjs';
+import {unzipSync,strFromU8} from 'fflate';
+await initKKStore({sqlite:new DatabaseSync(':memory:')});
+const user={id:'p',fullName:'Test',station:'Sittard',edition:24};await kkPut('participant','p','p',user);await kkPut('submission','proof','p',{id:'proof',kind:'proof',station:'Eindhoven'});
+assert.ok(calculateHilta('Eindhoven','Rotterdam C').km>0);
+let p=await adminRoutePreview({proofId:'proof',from:'Sittard',to:'Eindhoven'});await assert.rejects(adminRouteConfirm({id:p.id}),/Bevestig/);await adminRouteConfirm({id:p.id,reviewed:true});assert.equal((await pendingRoutes()).length,0);assert.equal((await kkScoreRows())[0].km,p.km);
+const a=await adminRoutePreview({proofId:'proof',from:'Meppel',to:'Zwolle'}),b=await adminRoutePreview({proofId:'proof',from:'Meppel',to:'Zwolle'});await adminRouteConfirm({id:a.id,reviewed:true});await assert.rejects(adminRouteConfirm({id:b.id,reviewed:true}),/verouderd/);
+const edge=calculateHilta('Meppel','Zwolle').segments[0];p=await adminRoutePreview({proofId:'proof',from:'Meppel',to:'Deels richting Zwolle',segments:[{id:edge.id,km:10,from:'Meppel',to:'Deeltraject'}]});const r=await adminRouteConfirm({id:p.id,reviewed:true});await adminRouteConfirm({id:p.id,reviewed:true});assert.equal((await kkScoreRows())[0].km,10);
+const z=unzipSync(buildScorecard(user,[{id:'proof',created:1,proof:{station:'Eindhoven'},route:r}],'not-yet'));const xml=strFromU8(z['xl/worksheets/sheet1.xml']);assert.match(xml,/Deels door Hilta ingevuld/);assert.equal(Number(xml.match(/<x:c[^>]*r="E3"[^>]*>[\s\S]*?<x:v>([^<]*)/)[1]),10);assert.match(strFromU8(z['xl/worksheets/sheet2.xml']),/Beheerbevestiging/);
+await assert.rejects(adminRoutePreview({proofId:'proof',from:'A',to:'B',segments:[{id:edge.id,km:999}]}),/maximaal/);
+console.log('PASS admin approval, aliases, totals, no duplicate counting, stale proposal, partial scorecard and audit');
