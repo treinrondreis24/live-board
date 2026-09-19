@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {DatabaseSync} from 'node:sqlite';
+import {initKKStore} from './kk-store.mjs';
+import {featureSave,featureVote,featureStop,currentFeature,featureArchive} from './kk-feature.mjs';
+await initKKStore({sqlite:new DatabaseSync(':memory:')});
+const p=await featureSave({type:'poll',title:'Rotterdam bezocht?',options:['Ja','Nee']});
+await Promise.all(Array.from({length:215},(_,i)=>featureVote({id:'u'+i},{id:p.id,choice:i%2})));
+await featureVote({id:'u0'},{id:p.id,choice:1});
+let state=await currentFeature({id:'u0'});assert.equal(state.total,215);assert.equal(state.counts[0],108);assert.equal(state.answered,true);assert.equal((await currentFeature({id:'new'})).answered,false);
+await featureStop({id:p.id});await assert.rejects(featureVote({id:'new'},{id:p.id,choice:0}),/gesloten/);assert.equal((await currentFeature({id:'new'})).closed,'yes');
+await featureStop({id:p.id,hide:true});assert.equal(await currentFeature({id:'new'}),null);assert.equal((await featureArchive())[0].total,215);
+await assert.rejects(featureSave({type:'poll',title:'Q',options:['Same','Same']}));
+const next=await featureSave({type:'button',title:'Bewijs insturen',action:'bewijs'});assert.equal((await currentFeature({id:'u0'})).id,next.id);assert.equal((await featureArchive()).length,2);
+const poll=await featureSave({type:'poll',title:'Nieuwe poll',options:['A','B']});await featureSave({type:'button',title:'Eindclaim',action:'eindclaim'});await assert.rejects(featureVote({id:'new'},{id:poll.id,choice:0}),/gesloten/);
+console.log('PASS unique votes, >200 counts, answered persistence, stop/hide/archive, replacement and validation');

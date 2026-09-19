@@ -60,3 +60,10 @@ export async function kkScorecardProofs(owner){const rows=await query("SELECT s.
 export async function kkReplaceCredential(id,expected,value){return (await query("UPDATE kk_records SET payload=$3 WHERE kind='password' AND id=$1 AND payload=$2 RETURNING id",[id,expected,JSON.stringify(value)])).length===1;}
 export async function kkAcquireUploadLease(id,owner,nonce){const now=Date.now();return (await query("INSERT INTO kk_records(kind,id,owner,created,expires,payload) VALUES('upload-lock',$1,$2,$3,$4,$5) ON CONFLICT(kind,id) DO UPDATE SET expires=excluded.expires,payload=excluded.payload WHERE kk_records.expires<$3 RETURNING id",[id,owner,now,now+600000,JSON.stringify(nonce)])).length===1;}
 export async function kkReleaseUploadLease(id,nonce){await query("DELETE FROM kk_records WHERE kind='upload-lock' AND id=$1 AND payload=$2 RETURNING id",[id,JSON.stringify(nonce)]);}
+// Unique participant vote; only insert while this poll is active and open.
+export async function kkFeatureVote(poll,user,choice){
+ const field=(a,k)=>db.pool?a+".payload::jsonb->>'"+k+"'":"json_extract("+a+".payload,'$."+k+"')";
+ return (await query("INSERT INTO kk_records(kind,id,owner,created,expires,payload) SELECT 'feature-vote',$1,$2,$3,0,$4 FROM kk_records a JOIN kk_records p ON p.kind='feature' AND p.id=$5 WHERE a.kind='feature-active' AND a.id='current' AND "+field('a','id')+"=$5 AND "+field('p','closed')+"='no' ON CONFLICT(kind,id) DO NOTHING RETURNING id",[poll+':'+user,poll,Date.now(),JSON.stringify({choice}),poll])).length>0;
+}
+export async function kkFeatureCounts(id){const rows=await query("SELECT payload FROM kk_records WHERE kind='feature-vote' AND owner=$1",[id]);return rows.map(r=>JSON.parse(r.payload).choice);}
+export async function kkFeaturePosts(){return (await query("SELECT payload FROM kk_records WHERE kind='feature' ORDER BY created DESC")).map(r=>JSON.parse(r.payload));}
