@@ -1,3 +1,4 @@
+import {setProofOrder} from './kk-proof-order.mjs';
 import {withdrawalDetails} from './kk-withdrawal.mjs';
 import {liveboard} from './kk-liveboard.mjs';
 import {createParticipantReset} from './password-reset.mjs';
@@ -43,7 +44,7 @@ export async function sendCode(email,code){
  const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+process.env.RESEND_API_KEY,'Content-Type':'application/json'},signal:AbortSignal.timeout(15000),body:JSON.stringify({from:process.env.KK_EMAIL_FROM,to:[email],subject:'Je inlogcode voor Kilometer Kampioen',text:`Je inlogcode is ${code}. Deze code is 10 minuten geldig en werkt één keer. Heb je geen code aangevraagd? Dan kun je deze e-mail negeren.`})});
  if(!r.ok)fail('De e-mail kon niet worden verstuurd. Probeer later opnieuw.',503);
 }
-const assets={'/kilometerkampioen/reliable.js':'kk-reliable.js','/kilometerkampioen/stations.js':'kk-stations.js','/kilometerkampioen/stations.css':'kk-stations.css','/kilometerkampioen/manifest.webmanifest':'kk.webmanifest','/kilometerkampioen/install.js':'kk-install.js','/kilometerkampioen/sw.js':'kk-sw.js','/kilometerkampioen/icon-180.png':'kk-icon-180.png','/kilometerkampioen/icon-192.png':'kk-icon-192.png','/kilometerkampioen/icon-512.png':'kk-icon-512.png','/kilometerkampioen/scorecard.js':'kk-scorecard-ui.js','/kilometerkampioen/claims.js':'kk-claims.js','/treinhuis/claims.js':'kk-claims-admin.js','/kilometerkampioen':'kk-app.html','/kilometerkampioen/':'kk-app.html','/kilometerkampioen/app.js':'kk-app.js','/kilometerkampioen/app.css':'kk-app.css','/treinhuis':'kk-admin.html','/treinhuis/':'kk-admin.html','/treinhuis/app.js':'kk-admin.js','/treinhuis/teams.js':'kk-admin-teams.js','/kilometerkampioen/forms.js':'kk-forms.js','/kilometerkampioen/hilta.js':'kk-hilta.js','/treinhuis/blog.js':'kk-blog-admin.js','/kilometerkampioen/liveblog':'kk-blog.html','/kilometerkampioen/liveblog.js':'kk-blog-public.js','/kilometerkampioen/rich.js':'kk-rich.js','/kilometerkampioen/community.js':'kk-community.js','/kilometerkampioen/login.js':'kk-login.js','/kilometerkampioen/navigation.js':'kk-navigation.js'};
+const assets={'/kilometerkampioen/proof-order.js':'kk-proof-order.js','/kilometerkampioen/reliable.js':'kk-reliable.js','/kilometerkampioen/stations.js':'kk-stations.js','/kilometerkampioen/stations.css':'kk-stations.css','/kilometerkampioen/manifest.webmanifest':'kk.webmanifest','/kilometerkampioen/install.js':'kk-install.js','/kilometerkampioen/sw.js':'kk-sw.js','/kilometerkampioen/icon-180.png':'kk-icon-180.png','/kilometerkampioen/icon-192.png':'kk-icon-192.png','/kilometerkampioen/icon-512.png':'kk-icon-512.png','/kilometerkampioen/scorecard.js':'kk-scorecard-ui.js','/kilometerkampioen/claims.js':'kk-claims.js','/treinhuis/claims.js':'kk-claims-admin.js','/kilometerkampioen':'kk-app.html','/kilometerkampioen/':'kk-app.html','/kilometerkampioen/app.js':'kk-app.js','/kilometerkampioen/app.css':'kk-app.css','/treinhuis':'kk-admin.html','/treinhuis/':'kk-admin.html','/treinhuis/app.js':'kk-admin.js','/treinhuis/teams.js':'kk-admin-teams.js','/kilometerkampioen/forms.js':'kk-forms.js','/kilometerkampioen/hilta.js':'kk-hilta.js','/treinhuis/blog.js':'kk-blog-admin.js','/kilometerkampioen/liveblog':'kk-blog.html','/kilometerkampioen/liveblog.js':'kk-blog-public.js','/kilometerkampioen/rich.js':'kk-rich.js','/kilometerkampioen/community.js':'kk-community.js','/kilometerkampioen/login.js':'kk-login.js','/kilometerkampioen/navigation.js':'kk-navigation.js'};
 let cleanupAt=0;
 export async function handleKilometerkampioen(req,res,url){
  const path=url.pathname;if(!path.startsWith('/kilometerkampioen')&&!path.startsWith('/treinhuis'))return false;
@@ -94,6 +95,7 @@ export async function handleKilometerkampioen(req,res,url){
  if(admin&&path==='/treinhuis/api/blog-upload'){json(res,200,await upload(req,{id:EDITOR_OWNER}));return true;}
  const data=await body(req);
  if(admin&&path==='/treinhuis/api/password-reset'){json(res,200,await createParticipantReset(data.id));return true;}
+ if(admin&&path==='/treinhuis/api/proof-order'){json(res,200,{submission:await setProofOrder(null,data,true)});return true;}
  if(admin&&path==='/treinhuis/api/participant-save'){const row=await kkGet('participant',data.id);if(!row||row.value.deleting)fail('Deelnemer niet beschikbaar.',404);const profile=validateProfile(data,row.value,true);const changes=Object.fromEntries(['fullName','displayName','edition','startTime','startDate','rotterdamTime','together','companion','station','distance','updatedAt'].map(k=>[k,profile[k]]));await kkPatchParticipant(data.id,changes);json(res,200,{ok:true});return true;}
  if(admin&&path==='/treinhuis/api/participant-delete'){if(data.confirm!==true)fail('Bevestig het verwijderen.');await deleteParticipant(data.id);json(res,200,{ok:true});return true;}
  if(admin&&path==='/treinhuis/api/update-save'){await editUpdate(data);json(res,200,{ok:true});return true;}
@@ -129,6 +131,7 @@ export async function handleKilometerkampioen(req,res,url){
   const session=token();await kkPut('session',hash(session),user.id,{credentialVersion:(await kkGet('password',user.id))?.value.version||''},Date.now()+7*86400000);cookie(res,session,7*86400);json(res,200,{participant:user});return true;
  }
  const user=await participant(req);if(!user)fail('Log eerst in.',401);
+ if(path==='/kilometerkampioen/api/proof-order'){json(res,200,{submission:await setProofOrder(user,data)});return true;}
  if(path==='/kilometerkampioen/api/withdrawal'){const withdrawal=withdrawalDetails(user,data);await kkPatchParticipant(user.id,{withdrawal});json(res,200,{withdrawal});return true;}
  if(path==='/kilometerkampioen/api/claim-save'){json(res,200,{claim:await saveClaim(user,data)});return true;}
  if(path==='/kilometerkampioen/api/hilta-propose'){json(res,200,{proposal:await proposeHilta(user,data)});return true;}
