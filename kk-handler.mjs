@@ -1,3 +1,4 @@
+import {deleteProof} from './kk-proof-delete.mjs';
 import {adminRouteOptions,adminRoutePreview,adminRouteConfirm} from './kk-hilta-admin.mjs';
 import {externalDistance} from './kk-distance.mjs';
 import {pendingRoutes} from './kk-pending-routes.mjs';
@@ -108,6 +109,7 @@ export async function handleKilometerkampioen(req,res,url){
  if(admin&&path==='/treinhuis/api/feature-save'){json(res,200,{post:await featureSave(data)});return true;}
  if(admin&&path==='/treinhuis/api/feature-stop'){await featureStop(data);json(res,200,{ok:true});return true;}
  if(admin&&path==='/treinhuis/api/password-reset'){json(res,200,await createParticipantReset(data.id));return true;}
+ if(admin&&path==='/treinhuis/api/proof-delete'){if(data.confirm!==true)fail('Bevestig het verwijderen.');json(res,200,{ok:true,...await deleteProof(data.id)});return true;}
  if(admin&&path==='/treinhuis/api/proof-order'){json(res,200,{submission:await setProofOrder(null,data,true)});return true;}
  if(admin&&path==='/treinhuis/api/participant-save'){const row=await kkGet('participant',data.id);if(!row||row.value.deleting)fail('Deelnemer niet beschikbaar.',404);const profile=validateProfile(data,row.value,true);const changes=Object.fromEntries(['fullName','displayName','edition','startTime','startDate','rotterdamTime','together','companion','station','distance','updatedAt'].map(k=>[k,profile[k]]));await kkPatchParticipant(data.id,changes);json(res,200,{ok:true});return true;}
  if(admin&&path==='/treinhuis/api/participant-delete'){if(data.confirm!==true)fail('Bevestig het verwijderen.');await deleteParticipant(data.id);json(res,200,{ok:true});return true;}
