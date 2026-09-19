@@ -1,3 +1,4 @@
+import {pendingRoutes} from './kk-pending-routes.mjs';
 import {currentFeature,featureArchive,featureSave,featureStop,featureVote} from './kk-feature.mjs';
 import {setProofOrder} from './kk-proof-order.mjs';
 import {withdrawalDetails} from './kk-withdrawal.mjs';
@@ -75,6 +76,7 @@ export async function handleKilometerkampioen(req,res,url){
  if(Date.now()>cleanupAt){cleanupAt=Date.now()+600000;await kkCleanup();}
  if(admin&&req.method==='GET'&&path==='/treinhuis/api/features'){json(res,200,{posts:await featureArchive()});return true;}
  if(req.method==='GET'&&path==='/kilometerkampioen/api/feature'){const user=await participant(req);if(!user)fail('Log eerst in.',401);json(res,200,{post:await currentFeature(user)});return true;}
+ if(admin&&req.method==='GET'&&path==='/treinhuis/api/pending-routes'){json(res,200,{rows:await pendingRoutes()});return true;}
  if(admin&&req.method==='GET'&&path==='/treinhuis/api/participants'){const [participants,claims]=await Promise.all([kkList('participant'),kkList('claim')]);json(res,200,{participants:participants.map(r=>r.value),claims:claims.map(r=>({id:r.id,receivedAt:r.value.receivedAt,km:r.value.km}))});return true;}
  if(admin&&req.method==='GET'&&path==='/treinhuis/api/status'){json(res,200,{email:!!(process.env.RESEND_API_KEY&&process.env.KK_EMAIL_FROM),auth:!!secret(),media:mediaReady(),memory:process.memoryUsage(),uploads:uploadStatus()});return true;}
  if(req.method==='GET'&&path==='/kilometerkampioen/api/journey'){const user=await participant(req);if(!user)fail('Log eerst in.',401);if(!canUseProof(user))fail('Mijn bewijs is beschikbaar na goedkeuring.',403);json(res,200,{summary:(await scoreboard(user.id))[0],routes:await kkJourneyRoutes(user.id)});return true;}
