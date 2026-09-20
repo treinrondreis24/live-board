@@ -1,3 +1,4 @@
+import {adminSaveClaim} from './kk-admin-claim.mjs';
 import {adminJourney} from './kk-admin-journey.mjs';
 import {deleteProof} from './kk-proof-delete.mjs';
 import {adminRouteOptions,adminRoutePreview,adminRouteConfirm} from './kk-hilta-admin.mjs';
@@ -106,6 +107,7 @@ export async function handleKilometerkampioen(req,res,url){
  if(path==='/kilometerkampioen/api/upload'){const user=await participant(req);if(!user)fail('Log eerst in.',401);json(res,200,await upload(req,user));return true;}
  if(admin&&path==='/treinhuis/api/blog-upload'){json(res,200,await upload(req,{id:EDITOR_OWNER}));return true;}
  const data=await body(req);
+ if(admin&&path==='/treinhuis/api/admin-claim-save'){json(res,200,{claim:await adminSaveClaim(data)});return true;}
  if(admin&&path==='/treinhuis/api/route-preview'){json(res,200,{proposal:await adminRoutePreview(data)});return true;}
  if(admin&&path==='/treinhuis/api/route-confirm'){json(res,200,{route:await adminRouteConfirm(data)});return true;}
  if(admin&&path==='/treinhuis/api/route-distance'){try{json(res,200,await externalDistance(String(data.from||''),String(data.to||'')));}catch(e){fail(e.message);}return true;}
