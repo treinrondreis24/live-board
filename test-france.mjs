@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import {frenchFixture} from './test-fixtures/feeds.mjs';
 import {Worker} from 'node:worker_threads';
 import {DatabaseSync} from 'node:sqlite';
 import {parseFrenchPlan,decodeFrenchLive,frenchRows,frenchStations,restoreFrance,frenchPayload} from './france.mjs';
 import {initBoardCache,saveBoardCache} from './board-cache.mjs';
 import {initBoardAdmin,defaultBoardSettings,duplicateBoard,duplicatePayload,applyBoardSettings} from './board-admin.mjs';
-const bytes=fs.readFileSync(new URL('../france/plan.zip',import.meta.url)),feed=decodeFrenchLive(fs.readFileSync(new URL('../france/live.pb',import.meta.url))),now=feed.header.timestamp*1000;
+const fixture=frenchFixture(frenchStations),bytes=fixture.bytes,feed=decodeFrenchLive(fixture.live),now=feed.header.timestamp*1000;
 const plan=parseFrenchPlan(bytes,now),rows=frenchRows(plan,feed,now);
 assert.equal(new Set(plan.rows.map(r=>r.page)).size,21);assert(rows.some(r=>r.hasRealtime));assert(rows.some(r=>!r.hasRealtime));assert(rows.every(r=>r.transportMode==='rail'));
 const p=plan.rows.find(r=>r.plannedTimestamp>now&&r.plannedTimestamp<now+86400000);

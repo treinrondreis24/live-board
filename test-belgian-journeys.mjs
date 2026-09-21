@@ -1,11 +1,11 @@
-import fs from 'node:fs';
+import {belgianFixture} from './test-fixtures/feeds.mjs';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {parsePlan} from './belgium.mjs';
 import {belgianIceUpdates,archiveBelgianIce} from './belgian-journeys.mjs';
 import {initJourneys,recordJourneyMeasurements} from './journeys.mjs';
 const at=Date.parse('2026-08-19T12:00:00Z');
-const plan=parsePlan(fs.readFileSync(new URL('../belgium/gtfs.zip',import.meta.url)),at);
+const plan=parsePlan(belgianFixture(),at);
 const journeys=plan.iceJourneys;assert(journeys.length>0);assert(journeys.every(p=>p.category==='ICE'&&p.stops.length>=6));
 const p=journeys.find(p=>p.trainNumber==='13'),s=p.stops.find(s=>s.station==='Köln Hbf');assert(s);
 const feed={header:{timestamp:at/1000},entity:[{tripUpdate:{trip:{tripId:p.journeyRef,startDate:p.serviceDate.replaceAll('-','')},stopTimeUpdate:[{stopSequence:s.sequence,departure:{delay:600}}]}}]};

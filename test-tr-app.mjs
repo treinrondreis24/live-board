@@ -1,3 +1,4 @@
+import {stationFixture} from './test-fixtures/feeds.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -5,7 +6,7 @@ import http from 'node:http';
 import {DatabaseSync} from 'node:sqlite';
 import {parseStationCatalog,parseNews,createTreinreizigerHandler} from './tr-app-data.mjs';
 import {initBoardCache} from './board-cache.mjs';
-const catalog=parseStationCatalog(fs.readFileSync(new URL('../ndov-september.zip',import.meta.url)));assert(catalog.length>400);assert(catalog.some(s=>s.code==='AC'));assert(catalog.every(s=>s.country==='NL'));
+const catalog=parseStationCatalog(stationFixture());assert(catalog.length>400);assert(catalog.some(s=>s.code==='AC'));assert(catalog.every(s=>s.country==='NL'));
 const xml='<rss><channel><item><title><![CDATA[Test &#8211; &lt;b&gt;nieuws&lt;/b&gt;]]></title><link>https://www.treinreiziger.nl/test</link><description><![CDATA[<p>Hello</p>]]></description></item><item><title>bad</title><link>javascript:alert(1)</link></item></channel></rss>';
 assert.deepEqual(parseNews(xml).map(x=>x.title),['Test – nieuws']);assert.throws(()=>parseNews('<!DOCTYPE rss>'+xml));
 const js=fs.readFileSync(new URL('./tr-app.js',import.meta.url),'utf8');const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();const ctx={norm};vm.createContext(ctx);vm.runInContext(js.slice(js.indexOf('function matches('),js.indexOf('function rowsFor('))+';this.check=matches;',ctx);
