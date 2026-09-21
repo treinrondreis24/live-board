@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict';
+import {calculateHilta} from './kk-hilta.mjs';
+import {calculateScore,scoringRule} from './kk-scoring.mjs';
+import {buildScorecard} from './kk-scorecard.mjs';
+import {unzipSync,strFromU8} from 'fflate';
+const user={id:'p',edition:24};
+function proof(id,from,to,previous){return {id:String(id),created:id*60000,proof:{station:to},route:{...calculateHilta(from,to),status:'participant-confirmed',confirmedBy:'p',previousProofId:previous===null?null:String(previous)}};}
+const rows=[proof(1,'Meppel','Zwolle',null),proof(2,'Zwolle','Meppel',1),proof(3,'Meppel','Zwolle',2),proof(4,'Rotterdam Centraal','Rotterdam Centraal',3),proof(5,'Meppel','Zwolle',4)];
+let s=calculateScore(user,rows);assert.equal(s.rulesVersion,'2026-24-v1');assert.equal(s.validKm,83.1);assert.equal(s.travelledKm,110.8);assert.equal(s.excludedKm,27.7);assert.equal(s.pending,0);assert.equal(s.checkpoint,'4');
+const xml=strFromU8(unzipSync(buildScorecard(user,rows,s.checkpoint))['xl/worksheets/sheet1.xml']);assert.equal(Number(xml.match(/r="E3"[^>]*>[\s\S]*?<x:v>([^<]+)/)[1]),s.validKm);
+const before=JSON.stringify(rows);calculateScore(user,rows);assert.equal(JSON.stringify(rows),before);
+assert.equal(calculateScore({...user,edition:12},rows).validKm,s.validKm);
+assert.equal(calculateScore(user,rows,'not-yet').validKm,55.4);
+rows[1].route.sourceHash='outdated';s=calculateScore(user,rows);assert.equal(s.pending,1);assert.equal(s.excludedKm,0);assert.equal(s.validKm,83.1);
+const south=[proof(1,'Schiphol','Amsterdam Zuid',null),proof(2,'Amsterdam Zuid','Schiphol',1),proof(3,'Amsterdam Zuid','Amsterdam RAI',2)];s=calculateScore(user,south);assert.equal(s.validKm,10);assert.equal(s.travelledKm,19.2);assert.equal(s.excludedKm,9.2);
+const partial=[proof(1,'Leeuwarden','Harlingen Haven',null),proof(2,'Harlingen Haven','Leeuwarden',1)];for(const r of partial){r.route.status='admin-confirmed';r.route.segments[0].partial=true;r.route.segments[0].km=10;r.route.km=10;}assert.equal(calculateScore(user,partial).validKm,20);
+assert.equal(scoringRule({...user,startDate:'2027-01-01'}).id,'2026-24-v1');
+assert.throws(()=>calculateScore({...user,competitionYear:2028},[]),/rekenregels/);
+assert.throws(()=>calculateScore({...user,competitionYear:2028,scoringVersion:'2026-24-v1'},[]),/rekenregels/);
+assert.throws(()=>calculateScore({...user,competitionYear:2028,scoringVersion:'2028-24-draft'},[]),/rekenregels/);
+assert.equal(calculateScore(user,[]).checkpointMissing,true);
+console.log('PASS scoring: shared XLSX totals, reverse passages, caps, pending vs excluded, Zuid, partial segments, rule isolation, no mutation');
