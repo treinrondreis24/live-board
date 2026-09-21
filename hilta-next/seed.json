@@ -1,0 +1,6390 @@
+{
+  "schema": 1,
+  "revision": "import-967e215866c9fa0c",
+  "name": "Volgende editie · concept",
+  "sources": [
+    {
+      "url": "https://nanderv.github.io/trainkms/trains.html",
+      "sha256": "0439981eadb0530a287ff7fe9d76b2d3aa0760af784ce96c5f6220f239d2a21a"
+    },
+    {
+      "url": "https://wiki.ovinnederland.nl/wiki/Lijst_van_verkortingen_van_treinstations",
+      "sha256": "3f8bf9a0974ebb7a04ffeb88287c139142bba548938cc71e511ef8b3132c3aad"
+    },
+    {
+      "url": "scorekaart2026-aangepast.xlsx",
+      "sha256": "1d63402a698f391d8e630d56daa2a88e1015cade103984074887086c61d2aa75"
+    }
+  ],
+  "importedAt": "2026-09-21T10:55:45.069Z",
+  "stations": [
+    {
+      "code": "atn",
+      "name": "Aalten",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ac",
+      "name": "Abcoude",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "akm",
+      "name": "Akkrum",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "amr",
+      "name": "Alkmaar",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "amrn",
+      "name": "Alkmaar Noord",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "aml",
+      "name": "Almelo",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "amri",
+      "name": "Almelo de Riet",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "almb",
+      "name": "Almere Buiten",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "alm",
+      "name": "Almere Centrum",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "almm",
+      "name": "Almere Muziekwijk",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "almo",
+      "name": "Almere Oostvaarders",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "almp",
+      "name": "Almere Parkwijk",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ampo",
+      "name": "Almere Poort",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "apn",
+      "name": "Alphen a/d Rijn",
+      "aliases": [
+        "Alphen aan den Rijn"
+      ],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "amf",
+      "name": "Amersfoort Centraal",
+      "aliases": [
+        "Amersfoort"
+      ],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "amfs",
+      "name": "Amersfoort Schothorst",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "avat",
+      "name": "Amersfoort Vathorst",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "asa",
+      "name": "Amsterdam Amstel",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "asdar",
+      "name": "Amsterdam ArenA",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": "Evenementenstation"
+    },
+    {
+      "code": "asb",
+      "name": "Amsterdam Bijlmer ArenA",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "asd",
+      "name": "Amsterdam Centraal",
+      "aliases": [
+        "Amsterdam C",
+        "Amsterdam CS"
+      ],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "asdh",
+      "name": "Amsterdam Holendrecht",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "asdl",
+      "name": "Amsterdam Lelylaan",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "asdm",
+      "name": "Amsterdam Muiderpoort",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "rai",
+      "name": "Amsterdam RAI",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "assp",
+      "name": "Amsterdam Science Park",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ass",
+      "name": "Amsterdam Sloterdijk",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "asdz",
+      "name": "Amsterdam Zuid",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ana",
+      "name": "Anna Paulowna",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "apd",
+      "name": "Apeldoorn",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "apdm",
+      "name": "Apeldoorn De Maten",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "apdo",
+      "name": "Apeldoorn Osseveld",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "apg",
+      "name": "Appingedam",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "akl",
+      "name": "Arkel",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "arn",
+      "name": "Arnemuiden",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ah",
+      "name": "Arnhem Centraal",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ahpr",
+      "name": "Arnhem Presikhaaf",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ahp",
+      "name": "Arnhem Velperpoort",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ahz",
+      "name": "Arnhem Zuid",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "asn",
+      "name": "Assen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "brn",
+      "name": "Baarn",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bf",
+      "name": "Baflo",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "brd",
+      "name": "Barendrecht",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bnc",
+      "name": "Barneveld Centrum",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bnn",
+      "name": "Barneveld Noord",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bnz",
+      "name": "Barneveld Zuid",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bdm",
+      "name": "Bedum",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bk",
+      "name": "Beek-Elsloo",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bsd",
+      "name": "Beesd",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bl",
+      "name": "Beilen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bgn",
+      "name": "Bergen op Zoom",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bet",
+      "name": "Best",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bv",
+      "name": "Beverwijk",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bhv",
+      "name": "Bilthoven",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "br",
+      "name": "Blerick",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bll",
+      "name": "Bloemendaal",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bdg",
+      "name": "Bodegraven",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bn",
+      "name": "Borne",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bsk",
+      "name": "Boskoop",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bsks",
+      "name": "Boskoop Snijdelwijk",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bhdv",
+      "name": "Boven-Hardinxveld",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bkf",
+      "name": "Bovenkarspel Flora",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bkg",
+      "name": "Bovenkarspel-Grootebroek",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bmr",
+      "name": "Boxmeer",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "btl",
+      "name": "Boxtel",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bd",
+      "name": "Breda",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bdpb",
+      "name": "Breda-Prinsenbeek",
+      "aliases": [
+        "Breda Prinsenbeek"
+      ],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bkl",
+      "name": "Breukelen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bmn",
+      "name": "Brummen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bp",
+      "name": "Buitenpost",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bde",
+      "name": "Bunde",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bnk",
+      "name": "Bunnik",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "bsmz",
+      "name": "Bussum Zuid",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "cps",
+      "name": "Capelle Schollevaar",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "cas",
+      "name": "Castricum",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "cvm",
+      "name": "Chevremont",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "co",
+      "name": "Coevorden",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ck",
+      "name": "Cuijk",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "cl",
+      "name": "Culemborg",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "da",
+      "name": "Daarlerveen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "dln",
+      "name": "Dalen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "dl",
+      "name": "Dalfsen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "dvnk",
+      "name": "De Vink",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "dei",
+      "name": "Deinum",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ddn",
+      "name": "Delden",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "dt",
+      "name": "Delft",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "dtz",
+      "name": "Delft Campus",
+      "aliases": [
+        "Delft Zuid"
+      ],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "dz",
+      "name": "Delfzijl",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "dzw",
+      "name": "Delfzijl West",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "dld",
+      "name": "Den Dolder",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "gvc",
+      "name": "Den Haag Centraal",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "gv",
+      "name": "Den Haag HS",
+      "aliases": [
+        "Den Haag Hollands Spoor"
+      ],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "laa",
+      "name": "Den Haag Laan v NOI",
+      "aliases": [
+        "Den Haag Laan van NOI"
+      ],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "gvm",
+      "name": "Den Haag Mariahoeve",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "gvmw",
+      "name": "Den Haag Moerwijk",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ypb",
+      "name": "Den Haag Ypenburg",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hdr",
+      "name": "Den Helder",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hdrz",
+      "name": "Den Helder Zuid",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "dn",
+      "name": "Deurne",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "dv",
+      "name": "Deventer",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "dvc",
+      "name": "Deventer Colmschate",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "dwe",
+      "name": "De Westereen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "did",
+      "name": "Didam",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "dmn",
+      "name": "Diemen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "dmnz",
+      "name": "Diemen Zuid",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "dr",
+      "name": "Dieren",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "dtc",
+      "name": "Doetinchem",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "dtch",
+      "name": "Doetinchem De Huet",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ddr",
+      "name": "Dordrecht",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ddrs",
+      "name": "Dordrecht Stadspolders",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ddzd",
+      "name": "Dordrecht Zuid",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "db",
+      "name": "Driebergen-Zeist",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "drh",
+      "name": "Driehuis",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "drp",
+      "name": "Dronryp",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "dron",
+      "name": "Dronten",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "dvn",
+      "name": "Duiven",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "dvd",
+      "name": "Duivendrecht",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ec",
+      "name": "Echt",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "edc",
+      "name": "Ede Centrum",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ed",
+      "name": "Ede-Wageningen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "eem",
+      "name": "Eemshaven",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "edn",
+      "name": "Eijsden",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ehv",
+      "name": "Eindhoven Centraal",
+      "aliases": [
+        "Eindhoven"
+      ],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ehs",
+      "name": "Eindhoven Strijp-S",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ehst",
+      "name": "Eindhoven Stadion",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": "Evenementenstation"
+    },
+    {
+      "code": "est",
+      "name": "Elst",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "emn",
+      "name": "Emmen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "emnz",
+      "name": "Emmen Zuid",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ekz",
+      "name": "Enkhuizen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "es",
+      "name": "Enschede",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ese",
+      "name": "Enschede De Eschmarke",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "esk",
+      "name": "Enschede Kennispark",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "eml",
+      "name": "Ermelo",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "etn",
+      "name": "Etten-Leur",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "egh",
+      "name": "Eygelshoven",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "eghm",
+      "name": "Eygelshoven Markt",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "fwd",
+      "name": "Feanwâlden",
+      "aliases": [
+        "Feanwalden"
+      ],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "fn",
+      "name": "Franeker",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "gdr",
+      "name": "Gaanderen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "gdm",
+      "name": "Geldermalsen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "gp",
+      "name": "Geldrop",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "gln",
+      "name": "Geleen Oost",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "lut",
+      "name": "Geleen-Lutterade",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "gz",
+      "name": "Gilze-Rijen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "gbr",
+      "name": "Glanerbrug",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "gs",
+      "name": "Goes",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "go",
+      "name": "Goor",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "gr",
+      "name": "Gorinchem",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "gd",
+      "name": "Gouda",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "gdg",
+      "name": "Gouda Goverwelle",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "gbg",
+      "name": "Gramsbergen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "gk",
+      "name": "Grijpskerk",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "gn",
+      "name": "Groningen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "gerp",
+      "name": "Groningen Europapark",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "gnn",
+      "name": "Groningen Noord",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "gw",
+      "name": "Grou-Jirnsum",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hlm",
+      "name": "Haarlem",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hlms",
+      "name": "Haarlem Spaarnwoude",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hwzw",
+      "name": "Halfweg-Zwanenburg",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hde",
+      "name": "'t Harde",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hdb",
+      "name": "Hardenberg",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hd",
+      "name": "Harderwijk",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hbzm",
+      "name": "Hardinxveld Blauwe Zoom",
+      "aliases": [
+        "Bzm"
+      ],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "gnd",
+      "name": "Hardinxveld-Giessendam",
+      "aliases": [
+        "Hag"
+      ],
+      "validFrom": "",
+      "validTo": "",
+      "note": "De afkorting Hag werd gebruikt voor het voormalige station"
+    },
+    {
+      "code": "hrn",
+      "name": "Haren",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hlg",
+      "name": "Harlingen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hlgh",
+      "name": "Harlingen Haven",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hk",
+      "name": "Heemskerk",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "had",
+      "name": "Heemstede-Aerdenhout",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hr",
+      "name": "Heerenveen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hwd",
+      "name": "Heerhugowaard",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hrl",
+      "name": "Heerlen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hrlw",
+      "name": "Heerlen Woonboulevard",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hze",
+      "name": "Heeze",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hlo",
+      "name": "Heiloo",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hno",
+      "name": "Heino",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hm",
+      "name": "Helmond",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hmbv",
+      "name": "Helmond Brandevoort",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hmbh",
+      "name": "Helmond Brouwhuis",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hmh",
+      "name": "Helmond 't Hout",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hmn",
+      "name": "Hemmen-Dodewaard",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hgl",
+      "name": "Hengelo",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hglg",
+      "name": "Hengelo Gezondheidspark",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hglo",
+      "name": "Hengelo Oost",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ht",
+      "name": "'s-Hertogenbosch",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hto",
+      "name": "'s-Hertogenbosch Oost",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hil",
+      "name": "Hillegom",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hvs",
+      "name": "Hilversum",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hvsm",
+      "name": "Hilversum Media Park",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hvsp",
+      "name": "Hilversum Sportpark",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hnp",
+      "name": "Hindeloopen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hb",
+      "name": "Hoensbroek",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hvl",
+      "name": "Hoevelaken",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hor",
+      "name": "Hollandsche Rading",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hon",
+      "name": "Holten",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hfd",
+      "name": "Hoofddorp",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hgv",
+      "name": "Hoogeveen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hgz",
+      "name": "Hoogezand-Sappemeer",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hks",
+      "name": "Hoogkarspel",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hn",
+      "name": "Hoorn",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hnk",
+      "name": "Hoorn Kersenboogerd",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hrt",
+      "name": "Horst-Sevenum",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "htn",
+      "name": "Houten",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "htnc",
+      "name": "Houten Castellum",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "sgl",
+      "name": "Houthem-St. Gerlach",
+      "aliases": [
+        "Houthem-Sint Gerlach"
+      ],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "hdg",
+      "name": "Hurdegaryp",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ijt",
+      "name": "IJlst",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "kpn",
+      "name": "Kampen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "kpnz",
+      "name": "Kampen Zuid",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": "Station aan de Hanzelijn"
+    },
+    {
+      "code": "bzl",
+      "name": "Kapelle-Biezelinge",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "krd",
+      "name": "Kerkrade Centrum",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ktr",
+      "name": "Kesteren",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "kbk",
+      "name": "Klarenbeek",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "kmr",
+      "name": "Klimmen-Ransdaal",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "kz",
+      "name": "Koog aan de Zaan",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "kmw",
+      "name": "Koudum-Molkwerum",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "kbd",
+      "name": "Krabbendijke",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "kma",
+      "name": "Krommenie-Assendelft",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "kw",
+      "name": "Kropswolde",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "krg",
+      "name": "Kruiningen-Yerseke",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "zlw",
+      "name": "Lage Zwaluwe",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "lg",
+      "name": "Landgraaf",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "llzm",
+      "name": "Lansingerland-Zoetermeer",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ldm",
+      "name": "Leerdam",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "lw",
+      "name": "Leeuwarden",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "lwc",
+      "name": "Leeuwarden Camminghaburen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ledn",
+      "name": "Leiden Centraal",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ldl",
+      "name": "Leiden Lammenschans",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "lls",
+      "name": "Lelystad Centrum",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ltv",
+      "name": "Lichtenvoorde-Groenlo",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "lc",
+      "name": "Lochem",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "lp",
+      "name": "Loppersum",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ltn",
+      "name": "Lunteren",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "mz",
+      "name": "Maarheeze",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "mrn",
+      "name": "Maarn",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "mas",
+      "name": "Maarssen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "mt",
+      "name": "Maastricht",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "mtn",
+      "name": "Maastricht Noord",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "mtr",
+      "name": "Maastricht Randwyck",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "mg",
+      "name": "Mantgum",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "mrb",
+      "name": "Mariënberg",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "mth",
+      "name": "Martenshoek",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "mes",
+      "name": "Meerssen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "mp",
+      "name": "Meppel",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "mdb",
+      "name": "Middelburg",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "mmlh",
+      "name": "Mook-Molenhoek",
+      "aliases": [
+        "Mook Molenhoek"
+      ],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ndb",
+      "name": "Naarden-Bussum",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "na",
+      "name": "Nieuw Amsterdam",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "nvp",
+      "name": "Nieuw Vennep",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "nwk",
+      "name": "Nieuwerkerk a/d IJssel",
+      "aliases": [
+        "Nieuwerkerk aan den IJssel"
+      ],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "nsch",
+      "name": "Bad Nieuweschans",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "nkk",
+      "name": "Nijkerk",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "nm",
+      "name": "Nijmegen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "nmd",
+      "name": "Nijmegen Dukenburg",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "nmgo",
+      "name": "Nijmegen Goffert",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "nmh",
+      "name": "Nijmegen Heyendaal",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "nml",
+      "name": "Nijmegen Lent",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "nvd",
+      "name": "Nijverdal",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ns",
+      "name": "Nunspeet",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "nh",
+      "name": "Nuth",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "obd",
+      "name": "Obdam",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ot",
+      "name": "Oisterwijk",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "odz",
+      "name": "Oldenzaal",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ost",
+      "name": "Olst",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "omn",
+      "name": "Ommen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "otb",
+      "name": "Oosterbeek",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "op",
+      "name": "Opheusden",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "o",
+      "name": "Oss",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ow",
+      "name": "Oss West",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "odb",
+      "name": "Oudenbosch",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ovn",
+      "name": "Overveen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "pmr",
+      "name": "Purmerend",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "pmo",
+      "name": "Purmerend Overwhere",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "pmw",
+      "name": "Purmerend Weidevenne",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "pt",
+      "name": "Putten",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "rat",
+      "name": "Raalte",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "rvs",
+      "name": "Ravenstein",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "rv",
+      "name": "Reuver",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "rh",
+      "name": "Rheden",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "rhn",
+      "name": "Rhenen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "rsn",
+      "name": "Rijssen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "rsw",
+      "name": "Rijswijk",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "rb",
+      "name": "Rilland-Bath",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "rm",
+      "name": "Roermond",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "rd",
+      "name": "Roodeschool",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "rsd",
+      "name": "Roosendaal",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "rs",
+      "name": "Rosmalen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "rta",
+      "name": "Rotterdam Alexander",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "rtb",
+      "name": "Rotterdam Blaak",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "rtd",
+      "name": "Rotterdam Centraal",
+      "aliases": [
+        "Rotterdam C",
+        "Rotterdam CS"
+      ],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "rlb",
+      "name": "Rotterdam Lombardijen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "rtn",
+      "name": "Rotterdam Noord",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "rtst",
+      "name": "Rotterdam Stadion",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": "Evenementenstation"
+    },
+    {
+      "code": "rtz",
+      "name": "Rotterdam Zuid",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "rl",
+      "name": "Ruurlo",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "sptn",
+      "name": "Santpoort Noord",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "sptz",
+      "name": "Santpoort Zuid",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ssh",
+      "name": "Sassenheim",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "swd",
+      "name": "Sauwerd",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "sgn",
+      "name": "Schagen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "sda",
+      "name": "Scheemda",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "sdm",
+      "name": "Schiedam Centrum",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "sn",
+      "name": "Schinnen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "sog",
+      "name": "Schin op Geul",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "shl",
+      "name": "Schiphol Airport",
+      "aliases": [
+        "Schiphol",
+        "Schiphol Airport"
+      ],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "std",
+      "name": "Sittard",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "sk",
+      "name": "Sneek",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "sknd",
+      "name": "Sneek Noord",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "st",
+      "name": "Soest",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "stz",
+      "name": "Soest Zuid",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "sd",
+      "name": "Soestdijk",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "sdtb",
+      "name": "Sliedrecht Baanhoek",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "sdt",
+      "name": "Sliedrecht",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "sbk",
+      "name": "Spaubeek",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "stv",
+      "name": "Stavoren",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "stm",
+      "name": "Stedum",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "swk",
+      "name": "Steenwijk",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "srn",
+      "name": "Susteren",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "sm",
+      "name": "Swalmen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "tg",
+      "name": "Tegelen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "tbg",
+      "name": "Terborg",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "tl",
+      "name": "Tiel",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "tpsw",
+      "name": "Tiel Passewaaij",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "tb",
+      "name": "Tilburg",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "tbr",
+      "name": "Tilburg Reeshof",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "tbu",
+      "name": "Tilburg Universiteit",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "twl",
+      "name": "Twello",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "utg",
+      "name": "Uitgeest",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "uhz",
+      "name": "Uithuizen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "uhm",
+      "name": "Uithuizermeeden",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ust",
+      "name": "Usquert",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ut",
+      "name": "Utrecht Centraal",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "utlr",
+      "name": "Utrecht Leidsche Rijn",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "utln",
+      "name": "Utrecht Lunetten",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "utm",
+      "name": "Utrecht Maliebaan",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": "Spoorwegmuseum"
+    },
+    {
+      "code": "uto",
+      "name": "Utrecht Overvecht",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "utt",
+      "name": "Utrecht Terwijde",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "utvr",
+      "name": "Utrecht Vaartsche Rijn",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "utzl",
+      "name": "Utrecht Zuilen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "vk",
+      "name": "Valkenburg",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "vsv",
+      "name": "Varsseveld",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "vdm",
+      "name": "Veendam",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "vndc",
+      "name": "Veenendaal Centrum",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "klp",
+      "name": "Veenendaal-De Klomp",
+      "aliases": [
+        "Veenendaal-de Klomp"
+      ],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "vndw",
+      "name": "Veenendaal West",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "vp",
+      "name": "Velp",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "vl",
+      "name": "Venlo",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "vry",
+      "name": "Venray",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "vlb",
+      "name": "Vierlingsbeek",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "vtn",
+      "name": "Vleuten",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "vs",
+      "name": "Vlissingen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "vss",
+      "name": "Vlissingen Souburg",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "vdl",
+      "name": "Voerendaal",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "vb",
+      "name": "Voorburg",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "vh",
+      "name": "Voorhout",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "vst",
+      "name": "Voorschoten",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "vem",
+      "name": "Voorst-Empe",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "vd",
+      "name": "Vorden",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "vz",
+      "name": "Vriezenveen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "vhp",
+      "name": "Vroomshoop",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "vg",
+      "name": "Vught",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "wad",
+      "name": "Waddinxveen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "wadn",
+      "name": "Waddinxveen Noord",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "wadt",
+      "name": "Waddinxveen Triangel",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "wfm",
+      "name": "Warffum",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "wt",
+      "name": "Weert",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "wp",
+      "name": "Weesp",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "wl",
+      "name": "Wehl",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "wtv",
+      "name": "Westervoort",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "wz",
+      "name": "Wezep",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "wdn",
+      "name": "Wierden",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "wc",
+      "name": "Wijchen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "wh",
+      "name": "Wijhe",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ws",
+      "name": "Winschoten",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "wsm",
+      "name": "Winsum",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ww",
+      "name": "Winterswijk",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "www",
+      "name": "Winterswijk West",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "wd",
+      "name": "Woerden",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "wf",
+      "name": "Wolfheze",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "wv",
+      "name": "Wolvega",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "wk",
+      "name": "Workum",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "wm",
+      "name": "Wormerveer",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "zd",
+      "name": "Zaandam",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "zdk",
+      "name": "Zaandam Kogerveld",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "zbm",
+      "name": "Zaltbommel",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "zvt",
+      "name": "Zandvoort aan Zee",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "za",
+      "name": "Zetten-Andelst",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "zv",
+      "name": "Zevenaar",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "zvb",
+      "name": "Zevenbergen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ztm",
+      "name": "Zoetermeer",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "ztmo",
+      "name": "Zoetermeer Oost",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "zb",
+      "name": "Zuidbroek",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "zh",
+      "name": "Zuidhorn",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "zp",
+      "name": "Zutphen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "zwd",
+      "name": "Zwijndrecht",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "zl",
+      "name": "Zwolle",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "zlsh",
+      "name": "Zwolle Stadshagen",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    },
+    {
+      "code": "zzs",
+      "name": "Zaandijk Zaanse Schans",
+      "aliases": [],
+      "validFrom": "",
+      "validTo": "",
+      "note": ""
+    }
+  ],
+  "trajectories": [
+    {
+      "id": "score2026-8",
+      "label": "Leeuwarden - Harlingen Haven",
+      "points": [
+        "lw",
+        "dei",
+        "drp",
+        "fn",
+        "hlg",
+        "hlgh"
+      ],
+      "parts": [
+        3700,
+        7000,
+        6300,
+        8400,
+        1000
+      ],
+      "scoreMetres": 26400,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-9",
+      "label": "Leeuwarden - Stavoren",
+      "points": [
+        "lw",
+        "mg",
+        "sknd",
+        "sk",
+        "ijt",
+        "wk",
+        "hnp",
+        "kmw",
+        "stv"
+      ],
+      "parts": [
+        9800,
+        11000,
+        900,
+        3500,
+        12100,
+        3500,
+        5200,
+        4200
+      ],
+      "scoreMetres": 50200,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-10",
+      "label": "Groningen - Leeuwarden",
+      "points": [
+        "gn",
+        "zh",
+        "gk",
+        "bp",
+        "dwe",
+        "fwd",
+        "hdg",
+        "lwc",
+        "lw"
+      ],
+      "parts": [
+        11800,
+        7000,
+        10800,
+        7700,
+        3200,
+        4000,
+        6800,
+        3200
+      ],
+      "scoreMetres": 54500,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-11",
+      "label": "Eemshaven - Sauwerd",
+      "points": [
+        "eem",
+        "rd",
+        "uhm",
+        "uhz",
+        "ust",
+        "wfm",
+        "bf",
+        "wsm",
+        "swd"
+      ],
+      "parts": [
+        7100,
+        3100,
+        3100,
+        4700,
+        3100,
+        4900,
+        3400,
+        4700
+      ],
+      "scoreMetres": 26500,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-12",
+      "label": "Delfzijl - Sauwerd",
+      "points": [
+        "dz",
+        "dzw",
+        "apg",
+        "lp",
+        "stm",
+        "bdm",
+        "swd"
+      ],
+      "parts": [
+        900,
+        3200,
+        8000,
+        3500,
+        7000,
+        4200
+      ],
+      "scoreMetres": 34100,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-13",
+      "label": "Sauwerd - Groningen",
+      "points": [
+        "swd",
+        "gnn",
+        "gn"
+      ],
+      "parts": [
+        7100,
+        3900
+      ],
+      "scoreMetres": 11000,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-14",
+      "label": "Groningen - Groningen Europapark",
+      "points": [
+        "gn",
+        "gerp"
+      ],
+      "parts": [
+        2600
+      ],
+      "scoreMetres": 2600,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-15",
+      "label": "Groningen Europapark - Zuidbroek",
+      "points": [
+        "gerp",
+        "kw",
+        "mth",
+        "hgz",
+        "zb"
+      ],
+      "parts": [
+        8700,
+        1900,
+        1800,
+        6600
+      ],
+      "scoreMetres": 19000,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-16",
+      "label": "Zuidbroek - Veendam",
+      "points": [
+        "zb",
+        "vdm"
+      ],
+      "parts": [
+        7500
+      ],
+      "scoreMetres": 7500,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-17",
+      "label": "Zuidbroek - Bad Nieuweschans",
+      "points": [
+        "zb",
+        "sda",
+        "ws",
+        "nsch"
+      ],
+      "parts": [
+        7700,
+        4900,
+        12000
+      ],
+      "scoreMetres": 24600,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-18",
+      "label": "Groningen Europapark - Meppel",
+      "points": [
+        "gerp",
+        "hrn",
+        "asn",
+        "bl",
+        "hgv",
+        "mp"
+      ],
+      "parts": [
+        3000,
+        22200,
+        15600,
+        13900,
+        19900
+      ],
+      "scoreMetres": 74600,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-19",
+      "label": "Leeuwarden - Meppel",
+      "points": [
+        "lw",
+        "gw",
+        "akm",
+        "hr",
+        "wv",
+        "swk",
+        "mp"
+      ],
+      "parts": [
+        13600,
+        4800,
+        11500,
+        10100,
+        12600,
+        13900
+      ],
+      "scoreMetres": 66500,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-20",
+      "label": "Meppel - Zwolle",
+      "points": [
+        "mp",
+        "zl"
+      ],
+      "parts": [
+        27700
+      ],
+      "scoreMetres": 27700,
+      "maxCount": 4,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-22",
+      "label": "Zwolle - Kampen",
+      "points": [
+        "zl",
+        "zlsh",
+        "kpn"
+      ],
+      "parts": [
+        3700,
+        9600
+      ],
+      "scoreMetres": 13300,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-23",
+      "label": "Zwolle - Mariënberg",
+      "points": [
+        "zl",
+        "dl",
+        "omn",
+        "mrb"
+      ],
+      "parts": [
+        12400,
+        10800,
+        11100
+      ],
+      "scoreMetres": 34300,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-24",
+      "label": "Mariënberg - Emmen",
+      "points": [
+        "mrb",
+        "hdb",
+        "gbg",
+        "co",
+        "dln",
+        "na",
+        "emnz",
+        "emn"
+      ],
+      "parts": [
+        8500,
+        5100,
+        7700,
+        4000,
+        7000,
+        3800,
+        5100
+      ],
+      "scoreMetres": 41200,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-25",
+      "label": "Mariënberg - Almelo",
+      "points": [
+        "mrb",
+        "vhp",
+        "da",
+        "vz",
+        "aml"
+      ],
+      "parts": [
+        6200,
+        2000,
+        4600,
+        6200
+      ],
+      "scoreMetres": 19000,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-26",
+      "label": "Zwolle - Wierden",
+      "points": [
+        "zl",
+        "hno",
+        "rat",
+        "nvd",
+        "wdn"
+      ],
+      "parts": [
+        12300,
+        5800,
+        13200,
+        8500
+      ],
+      "scoreMetres": 39800,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-27",
+      "label": "Wierden - Almelo",
+      "points": [
+        "wdn",
+        "aml"
+      ],
+      "parts": [
+        4600
+      ],
+      "scoreMetres": 4600,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-28",
+      "label": "Zwolle - Deventer",
+      "points": [
+        "zl",
+        "wh",
+        "ost",
+        "dv"
+      ],
+      "parts": [
+        14000,
+        6500,
+        9200
+      ],
+      "scoreMetres": 29700,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-29",
+      "label": "Deventer - Wierden",
+      "points": [
+        "dv",
+        "dvc",
+        "hon",
+        "rsn",
+        "wdn"
+      ],
+      "parts": [
+        4500,
+        14600,
+        7500,
+        7700
+      ],
+      "scoreMetres": 34300,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-30",
+      "label": "Almelo - Hengelo",
+      "points": [
+        "aml",
+        "amri",
+        "bn",
+        "hgl"
+      ],
+      "parts": [
+        1800,
+        7500,
+        5300
+      ],
+      "scoreMetres": 14600,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-31",
+      "label": "Hengelo - Oldenzaal",
+      "points": [
+        "hgl",
+        "hglo",
+        "odz"
+      ],
+      "parts": [
+        2200,
+        8800
+      ],
+      "scoreMetres": 11000,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-32",
+      "label": "Hengelo - Enschede",
+      "points": [
+        "hgl",
+        "esk",
+        "es"
+      ],
+      "parts": [
+        3800,
+        3800
+      ],
+      "scoreMetres": 7600,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-33",
+      "label": "Enschede - Glanerbrug",
+      "points": [
+        "es",
+        "ese",
+        "gbr"
+      ],
+      "parts": [
+        4200,
+        2000
+      ],
+      "scoreMetres": 6200,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-35",
+      "label": "Amersfoort Centraal - Zwolle",
+      "points": [
+        "amf",
+        "amfs",
+        "avat",
+        "nkk",
+        "pt",
+        "eml",
+        "hd",
+        "ns",
+        "hde",
+        "wz",
+        "zl"
+      ],
+      "parts": [
+        3200,
+        3100,
+        5200,
+        7400,
+        4900,
+        4200,
+        12200,
+        8700,
+        8700,
+        8900
+      ],
+      "scoreMetres": 66500,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-36",
+      "label": "Amersfoort Centraal - Hoevelaken",
+      "points": [
+        "amf",
+        "hvl"
+      ],
+      "parts": [
+        6000
+      ],
+      "scoreMetres": 6000,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-37",
+      "label": "Hoevelaken - Ede-Wageningen",
+      "points": [
+        "hvl",
+        "bnn",
+        "bnc",
+        "bnz",
+        "ltn",
+        "edc",
+        "ed"
+      ],
+      "parts": [
+        10200,
+        2400,
+        2100,
+        5100,
+        5800,
+        2100
+      ],
+      "scoreMetres": 27700,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-38",
+      "label": "Hoevelaken - Apeldoorn",
+      "points": [
+        "hvl",
+        "apd"
+      ],
+      "parts": [
+        37700
+      ],
+      "scoreMetres": 37700,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-39",
+      "label": "Apeldoorn - Deventer",
+      "points": [
+        "apd",
+        "apdo",
+        "twl",
+        "dv"
+      ],
+      "parts": [
+        2800,
+        7100,
+        4700
+      ],
+      "scoreMetres": 14600,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-40",
+      "label": "Deventer - Zutphen",
+      "points": [
+        "dv",
+        "zp"
+      ],
+      "parts": [
+        16400
+      ],
+      "scoreMetres": 16400,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-41",
+      "label": "Apeldoorn - Zutphen",
+      "points": [
+        "apd",
+        "apdm",
+        "kbk",
+        "vem",
+        "zp"
+      ],
+      "parts": [
+        2500,
+        6600,
+        4200,
+        4200
+      ],
+      "scoreMetres": 17500,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-42",
+      "label": "Zutphen - Hengelo",
+      "points": [
+        "zp",
+        "lc",
+        "go",
+        "ddn",
+        "hglg",
+        "hgl"
+      ],
+      "parts": [
+        17100,
+        13300,
+        9400,
+        4200,
+        1700
+      ],
+      "scoreMetres": 45700,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-43",
+      "label": "Zutphen - Winterswijk",
+      "points": [
+        "zp",
+        "vd",
+        "rl",
+        "ltv",
+        "www",
+        "ww"
+      ],
+      "parts": [
+        11800,
+        9600,
+        12700,
+        8600,
+        1000
+      ],
+      "scoreMetres": 43700,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-44",
+      "label": "Ede-Wageningen - Arnhem Centraal",
+      "points": [
+        "ed",
+        "wf",
+        "otb",
+        "ah"
+      ],
+      "parts": [
+        8700,
+        3500,
+        4500
+      ],
+      "scoreMetres": 16700,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-45",
+      "label": "Arnhem Centraal - Arnhem Velperpoort",
+      "points": [
+        "ah",
+        "ahp"
+      ],
+      "parts": [
+        1900
+      ],
+      "scoreMetres": 1900,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-46",
+      "label": "Arnhem Velperpoort - Zutphen",
+      "points": [
+        "ahp",
+        "ahpr",
+        "vp",
+        "rh",
+        "dr",
+        "bmn",
+        "zp"
+      ],
+      "parts": [
+        1600,
+        2500,
+        4000,
+        6100,
+        6000,
+        7100
+      ],
+      "scoreMetres": 27300,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-47",
+      "label": "Arnhem Velperpoort - Zevenaar",
+      "points": [
+        "ahp",
+        "wtv",
+        "dvn",
+        "zv"
+      ],
+      "parts": [
+        4300,
+        3800,
+        4400
+      ],
+      "scoreMetres": 12500,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-48",
+      "label": "Zevenaar - Winterswijk",
+      "points": [
+        "zv",
+        "did",
+        "wl",
+        "dtch",
+        "dtc",
+        "gdr",
+        "tbg",
+        "vsv",
+        "atn",
+        "ww"
+      ],
+      "parts": [
+        4600,
+        6000,
+        3600,
+        1900,
+        5100,
+        1600,
+        6900,
+        8300,
+        12400
+      ],
+      "scoreMetres": 50400,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-49",
+      "label": "Tiel - Elst",
+      "points": [
+        "tl",
+        "ktr",
+        "op",
+        "hmn",
+        "za",
+        "est"
+      ],
+      "parts": [
+        12000,
+        3400,
+        3000,
+        3200,
+        11000
+      ],
+      "scoreMetres": 32600,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-50",
+      "label": "Elst - Arnhem Centraal",
+      "points": [
+        "est",
+        "ahz",
+        "ah"
+      ],
+      "parts": [
+        4300,
+        6000
+      ],
+      "scoreMetres": 10300,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-51",
+      "label": "Nijmegen - Elst",
+      "points": [
+        "nm",
+        "nml",
+        "est"
+      ],
+      "parts": [
+        2500,
+        5800
+      ],
+      "scoreMetres": 8300,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-53",
+      "label": "Weesp - Almere Poort",
+      "points": [
+        "wp",
+        "ampo"
+      ],
+      "parts": [
+        11700
+      ],
+      "scoreMetres": 11700,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-54",
+      "label": "Naarden-Bussum - Almere Poort",
+      "points": [
+        "ndb",
+        "ampo"
+      ],
+      "parts": [
+        17200
+      ],
+      "scoreMetres": 17200,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-55",
+      "label": "Almere Poort - Lelystad Centrum",
+      "points": [
+        "ampo",
+        "almm",
+        "alm",
+        "almp",
+        "almb",
+        "almo",
+        "lls"
+      ],
+      "parts": [
+        1400,
+        2000,
+        1900,
+        3100,
+        1800,
+        18100
+      ],
+      "scoreMetres": 28300,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-56",
+      "label": "Lelystad Centrum - Zwolle",
+      "points": [
+        "lls",
+        "dron",
+        "kpnz",
+        "zl"
+      ],
+      "parts": [
+        21000,
+        14000,
+        15000
+      ],
+      "scoreMetres": 50000,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-58",
+      "label": "Den Helder - Heerhugowaard",
+      "points": [
+        "hdr",
+        "hdrz",
+        "ana",
+        "sgn",
+        "hwd"
+      ],
+      "parts": [
+        2600,
+        8900,
+        9100,
+        13900
+      ],
+      "scoreMetres": 34500,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-59",
+      "label": "Heerhugowaard - Hoorn",
+      "points": [
+        "hwd",
+        "obd",
+        "hn"
+      ],
+      "parts": [
+        6000,
+        10900
+      ],
+      "scoreMetres": 16900,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-60",
+      "label": "Hoorn - Enkhuizen",
+      "points": [
+        "hn",
+        "hnk",
+        "hks",
+        "bkg",
+        "bkf",
+        "ekz"
+      ],
+      "parts": [
+        2200,
+        7900,
+        3700,
+        1300,
+        2400
+      ],
+      "scoreMetres": 17500,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-61",
+      "label": "Hoorn - Zaandam",
+      "points": [
+        "hn",
+        "pmo",
+        "pmr",
+        "pmw",
+        "zdk",
+        "zd"
+      ],
+      "parts": [
+        17800,
+        1600,
+        1600,
+        9000,
+        2800
+      ],
+      "scoreMetres": 32800,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-62",
+      "label": "Heerhugowaard - Uitgeest",
+      "points": [
+        "hwd",
+        "amrn",
+        "amr",
+        "hlo",
+        "cas",
+        "utg"
+      ],
+      "parts": [
+        5100,
+        1700,
+        5100,
+        6800,
+        4200
+      ],
+      "scoreMetres": 22900,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-63",
+      "label": "Uitgeest - Zaandam",
+      "points": [
+        "utg",
+        "kma",
+        "wm",
+        "zzs",
+        "kz",
+        "zd"
+      ],
+      "parts": [
+        5000,
+        1900,
+        2800,
+        1200,
+        2100
+      ],
+      "scoreMetres": 13000,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-64",
+      "label": "Uitgeest - Haarlem",
+      "points": [
+        "utg",
+        "hk",
+        "bv",
+        "drh",
+        "sptn",
+        "sptz",
+        "bll",
+        "hlm"
+      ],
+      "parts": [
+        3600,
+        2700,
+        4600,
+        900,
+        1600,
+        1900,
+        2000
+      ],
+      "scoreMetres": 17300,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-65",
+      "label": "Zandvoort aan Zee - Haarlem",
+      "points": [
+        "zvt",
+        "ovn",
+        "hlm"
+      ],
+      "parts": [
+        5600,
+        2300
+      ],
+      "scoreMetres": 7900,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-66",
+      "label": "Haarlem - Leiden Centraal",
+      "points": [
+        "hlm",
+        "had",
+        "hil",
+        "vh",
+        "ledn"
+      ],
+      "parts": [
+        4500,
+        6900,
+        10700,
+        7000
+      ],
+      "scoreMetres": 29100,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-67",
+      "label": "Haarlem - Amsterdam Sloterdijk",
+      "points": [
+        "hlm",
+        "hlms",
+        "hwzw",
+        "ass"
+      ],
+      "parts": [
+        1900,
+        6700,
+        6000
+      ],
+      "scoreMetres": 14600,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-68",
+      "label": "Zaandam - Amsterdam Sloterdijk",
+      "points": [
+        "zd",
+        "ass"
+      ],
+      "parts": [
+        8200
+      ],
+      "scoreMetres": 8200,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-69",
+      "label": "Leiden Centraal - Hoofddorp",
+      "points": [
+        "ledn",
+        "ssh",
+        "nvp",
+        "hfd"
+      ],
+      "parts": [
+        6800,
+        10300,
+        5100
+      ],
+      "scoreMetres": 22200,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-70",
+      "label": "Hoofddorp - Schiphol",
+      "points": [
+        "hfd",
+        "shl"
+      ],
+      "parts": [
+        4600
+      ],
+      "scoreMetres": 4600,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-71",
+      "label": "Schiphol - Amsterdam Sloterdijk",
+      "points": [
+        "shl",
+        "asdl",
+        "ass"
+      ],
+      "parts": [
+        8600,
+        3800
+      ],
+      "scoreMetres": 12400,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-72",
+      "label": "Amsterdam Sloterdijk - Amsterdam Centraal",
+      "points": [
+        "ass",
+        "asd"
+      ],
+      "parts": [
+        5000
+      ],
+      "scoreMetres": 5000,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-73",
+      "label": "Amsterdam Centraal - Amsterdam Muiderpoort",
+      "points": [
+        "asd",
+        "asdm"
+      ],
+      "parts": [
+        3600
+      ],
+      "scoreMetres": 3600,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-74",
+      "label": "Amsterdam Muiderpoort - Duivendrecht",
+      "points": [
+        "asdm",
+        "asa",
+        "dvd"
+      ],
+      "parts": [
+        2600,
+        2100
+      ],
+      "scoreMetres": 4700,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-75",
+      "label": "Duivendrecht - Amsterdam Bijlmer Arena",
+      "points": [
+        "dvd",
+        "asb"
+      ],
+      "parts": [
+        1000
+      ],
+      "scoreMetres": 1000,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-76",
+      "label": "Schiphol - Amsterdam RAI",
+      "points": [
+        "shl",
+        "asdz",
+        "rai"
+      ],
+      "parts": [
+        9200,
+        800
+      ],
+      "scoreMetres": 10000,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-77",
+      "label": "Amsterdam RAI - Duivendrecht",
+      "points": [
+        "rai",
+        "dvd"
+      ],
+      "parts": [
+        4300
+      ],
+      "scoreMetres": 4300,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-78",
+      "label": "Amsterdam RAI - Amsterdam Bijlmer Arena",
+      "points": [
+        "rai",
+        "asb"
+      ],
+      "parts": [
+        5000
+      ],
+      "scoreMetres": 5000,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-79",
+      "label": "Amsterdam Bijlmer Arena - Breukelen",
+      "points": [
+        "asb",
+        "asdh",
+        "ac",
+        "bkl"
+      ],
+      "parts": [
+        1100,
+        5000,
+        11300
+      ],
+      "scoreMetres": 17400,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-80",
+      "label": "Duivendrecht - Weesp",
+      "points": [
+        "dvd",
+        "dmnz",
+        "wp"
+      ],
+      "parts": [
+        1600,
+        6200
+      ],
+      "scoreMetres": 7800,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-81",
+      "label": "Amsterdam Muiderpoort - Weesp",
+      "points": [
+        "asdm",
+        "assp",
+        "dmn",
+        "wp"
+      ],
+      "parts": [
+        1400,
+        2100,
+        6300
+      ],
+      "scoreMetres": 9800,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-83",
+      "label": "Weesp - Naarden-Bussum",
+      "points": [
+        "wp",
+        "ndb"
+      ],
+      "parts": [
+        9100
+      ],
+      "scoreMetres": 9100,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-84",
+      "label": "Naarden-Bussum - Hilversum",
+      "points": [
+        "ndb",
+        "bsmz",
+        "hvsm",
+        "hvs"
+      ],
+      "parts": [
+        1600,
+        3300,
+        1500
+      ],
+      "scoreMetres": 6400,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-85",
+      "label": "Hilversum - Baarn",
+      "points": [
+        "hvs",
+        "brn"
+      ],
+      "parts": [
+        7100
+      ],
+      "scoreMetres": 7100,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-86",
+      "label": "Baarn - Amersfoort Centraal",
+      "points": [
+        "brn",
+        "amf"
+      ],
+      "parts": [
+        8900
+      ],
+      "scoreMetres": 8900,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-87",
+      "label": "Den Dolder - Baarn",
+      "points": [
+        "dld",
+        "stz",
+        "st",
+        "sd",
+        "brn"
+      ],
+      "parts": [
+        5400,
+        900,
+        1500,
+        3100
+      ],
+      "scoreMetres": 10900,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-88",
+      "label": "Den Dolder - Amersfoort Centraal",
+      "points": [
+        "dld",
+        "amf"
+      ],
+      "parts": [
+        9500
+      ],
+      "scoreMetres": 9500,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-89",
+      "label": "Utrecht Overvecht - Hilversum",
+      "points": [
+        "uto",
+        "hor",
+        "hvsp",
+        "hvs"
+      ],
+      "parts": [
+        8700,
+        4200,
+        1200
+      ],
+      "scoreMetres": 14100,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-90",
+      "label": "Utrecht Overvecht - Den Dolder",
+      "points": [
+        "uto",
+        "bhv",
+        "dld"
+      ],
+      "parts": [
+        5600,
+        2900
+      ],
+      "scoreMetres": 8500,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "Controleer doorkruist scorekaartknooppunt",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-91",
+      "label": "Utrecht Centraal - Utrecht Overvecht",
+      "points": [
+        "ut",
+        "uto"
+      ],
+      "parts": [
+        3400
+      ],
+      "scoreMetres": 3400,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-92",
+      "label": "Breukelen - Utrecht Centraal",
+      "points": [
+        "bkl",
+        "mas",
+        "utzl",
+        "ut"
+      ],
+      "parts": [
+        5300,
+        4900,
+        3100
+      ],
+      "scoreMetres": 13300,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-93",
+      "label": "Woerden - Breukelen",
+      "points": [
+        "wd",
+        "bkl"
+      ],
+      "parts": [
+        12600
+      ],
+      "scoreMetres": 12600,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-94",
+      "label": "Woerden - Utrecht Centraal",
+      "points": [
+        "wd",
+        "vtn",
+        "utt",
+        "utlr",
+        "ut"
+      ],
+      "parts": [
+        8200,
+        2100,
+        1700,
+        3900
+      ],
+      "scoreMetres": 15900,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-95",
+      "label": "Bilthoven - Utrecht Maliebaan",
+      "points": [
+        "bhv",
+        "utm"
+      ],
+      "parts": [
+        6200
+      ],
+      "scoreMetres": 6200,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-96",
+      "label": "Utrecht Centraal - Utrecht Vaartsche Rijn",
+      "points": [
+        "ut",
+        "utvr"
+      ],
+      "parts": [
+        1500
+      ],
+      "scoreMetres": 1500,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-97",
+      "label": "Utrecht Vaartsche Rijn - Maarn",
+      "points": [
+        "utvr",
+        "bnk",
+        "db",
+        "mrn"
+      ],
+      "parts": [
+        5500,
+        4500,
+        7700
+      ],
+      "scoreMetres": 17700,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-98",
+      "label": "Maarn - Rhenen",
+      "points": [
+        "mrn",
+        "vndw",
+        "vndc",
+        "rhn"
+      ],
+      "parts": [
+        13200,
+        1400,
+        7300
+      ],
+      "scoreMetres": 21900,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-99",
+      "label": "Maarn - Ede-Wageningen",
+      "points": [
+        "mrn",
+        "klp",
+        "ed"
+      ],
+      "parts": [
+        14600,
+        7000
+      ],
+      "scoreMetres": 21600,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-100",
+      "label": "Utrecht Vaartsche Rijn - Geldermalsen",
+      "points": [
+        "utvr",
+        "utln",
+        "htn",
+        "htnc",
+        "cl",
+        "gdm"
+      ],
+      "parts": [
+        2000,
+        4100,
+        2000,
+        8700,
+        7700
+      ],
+      "scoreMetres": 24500,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-101",
+      "label": "Geldermalsen - Tiel",
+      "points": [
+        "gdm",
+        "tpsw",
+        "tl"
+      ],
+      "parts": [
+        9200,
+        2700
+      ],
+      "scoreMetres": 11900,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-103",
+      "label": "Dordrecht - Geldermalsen",
+      "points": [
+        "ddr",
+        "ddrs",
+        "sdtb",
+        "sdt",
+        "hbzm",
+        "gnd",
+        "bhdv",
+        "gr",
+        "akl",
+        "ldm",
+        "bsd",
+        "gdm"
+      ],
+      "parts": [
+        2100,
+        3700,
+        3200,
+        2600,
+        1400,
+        2800,
+        6600,
+        4700,
+        7400,
+        6800,
+        6800
+      ],
+      "scoreMetres": 48100,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-104",
+      "label": "Geldermalsen - 's-Hertogenbosch",
+      "points": [
+        "gdm",
+        "zbm",
+        "ht"
+      ],
+      "parts": [
+        9400,
+        12700
+      ],
+      "scoreMetres": 22100,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-105",
+      "label": "'s-Hertogenbosch - Nijmegen",
+      "points": [
+        "ht",
+        "hto",
+        "rs",
+        "ow",
+        "o",
+        "rvs",
+        "wc",
+        "nmd",
+        "nmgo",
+        "nm"
+      ],
+      "parts": [
+        2200,
+        4200,
+        10600,
+        1800,
+        8400,
+        6700,
+        4700,
+        1900,
+        3000
+      ],
+      "scoreMetres": 43500,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-106",
+      "label": "Nijmegen - Blerick",
+      "points": [
+        "nm",
+        "nmh",
+        "mmlh",
+        "ck",
+        "bmr",
+        "vlb",
+        "vry",
+        "br"
+      ],
+      "parts": [
+        1700,
+        7400,
+        4600,
+        10300,
+        7100,
+        7300,
+        20600
+      ],
+      "scoreMetres": 59000,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-107",
+      "label": "Blerick - Venlo",
+      "points": [
+        "br",
+        "vl"
+      ],
+      "parts": [
+        1700
+      ],
+      "scoreMetres": 1700,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-108",
+      "label": "Dordrecht - Lage Zwaluwe",
+      "points": [
+        "ddr",
+        "ddzd",
+        "zlw"
+      ],
+      "parts": [
+        2800,
+        11500
+      ],
+      "scoreMetres": 14300,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-109",
+      "label": "Roosendaal - Lage Zwaluwe",
+      "points": [
+        "rsd",
+        "odb",
+        "zvb",
+        "zlw"
+      ],
+      "parts": [
+        6900,
+        8100,
+        7800
+      ],
+      "scoreMetres": 22800,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-110",
+      "label": "Roosendaal - Breda",
+      "points": [
+        "rsd",
+        "etn",
+        "bd"
+      ],
+      "parts": [
+        12900,
+        11100
+      ],
+      "scoreMetres": 24000,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-111",
+      "label": "Lage Zwaluwe - Breda Prinsenbeek",
+      "points": [
+        "zlw",
+        "bdpb"
+      ],
+      "parts": [
+        10100
+      ],
+      "scoreMetres": 10100,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-112",
+      "label": "Breda Prinsenbeek - Breda",
+      "points": [
+        "bdpb",
+        "bd"
+      ],
+      "parts": [
+        4800
+      ],
+      "scoreMetres": 4800,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-113",
+      "label": "Breda - Tilburg",
+      "points": [
+        "bd",
+        "gz",
+        "tbr",
+        "tbu",
+        "tb"
+      ],
+      "parts": [
+        9700,
+        4900,
+        4200,
+        2800
+      ],
+      "scoreMetres": 21600,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-114",
+      "label": "Tilburg - 's-Hertogenbosch",
+      "points": [
+        "tb",
+        "ht"
+      ],
+      "parts": [
+        22300
+      ],
+      "scoreMetres": 22300,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-115",
+      "label": "'s-Hertogenbosch - Boxtel",
+      "points": [
+        "ht",
+        "vg",
+        "btl"
+      ],
+      "parts": [
+        4200,
+        8000
+      ],
+      "scoreMetres": 12200,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-116",
+      "label": "Boxtel - Tilburg",
+      "points": [
+        "btl",
+        "ot",
+        "tb"
+      ],
+      "parts": [
+        8900,
+        8100
+      ],
+      "scoreMetres": 17000,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-117",
+      "label": "Boxtel - Eindhoven Centraal",
+      "points": [
+        "btl",
+        "bet",
+        "ehs",
+        "ehv"
+      ],
+      "parts": [
+        9900,
+        7400,
+        2600
+      ],
+      "scoreMetres": 19900,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-118",
+      "label": "Eindhoven Centraal - Blerick",
+      "points": [
+        "ehv",
+        "hmbv",
+        "hmh",
+        "hm",
+        "hmbh",
+        "dn",
+        "hrt",
+        "br"
+      ],
+      "parts": [
+        9400,
+        1600,
+        1900,
+        3000,
+        6500,
+        17900,
+        9900
+      ],
+      "scoreMetres": 50200,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-120",
+      "label": "Eindhoven Centraal - Roermond",
+      "points": [
+        "ehv",
+        "gp",
+        "hze",
+        "mz",
+        "wt",
+        "rm"
+      ],
+      "parts": [
+        6100,
+        4200,
+        10200,
+        9500,
+        23600
+      ],
+      "scoreMetres": 53600,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-121",
+      "label": "Venlo - Roermond",
+      "points": [
+        "vl",
+        "tg",
+        "rv",
+        "sm",
+        "rm"
+      ],
+      "parts": [
+        4900,
+        7000,
+        6400,
+        5400
+      ],
+      "scoreMetres": 23700,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-122",
+      "label": "Roermond - Sittard",
+      "points": [
+        "rm",
+        "ec",
+        "srn",
+        "std"
+      ],
+      "parts": [
+        13300,
+        4500,
+        6600
+      ],
+      "scoreMetres": 24400,
+      "maxCount": 4,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-123",
+      "label": "Sittard - Maastricht Noord",
+      "points": [
+        "std",
+        "lut",
+        "bk",
+        "bde",
+        "mtn"
+      ],
+      "parts": [
+        3900,
+        4100,
+        7500,
+        3400
+      ],
+      "scoreMetres": 18900,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-124",
+      "label": "Maastricht Noord - Maastricht",
+      "points": [
+        "mtn",
+        "mt"
+      ],
+      "parts": [
+        3000
+      ],
+      "scoreMetres": 3000,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-125",
+      "label": "Maastricht - Eijsden",
+      "points": [
+        "mt",
+        "mtr",
+        "edn"
+      ],
+      "parts": [
+        1600,
+        7500
+      ],
+      "scoreMetres": 9100,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-126",
+      "label": "Sittard - Heerlen",
+      "points": [
+        "std",
+        "gln",
+        "sbk",
+        "sn",
+        "nh",
+        "hb",
+        "hrl"
+      ],
+      "parts": [
+        4000,
+        3200,
+        1900,
+        2800,
+        3000,
+        3600
+      ],
+      "scoreMetres": 18500,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-127",
+      "label": "Maastricht Noord - Heerlen",
+      "points": [
+        "mtn",
+        "mes",
+        "sgl",
+        "vk",
+        "sog",
+        "kmr",
+        "vdl",
+        "hrlw",
+        "hrl"
+      ],
+      "parts": [
+        2400,
+        3300,
+        2700,
+        3200,
+        2300,
+        3600,
+        2000,
+        1800
+      ],
+      "scoreMetres": 21300,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-128",
+      "label": "Heerlen - Landgraaf",
+      "points": [
+        "hrl",
+        "lg"
+      ],
+      "parts": [
+        3200
+      ],
+      "scoreMetres": 3200,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-129",
+      "label": "Landgraaf - Eygelshoven Markt",
+      "points": [
+        "lg",
+        "eghm"
+      ],
+      "parts": [
+        3000
+      ],
+      "scoreMetres": 3000,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-130",
+      "label": "Landgraaf - Kerkrade Centrum",
+      "points": [
+        "lg",
+        "egh",
+        "cvm",
+        "krd"
+      ],
+      "parts": [
+        1800,
+        1800,
+        2000
+      ],
+      "scoreMetres": 5600,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-132",
+      "label": "Vlissingen - Roosendaal",
+      "points": [
+        "vs",
+        "vss",
+        "mdb",
+        "arn",
+        "gs",
+        "bzl",
+        "krg",
+        "kbd",
+        "rb",
+        "bgn",
+        "rsd"
+      ],
+      "parts": [
+        2200,
+        3900,
+        3700,
+        15300,
+        5200,
+        5900,
+        6700,
+        3300,
+        15700,
+        13400
+      ],
+      "scoreMetres": 75300,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-134",
+      "label": "Hoofddorp - Rotterdam Centraal (via HSL)",
+      "points": [
+        "hfd",
+        "rtd"
+      ],
+      "parts": [
+        47800
+      ],
+      "scoreMetres": 47800,
+      "maxCount": 2,
+      "hsl": true,
+      "review": "pending",
+      "problem": "",
+      "source": "Scorekaart 2026",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-135",
+      "label": "Rotterdam Lombardijen - Breda Prinsenbeek (via HSL)",
+      "points": [
+        "rlb",
+        "bdpb"
+      ],
+      "parts": [
+        33800
+      ],
+      "scoreMetres": 33800,
+      "maxCount": 2,
+      "hsl": true,
+      "review": "pending",
+      "problem": "",
+      "source": "Scorekaart 2026",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-136",
+      "label": "Leiden Centraal - Alphen aan den Rijn",
+      "points": [
+        "ledn",
+        "ldl",
+        "apn"
+      ],
+      "parts": [
+        3300,
+        12000
+      ],
+      "scoreMetres": 15300,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-137",
+      "label": "Alphen aan den Rijn - Woerden",
+      "points": [
+        "apn",
+        "bdg",
+        "wd"
+      ],
+      "parts": [
+        8000,
+        11100
+      ],
+      "scoreMetres": 19100,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-138",
+      "label": "Alphen aan den Rijn - Gouda",
+      "points": [
+        "apn",
+        "bsk",
+        "bsks",
+        "wadn",
+        "wad",
+        "wadt",
+        "gd"
+      ],
+      "parts": [
+        5700,
+        1000,
+        1200,
+        1300,
+        1900,
+        5800
+      ],
+      "scoreMetres": 16900,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-139",
+      "label": "Gouda - Woerden",
+      "points": [
+        "gd",
+        "gdg",
+        "wd"
+      ],
+      "parts": [
+        1400,
+        15400
+      ],
+      "scoreMetres": 16800,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-140",
+      "label": "Den Haag Centraal - Den Haag Laan van NOI",
+      "points": [
+        "gvc",
+        "laa"
+      ],
+      "parts": [
+        1500
+      ],
+      "scoreMetres": 1500,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-141",
+      "label": "Den Haag Laan van NOI - Leiden Centraal",
+      "points": [
+        "laa",
+        "gvm",
+        "vst",
+        "dvnk",
+        "ledn"
+      ],
+      "parts": [
+        2500,
+        6100,
+        2700,
+        2600
+      ],
+      "scoreMetres": 13900,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-142",
+      "label": "Den Haag Centraal - Gouda",
+      "points": [
+        "gvc",
+        "vb",
+        "ypb",
+        "ztm",
+        "ztmo",
+        "llzm",
+        "gd"
+      ],
+      "parts": [
+        3100,
+        2400,
+        6100,
+        1200,
+        2000,
+        13400
+      ],
+      "scoreMetres": 28200,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-143",
+      "label": "Den Haag Centraal - Den Haag Hollands Spoor",
+      "points": [
+        "gvc",
+        "gv"
+      ],
+      "parts": [
+        1800
+      ],
+      "scoreMetres": 1800,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-144",
+      "label": "Den Haag Hollands Spoor - Den Haag Laan van NOI",
+      "points": [
+        "gv",
+        "laa"
+      ],
+      "parts": [
+        1900
+      ],
+      "scoreMetres": 1900,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-145",
+      "label": "Den Haag Hollands Spoor - Rotterdam Centraal",
+      "points": [
+        "gv",
+        "gvmw",
+        "rsw",
+        "dt",
+        "dtz",
+        "sdm",
+        "rtd"
+      ],
+      "parts": [
+        1800,
+        1800,
+        3800,
+        2100,
+        8700,
+        4100
+      ],
+      "scoreMetres": 22300,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-146",
+      "label": "Rotterdam Centraal - Gouda",
+      "points": [
+        "rtd",
+        "rtn",
+        "rta",
+        "cps",
+        "nwk",
+        "gd"
+      ],
+      "parts": [
+        5000,
+        5200,
+        2000,
+        2200,
+        9400
+      ],
+      "scoreMetres": 23800,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-147",
+      "label": "Rotterdam Centraal - Rotterdam Lombardijen",
+      "points": [
+        "rtd",
+        "rtb",
+        "rtz",
+        "rtst",
+        "rlb"
+      ],
+      "parts": [
+        1900,
+        2400,
+        1100,
+        1800
+      ],
+      "scoreMetres": 7200,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    },
+    {
+      "id": "score2026-148",
+      "label": "Rotterdam Lombardijen - Dordrecht",
+      "points": [
+        "rlb",
+        "brd",
+        "zwd",
+        "ddr"
+      ],
+      "parts": [
+        3300,
+        7800,
+        2000
+      ],
+      "scoreMetres": 13100,
+      "maxCount": 2,
+      "hsl": false,
+      "review": "pending",
+      "problem": "",
+      "source": "Trainkms",
+      "validFrom": "",
+      "validTo": ""
+    }
+  ],
+  "rules": [
+    {
+      "id": "hsl-noord",
+      "from": "hfd",
+      "to": "rtd",
+      "label": "Hoe reisde je tussen Schiphol / Hoofddorp en Rotterdam?",
+      "defaultLabel": "Via HSL (kortste route)",
+      "options": [
+        {
+          "id": "leiden",
+          "label": "Via Leiden Centraal",
+          "via": [
+            "ledn"
+          ]
+        }
+      ],
+      "enabled": true
+    },
+    {
+      "id": "hsl-zuid",
+      "from": "rlb",
+      "to": "bdpb",
+      "label": "Hoe reisde je tussen Rotterdam en Breda?",
+      "defaultLabel": "Via HSL (kortste route)",
+      "options": [
+        {
+          "id": "dordrecht",
+          "label": "Via Dordrecht en Lage Zwaluwe",
+          "via": [
+            "ddr",
+            "zlw"
+          ]
+        }
+      ],
+      "enabled": true
+    }
+  ]
+}
