@@ -1,3 +1,4 @@
+import {readFile} from 'node:fs/promises';
 import {handleKilometerkampioen} from './kk-handler.mjs';
 import {handlePasswordReset} from './password-reset.mjs';
 import {kkTestConfig} from './kk-store.mjs';
@@ -7,7 +8,10 @@ export async function handleKKTest(req,res,url){
  const prefix=prefixes.find(p=>url.pathname===p||url.pathname.startsWith(p+'/')||p==='/wachtwoord-herstellen-test'&&url.pathname===p+'.js');
  if(!prefix)return false;
  try{
-  const config=await kkTestConfig(),canonical=new URL(url);canonical.pathname=canonical.pathname.replace(prefix,prefix.replace('-test',''));
+  const config=await kkTestConfig();
+ if(url.pathname==='/kilometerkampioen-test/station-catalog.json'){res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify({stations:config.network.stations.map(({name,code,aliases})=>({name,code,aliases}))}));return true;}
+ if(url.pathname==='/kilometerkampioen-test/station-picker.js'){res.writeHead(200,{'Content-Type':'application/javascript','Cache-Control':'no-cache'});res.end(await readFile(new URL('./kk-station-picker.js',import.meta.url)));return true;}
+ const canonical=new URL(url);canonical.pathname=canonical.pathname.replace(prefix,prefix.replace('-test',''));
   if(canonical.pathname.includes('/network-next')){res.writeHead(409,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'Deze testeditie gebruikt een vast netwerk. Bewerk het volgende-editienetwerk in het gewone beheer.'}));return true;}
   // Real credentials and test credentials must never share a reset form/action.
   if(prefix==='/wachtwoord-herstellen-test'&&req.method==='POST'){
@@ -24,6 +28,7 @@ export async function handleKKTest(req,res,url){
     let text=testLinks(Buffer.isBuffer(body)?body.toString('utf8'):String(body));
     if(type.includes('javascript'))text=text.replaceAll('localStorage.getItem(',"localStorage.getItem('kk-test:'+").replaceAll('localStorage.setItem(',"localStorage.setItem('kk-test:'+").replaceAll('localStorage.removeItem(',"localStorage.removeItem('kk-test:'+");
     if(type.includes('manifest+json')){const manifest=JSON.parse(text);manifest.name='TEST · '+manifest.name;manifest.short_name='KMtrein TEST';text=JSON.stringify(manifest);}
+    if(type.includes('html')&&prefix==='/kilometerkampioen-test')text=text.replace('</head>','<script src="/kilometerkampioen-test/station-picker.js" defer></script></head>');
     if(type.includes('html'))text=text.replace('<title>','<title>TEST · ').replace(/<body([^>]*)>/,'<body$1><aside class="kk-test-banner" role="note">TESTEDITIE — regels 2026 · Je testgegevens tellen niet mee voor de wedstrijd. <a href="/kilometerkampioen-test/">Testapp</a> · <a href="/treinhuis-test">Testbeheer</a></aside>');
     if(type.includes('css'))text+='\n.kk-test-banner{background:#ffdf75;color:#29220d;padding:14px 20px;font:700 16px Arial,sans-serif;border-bottom:3px solid #ba8400}.kk-test-banner a{color:#29220d;text-decoration:underline}';
     res.removeHeader('Content-Length');body=text;
