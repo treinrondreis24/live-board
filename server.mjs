@@ -15,6 +15,7 @@ import {initBoardAdmin,handleBoardAdmin,applyBoardSettings,boardSource,duplicate
 import {handleAdminSecurity,securityStatus,adminAuthenticated} from './admin-security.mjs';
 import {BoundedCache} from './bounded-cache.mjs';
 import {handleKilometerkampioen} from './kk-handler.mjs';
+import {handleKKTest} from './kk-test-handler.mjs';
 import {rfiStations,rfiState,rfiPayload,restoreRfi,startRfi} from './rfi.mjs';
 import {frenchStations,franceState,frenchPayload,restoreFrance,startFrance} from './france.mjs';
 import {spanishStations,internationalState,internationalPayload,restoreInternational,startInternational} from './international.mjs';
@@ -1074,6 +1075,7 @@ const server=http.createServer(async(req,res)=>{
     if(await handleConnectionAdmin(req,res,url))return;
     if(await handleConnections(req,res,url))return;
     if(await handleAppCms(req,res,url))return;
+    if(await handleKKTest(req,res,url))return;
     if(await handlePasswordReset(req,res,url))return;
     if(await handleTreinhuisAccess(req,res,url))return;
     if(await handleKilometerkampioen(req,res,url))return;

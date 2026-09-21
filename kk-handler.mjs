@@ -1,4 +1,5 @@
 import {networkView,saveNetwork,testNetwork} from './hilta-next/service.mjs';
+import {testEdition,sessionCookie} from './kk-edition-context.mjs';
 import {addOfflineParticipant} from './kk-offline-participant.mjs';
 import {adminSaveClaim} from './kk-admin-claim.mjs';
 import {adminJourney} from './kk-admin-journey.mjs';
@@ -36,8 +37,8 @@ const text=(s,n=200)=>String(s||'').trim().slice(0,n);
 function origin(req){return req.headers.origin==='https://'+req.headers.host;}
 async function body(req){let size=0;const chunks=[];for await(const chunk of req){size+=chunk.length;if(size>16384)fail('Het formulier is te groot.',413);chunks.push(chunk);}try{return JSON.parse(Buffer.concat(chunks).toString());}catch{fail('Ongeldig formulier.');}}
 const json=(res,status,value)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(value));};
-function cookie(res,value,maxAge){res.setHeader('Set-Cookie',`kk_session=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`);}
-async function participant(req){const id=String(req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith('kk_session='))?.slice(11);if(!id)return null;const s=await kkGet('session',hash(id));if(!s||Number(s.expires)<=Date.now())return null;const user=(await kkGet('participant',s.owner))?.value;const credential=await kkGet('password',s.owner);return user&&!user.deleting&&(s.value.credentialVersion||'')===(credential?.value.version||'')?user:null;}
+function cookie(res,value,maxAge){res.setHeader('Set-Cookie',`${sessionCookie()}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`);}
+async function participant(req){const key=sessionCookie()+'=',id=String(req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith(key))?.slice(key.length);if(!id)return null;const s=await kkGet('session',hash(id));if(!s||Number(s.expires)<=Date.now())return null;const user=(await kkGet('participant',s.owner))?.value;const credential=await kkGet('password',s.owner);return user&&!user.deleting&&(s.value.credentialVersion||'')===(credential?.value.version||'')?user:null;}
 export function validateProfile(data,user,admin=false){
  const fullName=text(data.fullName),displayName=text(data.displayName,80),edition=Number(data.edition),startTime=!admin&&user.startTime?user.startTime:text(data.startTime,5),companion=text(data.companion),station=text(data.station),distance=data.distance===''||data.distance==null?null:Number(data.distance);
  if(!fullName||!displayName||(!admin||data.edition)&&![12,24].includes(edition)||(!admin||startTime)&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime))fail('Vul naam, weergavenaam, editie en starttijd in.');
@@ -49,6 +50,7 @@ export function validateProfile(data,user,admin=false){
  return {...user,fullName,displayName,edition,startTime,startDate,rotterdamTime,together:!!data.together,companion:data.together?companion:'',station,distance,competition:'2026',updatedAt:Date.now()};
 }
 export async function sendCode(email,code){
+ if(testEdition())fail('Gebruik in de testeditie een eigen testregistratie met wachtwoord. E-mailcodes zijn hier uitgeschakeld.',409);
  if(!process.env.RESEND_API_KEY||!process.env.KK_EMAIL_FROM)fail('E-mailcodes zijn nog niet beschikbaar. Probeer later opnieuw.',503);
  const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+process.env.RESEND_API_KEY,'Content-Type':'application/json'},signal:AbortSignal.timeout(15000),body:JSON.stringify({from:process.env.KK_EMAIL_FROM,to:[email],subject:'Je inlogcode voor Kilometer Kampioen',text:`Je inlogcode is ${code}. Deze code is 10 minuten geldig en werkt één keer. Heb je geen code aangevraagd? Dan kun je deze e-mail negeren.`})});
  if(!r.ok)fail('De e-mail kon niet worden verstuurd. Probeer later opnieuw.',503);
@@ -88,12 +90,12 @@ export async function handleKilometerkampioen(req,res,url){
  if(admin&&req.method==='GET'&&path==='/treinhuis/api/route-options'){json(res,200,adminRouteOptions());return true;}
  if(admin&&req.method==='GET'&&path==='/treinhuis/api/pending-routes'){json(res,200,{rows:await pendingRoutes()});return true;}
  if(admin&&req.method==='GET'&&path==='/treinhuis/api/participants'){const [participants,claims]=await Promise.all([kkList('participant'),kkList('claim')]);json(res,200,{participants:participants.map(r=>r.value),claims:claims.map(r=>({id:r.id,receivedAt:r.value.receivedAt,km:r.value.km}))});return true;}
- if(admin&&req.method==='GET'&&path==='/treinhuis/api/status'){json(res,200,{email:!!(process.env.RESEND_API_KEY&&process.env.KK_EMAIL_FROM),auth:!!secret(),media:mediaReady(),memory:process.memoryUsage(),uploads:uploadStatus()});return true;}
+ if(admin&&req.method==='GET'&&path==='/treinhuis/api/status'){json(res,200,{email:!testEdition()&&!!(process.env.RESEND_API_KEY&&process.env.KK_EMAIL_FROM),auth:!!secret(),media:mediaReady(),memory:process.memoryUsage(),uploads:uploadStatus()});return true;}
  if(req.method==='GET'&&path==='/kilometerkampioen/api/journey'){const user=await participant(req);if(!user)fail('Log eerst in.',401);if(!canUseProof(user))fail('Mijn bewijs is beschikbaar na goedkeuring.',403);json(res,200,{summary:(await scoreboard(user.id))[0],routes:await kkJourneyRoutes(user.id)});return true;}
  if(req.method==='GET'&&path==='/kilometerkampioen/api/claim'){const user=await participant(req);if(!user)fail('Log eerst in.',401);json(res,200,{claim:await ownClaim(user)});return true;}
  if(admin&&req.method==='GET'&&path==='/treinhuis/api/claims'){json(res,200,{claims:await listClaims()});return true;}
  if(req.method==='GET'&&path.endsWith('/api/claim-file')){const user=admin?null:await participant(req);if(!admin&&!user)fail('Log eerst in.',401);json(res,200,{url:await claimFile(user,url.searchParams.get('claim'),url.searchParams.get('file'),admin)});return true;}
- if(req.method==='GET'&&path==='/kilometerkampioen/api/session'){json(res,200,{participant:await participant(req),emailReady:!!(process.env.RESEND_API_KEY&&process.env.KK_EMAIL_FROM)});return true;}
+ if(req.method==='GET'&&path==='/kilometerkampioen/api/session'){json(res,200,{participant:await participant(req),emailReady:!testEdition()&&!!(process.env.RESEND_API_KEY&&process.env.KK_EMAIL_FROM)});return true;}
  if(req.method==='GET'&&path==='/kilometerkampioen/api/hilta'){const user=await participant(req);if(!user)fail('Log eerst in.',401);json(res,200,await hiltaContext(user,url.searchParams.get('proofId')));return true;}
  if(req.method==='GET'&&path==='/kilometerkampioen/api/submissions'){const user=await participant(req);if(!user)fail('Log eerst in.',401);json(res,200,{submissions:await ownSubmissions(user)});return true;}
  if(req.method==='GET'&&path.endsWith('/api/media')){const user=admin?null:await participant(req);if(!admin&&!user)fail('Log eerst in.',401);const id=url.searchParams.get('id');const original=await mediaLink(user,id,admin);const row=await kkGet('media',id);json(res,200,url.searchParams.get('preview')==='1'?await previewMedia(row):{url:original,type:row.value.type});return true;}
@@ -165,7 +167,7 @@ export async function handleKilometerkampioen(req,res,url){
  if(path==='/kilometerkampioen/api/hilta-confirm'){json(res,200,{confirmation:await confirmHilta(user,data)});return true;}
  if(path==='/kilometerkampioen/api/submit'){json(res,200,{submission:await saveSubmission(user,data)});return true;}
  if(path==='/kilometerkampioen/api/profile'){const profile=validateProfile(data,user);const changes=Object.fromEntries(['fullName','displayName','edition','rotterdamTime','together','companion','station','distance','updatedAt'].map(k=>[k,profile[k]]));if(!user.startTime)changes.startTime=profile.startTime;if(!user.startDate)changes.startDate=profile.startDate;const saved=await kkPatchParticipant(user.id,changes);json(res,200,{participant:saved});return true;}
- if(path==='/kilometerkampioen/api/logout'){const session=String(req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith('kk_session='))?.slice(11);if(session)await kkDelete('session',hash(session));cookie(res,'',0);json(res,200,{ok:true});return true;}
+ if(path==='/kilometerkampioen/api/logout'){const key=sessionCookie()+'=',session=String(req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith(key))?.slice(key.length);if(session)await kkDelete('session',hash(session));cookie(res,'',0);json(res,200,{ok:true});return true;}
  fail('Dit onderdeel is nog niet beschikbaar.',404);
  }catch(e){if(e.retryAfter)res.setHeader('Retry-After',String(e.retryAfter));json(res,e.status||500,{error:e.status?e.message:'Er ging iets mis. Je gegevens zijn nog niet bevestigd; probeer opnieuw.'});}return true;
 }

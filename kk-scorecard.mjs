@@ -1,4 +1,5 @@
-import {calculateScore,validScoringRoute} from './kk-scoring.mjs';
+import {calculateScore,validScoringRoute,isCheckpoint} from './kk-scoring.mjs';
+import {testEdition} from './kk-edition-context.mjs';
 import {readFileSync} from 'node:fs';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
 import {kkScorecardProofs} from './kk-store.mjs';
@@ -7,7 +8,7 @@ import {hiltaNotice,hiltaEdges,hiltaScoreEdges} from './kk-hilta.mjs';
 const network=JSON.parse(readFileSync(new URL('./hilta-network.json',import.meta.url),'utf8').replace(/^\uFEFF/,''));
 const template=readFileSync(new URL('./kk-scorekaart-leeg.xlsx',import.meta.url));
 const fail=(message,status=400)=>{throw Object.assign(Error(message),{status});};
-const rotterdam=s=>/^rotterdam (centraal|c)$/i.test(String(s||'').trim());
+const rotterdam=isCheckpoint;
 const date=t=>new Date(t).toLocaleString('nl-NL',{timeZone:'Europe/Amsterdam',hour12:false});
 export async function scorecardContext(user){if(!canUseProof(user))fail('Je aanmelding moet eerst worden goedgekeurd.',403);return kkScorecardProofs(user.id);}
 export async function scorecardOptions(user){const rows=await scorecardContext(user);return {proofs:rows.length,confirmed:rows.filter(r=>['participant-confirmed','admin-confirmed'].includes(r.route?.status)).length,checkpoints:rows.filter(r=>rotterdam(r.proof.station||r.proof.text)).map(r=>({id:r.id,label:date(r.created)+' · '+(r.proof.station||r.proof.text)}))};}
@@ -22,7 +23,7 @@ export function buildScorecard(user,rows,checkpoint){
  rows.forEach((r,i)=>{const route=r.route,previous=previousById.get(r.id);if(r.proof.journeyAt)audit.push(['Volgorde aangepast',r.id+' · plek in reis '+date(r.proof.journeyAt)+' · ontvangen '+date(r.created)+(r.proof.affectsRoutes?' · TRAJECTEN GEWIJZIGD: pas de scorekaart handmatig aan.':' · Volgens deelnemer geen invloed op trajecten.')]);const valid=validScoringRoute(user,route,previous);
  if(!valid){skipped++;audit.push([date(r.created)+' · '+(r.proof.station||r.proof.text||''),'NIET MEEGETELD: route ontbreekt, is niet bevestigd of is verouderd. Bewijs: '+r.id]);return;}
  if(route.status==='admin-confirmed')audit.push(['Beheerbevestiging',route.id+' · '+date(route.confirmedAt)+' · '+(route.note||'')]);confirmed++;const side=i<=cut?0:1;audit.push([date(r.created)+' · '+r.id,(side?'NA':'VÓÓR')+' meldpunt · '+route.from+' → '+route.to+' · '+route.km+' km']);for(const seg of route.segments)audit.push(['',seg.from+' → '+seg.to+' · '+seg.km+' km']);});
- const files=unzipSync(template);const noteStyle=strFromU8(files['xl/worksheets/sheet2.xml']).match(/r="A2" s="(\d+)"/)?.[1]||'0';let xml=strFromU8(files['xl/worksheets/sheet1.xml']);xml=cell(xml,'A2','Kilometer Kampioen 2026 - Editie '+user.edition+' uur');xml=cell(xml,'B4',user.fullName||user.displayName||'');xml=cell(xml,'B5',rows.some(r=>r.route?.status==='admin-confirmed')?'Deels door Hilta ingevuld':'Volledig door Hilta ingevuld');
+ if(testEdition())audit.unshift(['TESTEDITIE', 'Geen officiële claim. Nieuw stationsnetwerk '+testEdition().network.revision+'; rekenregels '+score.rulesVersion]);const files=unzipSync(template);const noteStyle=strFromU8(files['xl/worksheets/sheet2.xml']).match(/r="A2" s="(\d+)"/)?.[1]||'0';let xml=strFromU8(files['xl/worksheets/sheet1.xml']);xml=cell(xml,'A2',(testEdition()?'TESTEDITIE · regels 2026 - ':'Kilometer Kampioen 2026 - ')+'Editie '+user.edition+' uur');xml=cell(xml,'B4',user.fullName||user.displayName||'');xml=cell(xml,'B5',rows.some(r=>r.route?.status==='admin-confirmed')?'Deels door Hilta ingevuld':'Volledig door Hilta ingevuld');
  let total=0;for(const edge of network.edges){const {raw,used}=score.edges.find(e=>e.id===edge.id);for(const [n,col] of ['D','E'].entries())xml=cell(xml,col+edge.row,used[n],true);const km=Math.round(edge.km*(used[0]+used[1])*10)/10;total+=Math.round(km*10);const ref='G'+edge.row;const re=new RegExp('(<x:c\\b[^>]*r="'+ref+'"[^>]*>[\\s\\S]*?<x:v>)[^<]*(</x:v>)');xml=xml.replace(re,(_,a,b)=>a+km+b);if(raw.some((n,i)=>n>used[i]))audit.push(['Maximum toegepast',edge.label+': '+raw.join(' vóór / ')+' na geregistreerd; '+used.join(' vóór / ')+' na geteld.']);}
  total/=10;const setCache=(ref,n)=>{xml=xml.replace(new RegExp('(<x:c\\b[^>]*r="'+ref+'"[^>]*>[\\s\\S]*?<x:v>)[^<]*(</x:v>)'),(_,a,b)=>a+n+b);};setCache('E3',total);setCache('G149',total);setCache('H3',total/(network.edges.reduce((n,e)=>n+Math.round(e.km*e.maxCount*10),0)/10));for(const [side,col] of ['D','E'].entries())setCache(col+'149',[...counts.values()].filter(v=>v[side]>0).length);
  audit.splice(8,0,['Resultaat',total+' km volgens scorekaartmaxima · '+confirmed+' bevestigde delen · '+skipped+' niet meegetelde delen. Controleer en vul ontbrekende delen zelf aan.']);

@@ -1,5 +1,7 @@
 import {readFileSync} from 'node:fs';
 import {hiltaEdges,hiltaScoreEdges} from './kk-hilta.mjs';
+import {testEdition} from './kk-edition-context.mjs';
+import {validTestRoute,testScore} from './hilta-next/test-edition.mjs';
 const network=JSON.parse(readFileSync(new URL('./hilta-network.json',import.meta.url),'utf8').replace(/^\uFEFF/,''));
 export const scoringVersions=Object.freeze({
  '2026-12-v1':Object.freeze({year:2026,edition:12,unit:'km',status:'active'}),
@@ -13,12 +15,14 @@ export function scoringRule(user){
  if(!rule||rule.year!==year||rule.edition!==edition||rule.status!=='active')throw Object.assign(Error('Voor deze wedstrijdeditie zijn nog geen definitieve rekenregels beschikbaar.'),{status:409});
  return {id:key,...rule};
 }
-export const isCheckpoint=s=>/^rotterdam (centraal|c)$/i.test(String(s||'').trim());
+export const isCheckpoint=s=>/^rotterdam (centraal|c)$/i.test(String(s||'').trim())||!!testEdition()&&String(s||'').trim().toLowerCase()==='rtd';
 export function validScoringRoute(user,route,previous){
+ if(testEdition())return validTestRoute(user,route,previous);
  return !!((route?.status==='admin-confirmed'||route?.status==='participant-confirmed'&&route.confirmedBy===user.id)&&route.sourceHash===network.sha256&&route.previousProofId===previous&&Array.isArray(route.segments)&&route.segments.every(seg=>hiltaScoreEdges.some(e=>e.id===seg.id&&(route.status==='admin-confirmed'?Number.isFinite(seg.km)&&seg.km>0&&seg.km<=e.km:e.km===seg.km&&((e.from===seg.from&&e.to===seg.to)||(e.from===seg.to&&e.to===seg.from))))));
 }
 // Pure calculation; never modifies routes, evidence, claims or historical records.
 export function calculateScore(user,input,checkpoint='auto'){
+ if(testEdition())return testScore(user,input,scoringRule(user),network,checkpoint);
  const rules=scoringRule(user),received=[...input].sort((a,b)=>a.created-b.created||a.id.localeCompare(b.id));
  const previous=new Map(received.map((r,i)=>[r.id,i?received[i-1].id:null]));
  const rows=[...input].sort((a,b)=>(a.proof.journeyAt??a.created)-(b.proof.journeyAt??b.created)||a.id.localeCompare(b.id));

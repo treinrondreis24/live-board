@@ -1,0 +1,55 @@
+import assert from 'node:assert/strict';
+import {DatabaseSync} from 'node:sqlite';
+import {readFileSync} from 'node:fs';
+import {createServer} from 'node:http';
+import {createHash} from 'node:crypto';
+import {Script} from 'node:vm';
+import {initBoardCache} from './board-cache.mjs';
+import {kkPut,kkGet,kkTestConfig,kkScoringProofs,kkDeleteOwner} from './kk-store.mjs';
+import {withTestEdition,testLinks} from './kk-edition-context.mjs';
+import {handleKKTest} from './kk-test-handler.mjs';
+import {handleKilometerkampioen} from './kk-handler.mjs';
+import {mediaKey} from './kk-media.mjs';
+import {calculateHilta} from './kk-hilta.mjs';
+import {calculateScore} from './kk-scoring.mjs';
+import {buildScorecard} from './kk-scorecard.mjs';
+import {unzipSync,strFromU8} from 'fflate';
+const sqlite=new DatabaseSync(':memory:');await initBoardCache({sqlite});
+assert.equal(testLinks('https://storage.example/kilometerkampioen-media/file?signature=abc'),'https://storage.example/kilometerkampioen-media/file?signature=abc');
+assert.equal(testLinks('/kilometerkampioen-test/'),'/kilometerkampioen-test/');
+process.env.KK_AUTH_SECRET='test-edition-secret';
+const network=JSON.parse(readFileSync(new URL('./hilta-next/seed.json',import.meta.url),'utf8'));
+for(const t of network.trajectories)t.review=/Sauwerd/.test(t.label)&&/Eemshaven|Delfzijl/.test(t.label)?'pending':'checked';
+await kkPut('hilta-next','draft','hilta-next',network);
+const owner=createHash('sha256').update('edition@example.org').digest('hex');
+await kkPut('participant',owner,owner,{id:owner,fullName:'Real participant',edition:24});
+await kkPut('claim',owner,owner,{km:999});
+const baseline=JSON.stringify(sqlite.prepare('SELECT * FROM kk_records ORDER BY kind,id').all());
+const config=await kkTestConfig();
+const server=createServer(async(req,res)=>{const url=new URL(req.url,'http://'+req.headers.host);try{if(await handleKKTest(req,res,url))return;if(await handleKilometerkampioen(req,res,url))return;res.writeHead(404);res.end();}catch(e){res.writeHead(500);res.end(e.stack);}});
+await new Promise(r=>server.listen(0,'127.0.0.1',r));const host='127.0.0.1:'+server.address().port,base='http://'+host;
+async function call(path,data,cookie=''){const response=await fetch(base+path,{method:data?'POST':'GET',headers:{origin:'https://'+host,cookie,...(data?{'content-type':'application/json'}:{})},body:data?JSON.stringify(data):undefined,redirect:'manual'});const text=await response.text();let body;try{body=JSON.parse(text);}catch{body=text;}return {status:response.status,headers:response.headers,body};}
+try{
+ const page=await call('/kilometerkampioen-test/');assert.equal(page.status,200);assert.match(page.body,/TESTEDITIE/);assert.match(page.body,/kilometerkampioen-test\/app.js/);assert.doesNotMatch(page.body,/src="\/kilometerkampioen\//);
+ for(const source of [...page.body.matchAll(/<script src="([^"]+)"/g)].map(m=>m[1])){const js=await call(source);assert.equal(js.status,200,source);new Script(js.body);}
+ assert.equal((await call('/treinhuis-test/api/participants')).status,401);
+ const registered=await call('/kilometerkampioen-test/api/register',{email:'edition@example.org',password:'test-only-password-123',fullName:'Test participant',displayName:'Test'});assert.equal(registered.status,200,JSON.stringify(registered.body));const cookie=registered.headers.get('set-cookie').split(';')[0];assert.match(cookie,/^kk_test_session=/);
+ assert.equal((await call('/kilometerkampioen/api/session',null,cookie)).body.participant,null);
+ assert.equal((await call('/kilometerkampioen-test/api/session',null,cookie.replace('kk_test_session','kk_session'))).body.participant,null);
+ await withTestEdition(config,async()=>{const p=await kkGet('participant',owner);assert.equal(p.value.fullName,'Test participant');await kkPut('participant',owner,owner,{...p.value,approval:'approved',edition:24,station:'Schiphol',startTime:'01:00',startDate:'2026-09-19'});assert.match(mediaKey(owner,'11111111-1111-1111-1111-111111111111'),/^kk\/test-2026\//);});
+ assert.match(mediaKey(owner,'11111111-1111-1111-1111-111111111111'),/^kk\/2026\//);
+ const id='11111111-1111-4111-8111-111111111111';await withTestEdition(config,()=>kkPut('submission',id,owner,{id,kind:'proof',station:'Amsterdam Zuid',media:[],receivedAt:Date.now()}));
+ const proposed=await call('/kilometerkampioen-test/api/hilta-propose',{proofId:id,via:[]},cookie);assert.equal(proposed.status,200,JSON.stringify(proposed.body));assert.equal(proposed.body.proposal.from,'Schiphol Airport');assert.ok(proposed.body.proposal.segments.length);
+ const confirmed=await call('/kilometerkampioen-test/api/hilta-confirm',{proposalId:proposed.body.proposal.id,reviewed:true},cookie);assert.equal(confirmed.status,200,JSON.stringify(confirmed.body));
+ const journey=await call('/kilometerkampioen-test/api/journey',null,cookie);assert.equal(journey.status,200,JSON.stringify(journey.body));
+ await withTestEdition(config,async()=>{
+  const p=(await kkGet('participant',owner)).value,rows=(await kkScoringProofs(owner)).get(owner),score=calculateScore(p,rows);assert.ok(score.validKm>0);
+  const repeat={...rows[0],id:'second',created:rows[0].created+1,route:{...rows[0].route,previousProofId:id}};const duplicated=calculateScore(p,[...rows,repeat]);assert.equal(duplicated.validKm,score.validKm);assert.equal(duplicated.excludedKm,score.validKm);
+  const file=buildScorecard(p,rows,'not-yet'),xml=strFromU8(unzipSync(file)['xl/worksheets/sheet1.xml']);assert.match(xml,/TESTEDITIE/);assert.equal(Number(xml.match(/r="E3"[^>]*>[\s\S]*?<x:v>([^<]+)/)[1]),score.validKm);
+  const hsl=calculateHilta('Amsterdam Centraal','Rotterdam Blaak');assert.equal(hsl.needsConfirmation,true);const q=hsl.questions[0];assert.ok(q.options.length>1);const via=calculateHilta('Amsterdam Centraal','Rotterdam Blaak',[],{[q.key]:q.options[1].id});assert.ok(via.km>hsl.km);assert.equal(via.needsConfirmation,false);
+  const missing=calculateHilta('Eemshaven','Sauwerd');assert.ok(missing.warnings.length);
+  await kkDeleteOwner(owner);
+ });
+ assert.equal(JSON.stringify(sqlite.prepare('SELECT * FROM kk_records ORDER BY kind,id').all()),baseline);
+ console.log('PASS test edition: separate records/media/sessions, same email, generated assets, proof/route confirmation, partial-segment caps, HSL questions, scorecard equality, pending lines, live records unchanged');
+}finally{await new Promise(r=>server.close(r));sqlite.close();}

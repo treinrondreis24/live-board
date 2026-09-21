@@ -3,6 +3,7 @@
 // from the upload handler, so an expired/unvalidated upload cannot be published.
 import {S3Client,PutObjectCommand,GetObjectCommand,HeadObjectCommand,DeleteObjectCommand} from '@aws-sdk/client-s3';
 import {getSignedUrl} from '@aws-sdk/s3-request-presigner';
+import {testEdition} from './kk-edition-context.mjs';
 let client;
 const names=['KK_S3_BUCKET','KK_S3_ENDPOINT','KK_S3_ACCESS_KEY_ID','KK_S3_SECRET_ACCESS_KEY'];
 export function mediaReady(env=process.env){return names.every(k=>!!env[k]);}
@@ -12,7 +13,7 @@ export function mediaConfig(env=process.env){
  return {bucket:env.KK_S3_BUCKET,config:{endpoint:endpoint.href,region:env.KK_S3_REGION||'auto',forcePathStyle:env.KK_S3_PATH_STYLE==='true',credentials:{accessKeyId:env.KK_S3_ACCESS_KEY_ID,secretAccessKey:env.KK_S3_SECRET_ACCESS_KEY}}};
 }
 function connection(){const c=mediaConfig();client??=new S3Client(c.config);return {client,bucket:c.bucket};}
-export function mediaKey(owner,id){if(!/^[a-f0-9]{64}$/.test(owner)||! /^[a-f0-9-]{36}$/.test(id))throw Error('Ongeldige mediaverwijzing.');return `kk/2026/${owner}/${id}`;}
+export function mediaKey(owner,id){if(!/^[a-f0-9]{64}$/.test(owner)||! /^[a-f0-9-]{36}$/.test(id))throw Error('Ongeldige mediaverwijzing.');return `kk/${testEdition()?'test-2026':'2026'}/${owner}/${id}`;}
 export const claimDocumentTypes=['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','text/csv','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','text/plain','application/vnd.oasis.opendocument.spreadsheet','application/vnd.oasis.opendocument.text'];
 export function validateMediaDeclaration({type,size}){
  const image=['image/jpeg','image/png','image/webp','image/heic','image/heif','image/avif'].includes(type);
