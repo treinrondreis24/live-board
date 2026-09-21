@@ -34,6 +34,12 @@ try{
  for(const source of [...page.body.matchAll(/<script src="([^"]+)"/g)].map(m=>m[1])){const js=await call(source);assert.equal(js.status,200,source);new Script(js.body);}
  assert.equal((await call('/treinhuis-test/api/participants')).status,401);
  const registered=await call('/kilometerkampioen-test/api/register',{email:'edition@example.org',password:'test-only-password-123',fullName:'Test participant',displayName:'Test'});assert.equal(registered.status,200,JSON.stringify(registered.body));const cookie=registered.headers.get('set-cookie').split(';')[0];assert.match(cookie,/^kk_test_session=/);
+ assert.equal((await call('/kilometerkampioen-test/api/questions')).status,401);
+ const question=await call('/kilometerkampioen-test/api/question-save',{key:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',title:'Privétest',body:'Alleen voor mij',visibility:'private'},cookie);assert.equal(question.status,200,JSON.stringify(question.body));
+ assert.equal((await call('/kilometerkampioen-test/api/questions',null,cookie)).body.rows.length,1);
+ assert.equal((await call('/kilometerkampioen-test/api/answer-accept',{id:question.body.question.id,answerId:null},cookie)).status,403);
+ assert.equal((await call('/kilometerkampioen-test/api/help-save',{title:'X',body:'X',edition:0,category:'faq'},cookie)).status,403);
+ assert.equal((await call('/kilometerkampioen-test/hulp',null,cookie)).status,200);
  assert.equal((await call('/kilometerkampioen/api/session',null,cookie)).body.participant,null);
  assert.equal((await call('/kilometerkampioen-test/api/session',null,cookie.replace('kk_test_session','kk_session'))).body.participant,null);
  await withTestEdition(config,async()=>{const p=await kkGet('participant',owner);assert.equal(p.value.fullName,'Test participant');await kkPut('participant',owner,owner,{...p.value,approval:'approved',edition:24,station:'Schiphol',startTime:'01:00',startDate:'2026-09-19'});assert.match(mediaKey(owner,'11111111-1111-1111-1111-111111111111'),/^kk\/test-2026\//);});

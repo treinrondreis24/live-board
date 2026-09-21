@@ -1,3 +1,4 @@
+import {handleQuestions} from './kk-questions.mjs';
 import {networkView,saveNetwork,testNetwork} from './hilta-next/service.mjs';
 import {testEdition,sessionCookie} from './kk-edition-context.mjs';
 import {addOfflineParticipant} from './kk-offline-participant.mjs';
@@ -81,6 +82,8 @@ export async function handleKilometerkampioen(req,res,url){
  if(req.method==='GET'&&path==='/kilometerkampioen/api/liveblog'){json(res,200,{posts:await publicBlog()});return true;}
  if(req.method==='GET'&&path==='/kilometerkampioen/api/blog-photo'){res.writeHead(302,{Location:await blogMedia(url.searchParams.get('post'),url.searchParams.get('id'))});res.end();return true;}
  if(admin&&!await adminAuthenticated(req,'treinhuis')){if(req.method==='GET'&&!path.includes('/api/')){res.writeHead(303,{Location:'/stationschef'});res.end();}else json(res,401,{error:'Log in met je beheeraccount.'});return true;}
+ if(testEdition()&&path.includes('/api/')&&await handleQuestions(req,res,url,{admin,user:admin?null:await participant(req)}))return true;
+ if(testEdition()&&req.method==='GET'&&['/kilometerkampioen/hulp','/treinhuis/hulp'].includes(path)){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});res.end(await readFile(new URL('./kk-help.html',import.meta.url)));return true;}
  if(assets[path]&&req.method==='GET'){const f=assets[path];res.writeHead(200,{'Content-Type':f.endsWith('.png')?'image/png':f.endsWith('.webmanifest')?'application/manifest+json':f.endsWith('.js')?'text/javascript; charset=utf-8':f.endsWith('.css')?'text/css; charset=utf-8':'text/html; charset=utf-8'});res.end(await readFile(new URL(f,import.meta.url)));return true;}
  if(Date.now()>cleanupAt){cleanupAt=Date.now()+600000;await kkCleanup();}
  if(admin&&req.method==='GET'&&(path==='/treinhuis/api/scorecard-options'||path==='/treinhuis/api/scorecard.xlsx')){const record=await kkGet('participant',url.searchParams.get('owner'));if(!record)fail('Deelnemer niet gevonden.',404);const user={...record.value,id:record.id};if(path.endsWith('scorecard-options')){json(res,200,await scorecardOptions(user));return true;}if(!await kkLimit('admin-scorecard:'+user.id,30,3600000))fail('Te veel downloads. Probeer later opnieuw.',429);const file=await personalScorecard(user,url.searchParams.get('checkpoint'));res.writeHead(200,{'Content-Type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','Content-Disposition':'attachment; filename="Hilta-scorekaart-herberekend.xlsx"','Cache-Control':'no-store','Content-Length':file.length});res.end(file);return true;}

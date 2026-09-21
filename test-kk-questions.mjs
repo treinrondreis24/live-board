@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import {DatabaseSync} from 'node:sqlite';
+import {initKKStore,kkGet,kkPut,kkList} from './kk-store.mjs';
+import {withTestEdition} from './kk-edition-context.mjs';
+import {saveQuestion,questionDetail,saveAnswer,acceptAnswer,saveArticle,questionFile} from './kk-questions.mjs';
+import {randomUUID} from 'node:crypto';
+const sqlite=new DatabaseSync(':memory:');await initKKStore({sqlite});const a={id:'a'.repeat(64),displayName:'A',edition:24},b={id:'b'.repeat(64),displayName:'B',edition:12};
+await withTestEdition({id:'test-2026'},async()=>{
+ const privateQ=await saveQuestion(a,{key:randomUUID(),title:'Privévraag',body:'Geheim',visibility:'private'});
+ await assert.rejects(questionDetail(privateQ.id,b),/niet beschikbaar/);
+ await assert.rejects(saveAnswer(privateQ.id,b,{key:randomUUID(),body:'Niet toegestaan'}),/niet beschikbaar/);
+ await assert.rejects(questionFile(privateQ.id,randomUUID(),b),/niet beschikbaar/);
+ assert.equal((await questionDetail(privateQ.id,a)).body,'Geheim');assert.equal((await questionDetail(privateQ.id,null,true)).body,'Geheim');
+ const q=await saveQuestion(a,{key:randomUUID(),title:'Community',body:'Vraag',visibility:'community'});const reply=await saveAnswer(q.id,b,{key:randomUUID(),body:'Antwoord'});
+ await assert.rejects(acceptAnswer(q.id,reply.id,false),/organisatie/);await acceptAnswer(q.id,reply.id,true);assert.equal((await questionDetail(q.id,a)).accepted,reply.id);
+ await assert.rejects(acceptAnswer(privateQ.id,reply.id,true),/hoort niet/);await acceptAnswer(q.id,null,true);assert.equal((await questionDetail(q.id,b)).accepted,null);
+ const file=randomUUID();await kkPut('question-upload',file,b.id,{name:'private.pdf'});await assert.rejects(saveQuestion(a,{key:randomUUID(),title:'X',body:'X',visibility:'community',files:[file]}),/Bijlage/);
+ const draft=await saveArticle({title:'FAQ',body:'Antwoord',category:'faq',edition:24,published:false});assert.equal((await kkGet('help-content',draft.id)).value.published,false);
+ assert.equal((await kkList('question')).length,2);
+});assert.equal((await kkList('question')).length,0);assert.equal((await kkList('help-content')).length,0);
+console.log('PASS questions: private access, replies, files, admin-only acceptance, cross-question rejection, draft FAQ and edition isolation');
