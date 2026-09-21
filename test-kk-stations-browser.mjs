@@ -1,6 +1,6 @@
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
 import fs from 'node:fs/promises';import assert from 'node:assert/strict';
-const browser=await chromium.launch({channel:'msedge',headless:true});
+const browser=await chromium.launch({...(process.env.PLAYWRIGHT_CHANNEL?{channel:process.env.PLAYWRIGHT_CHANNEL}:{}),headless:true});
 try{const page=await browser.newPage({viewport:{width:390,height:844}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
 await page.route('**/*',async route=>{const path=new URL(route.request().url()).pathname;
 if(path==='/')return route.fulfill({contentType:'text/html; charset=utf-8',body:'<meta name="viewport" content="width=device-width"><div id="host"></div><script src="/stations.js"></script><script>kkStations(document.getElementById("host"))</script>'});

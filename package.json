@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
-    "check": "node --check server.mjs && node --check storage.mjs && node --check datahub.mjs && node --check public/app.js && node --check public/mobile-common.js && node --check public/mobile.js && node --check public/nightjets.js && node --check public/station-mobile.js && node --check public/datahub.js && node --check public/koeln-embed.js"
+    "check": "node scripts/check.mjs all",
+    "check:syntax": "node scripts/check.mjs syntax",
+    "test": "node scripts/check.mjs unit",
+    "test:browser": "node scripts/check.mjs browser"
   },
   "engines": {
     "node": ">=24.0.0 <25"
@@ -22,5 +25,8 @@
     "qrcode": "1.5.4",
     "sharp": "0.35.4",
     "zeromq": "6.7.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0"
   }
 }
