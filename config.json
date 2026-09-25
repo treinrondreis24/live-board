@@ -1723,6 +1723,54 @@
       "title": "Vertrektijden Leeuwarden",
       "country": "NL",
       "quickDirections": []
+    },
+    "frankfurt": {
+      "station": "Frankfurt(Main)Hbf",
+      "title": "Vertrektijden Frankfurt(Main)Hbf",
+      "country": "DE",
+      "quickDirections": []
+    },
+    "frankfurt-flughafen": {
+      "station": "Frankfurt(M) Flughafen Fernbf",
+      "title": "Vertrektijden Frankfurt(M) Flughafen Fernbf",
+      "country": "DE",
+      "quickDirections": []
+    },
+    "stuttgart": {
+      "station": "Stuttgart Hbf",
+      "title": "Vertrektijden Stuttgart Hbf",
+      "country": "DE",
+      "quickDirections": []
+    },
+    "offenburg": {
+      "station": "Offenburg",
+      "title": "Vertrektijden Offenburg",
+      "country": "DE",
+      "quickDirections": []
+    },
+    "koeln-messe-deutz": {
+      "station": "Köln Messe/Deutz",
+      "title": "Vertrektijden Köln Messe/Deutz",
+      "country": "DE",
+      "quickDirections": []
+    },
+    "freiburg": {
+      "station": "Freiburg(Breisgau) Hbf",
+      "title": "Vertrektijden Freiburg(Breisgau) Hbf",
+      "country": "DE",
+      "quickDirections": []
+    },
+    "berlin-gesundbrunnen": {
+      "station": "Berlin Gesundbrunnen",
+      "title": "Vertrektijden Berlin Gesundbrunnen",
+      "country": "DE",
+      "quickDirections": []
+    },
+    "dresden": {
+      "station": "Dresden Hbf",
+      "title": "Vertrektijden Dresden Hbf",
+      "country": "DE",
+      "quickDirections": []
     }
   },
   "ndov": {
