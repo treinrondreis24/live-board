@@ -75,9 +75,11 @@ def application(environ,start_response):
         mode='attachment' if 'download=' in environ.get('QUERY_STRING','') else 'inline'
         start_response('200 OK',[('Content-Type','application/pdf'),('Content-Length',str(filename.stat().st_size)),('Content-Disposition',f'{mode}; filename="boekje-{ident[:8]}.pdf"'),('Cache-Control','no-store')])
         return [] if method=='HEAD' else FileWrapper(filename.open('rb'),64*1024)
-    # One mutation/render at a time. Busy requests are rejected, not queued in RAM.
+    # One mutation/render at a time. Mutations fail fast; the fixed four HTTP
+    # threads may briefly wait for previews, which browsers request in parallel.
     heavy=method=='POST' or path.startswith('/files/') or path=='/google/callback'
-    if heavy and not BUSY.acquire(blocking=False):
+    acquired=not heavy or (BUSY.acquire(timeout=30) if method in ('GET','HEAD') and path.startswith('/files/') else BUSY.acquire(blocking=False))
+    if not acquired:
         return response(429,{'error':'Er wordt al een boekje of pagina verwerkt. Probeer het zo nog eens.'},headers={'Retry-After':'3'})
     try:
         if path.startswith('/api/migration/'):
