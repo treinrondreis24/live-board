@@ -37,6 +37,17 @@ class CloudTests(unittest.TestCase):
         self.assertIn("api('/seinhuis/boekjesmaker/api/state')",text)
         self.assertIn("fetch('/api/admin-security/logout'",text)
         self.assertNotIn('Lokaal op deze computer',text)
+        self.assertNotIn('Herstart Boekjesmaker.cmd',text)
+        digital=cloud.page((cloud.server.ROOT/'digital.html').read_bytes()).decode()
+        self.assertIn("fetch('/seinhuis/boekjesmaker/api/digital/'",digital)
+        self.assertNotIn('/api/seinhuis/',digital)
+    def test_quota_rejects_new_files(self):
+        os.environ['BOOKLETS_STORAGE_LIMIT']='1000'
+        try:
+            status,_,raw=request('/api/upload','POST',b'%PDF')
+            self.assertEqual(status,400)
+            self.assertIn('opslagruimte',json.loads(raw)['error'])
+        finally:os.environ.pop('BOOKLETS_STORAGE_LIMIT')
     def test_single_heavy_operation(self):
         cloud.BUSY.acquire()
         try:

@@ -23,6 +23,7 @@ def load(s,source,cache):
         a=s.asset(source['asset'])
     else:
         raw=google_layout.render(model,images,cfg['format'],cfg['layout']);r,meta=s.inspect_pdf(raw);i=s.ident()
+        s.ensure_capacity(len(raw))
         (s.DATA/'pdfs'/f'{i}.pdf').write_bytes(raw)
         with s.db() as c:c.execute('INSERT INTO assets VALUES(?,?,?,?,?)',(i,model['title'],len(r.pages),json.dumps(meta),s.now()))
         a=s.asset(i)

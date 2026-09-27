@@ -20,8 +20,7 @@ BUSY=threading.BoundedSemaphore(1)
 
 def page(raw):
     text=raw.decode('utf-8')
-    for path in ('/api/','/files/','/digital/'):
-        text=text.replace(path,PREFIX+path)
+    text=re.sub(r'(?<=[\x22\x27`])/(api|files|digital)/',lambda m:PREFIX+m.group(),text)
     return text.replace('/seinhuis-logout-placeholder','/api/admin-security/logout').replace('href="/"','href="'+PREFIX+'/"').encode()
 
 class Handler(server.Handler):
@@ -82,6 +81,7 @@ def application(environ,start_response):
     if not acquired:
         return response(429,{'error':'Er wordt al een boekje of pagina verwerkt. Probeer het zo nog eens.'},headers={'Retry-After':'3'})
     try:
+        if method=='POST':server.ensure_capacity(size*3+1024*1024)
         if path.startswith('/api/migration/'):
             import migration
             result=migration.handle(path,environ,server)
@@ -96,6 +96,8 @@ def application(environ,start_response):
         (handler.do_POST if method=='POST' else handler.do_GET)()
         status,raw,ctype,headers=handler.result
         return response(status,raw,ctype if ctype!='application/json' else 'application/json; charset=utf-8',headers)
+    except ValueError as error:
+        return response(400,{'error':str(error)})
     except Exception:
         return response(500,{'error':'Verwerking mislukt. De oorspronkelijke bestanden blijven bewaard.'})
     finally:

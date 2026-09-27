@@ -30,6 +30,21 @@ def font_name(f):return 'Montserrat' if f.get('font')=='Montserrat' else 'Bookle
 LOCK = threading.RLock()
 SESSIONS = {}
 APP_VERSION = '2026.09.27.16'
+
+def storage_remaining():
+    limit=int(os.environ.get('BOOKLETS_STORAGE_LIMIT','5000000000'))
+    return limit-sum(p.stat().st_size for p in DATA.rglob('*') if p.is_file())
+
+def ensure_capacity(size):
+    if size+16*1024*1024>storage_remaining():
+        raise ValueError('De afgesproken opslagruimte van 5 GB is bijna vol. Neem contact op met de beheerder voordat u meer bestanden toevoegt.')
+
+class QuotaWriter:
+    def __init__(self,stream):self.stream=stream;self.remaining=storage_remaining()-16*1024*1024
+    def write(self,raw):
+        if len(raw)>self.remaining:raise ValueError('Het boekje past niet meer binnen de opslaglimiet van 5 GB.')
+        self.remaining-=len(raw);return self.stream.write(raw)
+    def __getattr__(self,name):return getattr(self.stream,name)
 class ClosingConnection(sqlite3.Connection):
     def __exit__(self,*args):
         try:return super().__exit__(*args)
@@ -307,7 +322,11 @@ def make_export(book,options=None):
     i=ident();target=DATA/'exports'/f'{i}.pdf'
     writer.remove_annotations(subtypes='/Link')
     writer.add_metadata({'/Title':book['title'],'/Creator':'Treinrondreis Boekjesmaker'})
-    with target.open('wb') as f: writer.write(f)
+    try:
+        with target.open('wb') as f: writer.write(QuotaWriter(f))
+    except Exception:
+        target.unlink(missing_ok=True)
+        raise
     result=PdfReader(target)
     if len(result.pages)!=report['pages'] or result.get_fields(): raise ValueError('PDF-controle mislukt.')
     with db() as c:c.execute('INSERT INTO exports VALUES(?,?,?,?,?,?)',(i,book['id'],book['title'],now(),json.dumps(book,ensure_ascii=False),json.dumps(report,ensure_ascii=False)))
@@ -371,7 +390,9 @@ class Handler(BaseHTTPRequestHandler):
             if not 0<=page<report['pages']:raise ValueError('Pagina bestaat niet.')
             preview=DATA/'previews'/f'export-{i}-{page}.png'
             with LOCK:
-                if not preview.exists():subprocess.run([str(POPPLER),'-f',str(page+1),'-l',str(page+1),'-scale-to','1600','-singlefile','-png',str(DATA/'exports'/f'{i}.pdf'),str(preview.with_suffix(''))],check=True,timeout=60,creationflags=0x08000000 if os.name=='nt' else 0)
+                if not preview.exists():
+                    ensure_capacity(20*1024*1024)
+                    subprocess.run([str(POPPLER),'-f',str(page+1),'-l',str(page+1),'-scale-to','1600','-singlefile','-png',str(DATA/'exports'/f'{i}.pdf'),str(preview.with_suffix(''))],check=True,timeout=60,creationflags=0x08000000 if os.name=='nt' else 0)
             return self.send(200,preview.read_bytes(),'image/png')
         m=re.fullmatch(r'/files/(asset|export|preview)/([a-f0-9]{32})(?:/(\d+))?',path)
         if m:
@@ -387,6 +408,7 @@ class Handler(BaseHTTPRequestHandler):
             preview=DATA/'previews'/f'{i}-{page}.png'
             with LOCK:
                 if not preview.exists():
+                    ensure_capacity(20*1024*1024)
                     subprocess.run([str(POPPLER),'-f',str(page+1),'-l',str(page+1),'-scale-to','950','-singlefile','-png',str(p),str(preview.with_suffix(''))],check=True,timeout=40,creationflags=0x08000000 if os.name=='nt' else 0)
             return self.send(200,preview.read_bytes(),'image/png')
         self.send(404,{'error':'Niet gevonden.'})
@@ -432,6 +454,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(404,{'error':'Niet gevonden.'})
             if path=='/api/upload':
                 reader,meta=inspect_pdf(raw);i=ident();title=parse_qs(urlparse(self.path).query).get('title',['Bouwsteen'])[0][:160]
+                ensure_capacity(len(raw))
                 (DATA/'pdfs'/f'{i}.pdf').write_bytes(raw)
                 with db() as c:c.execute('INSERT INTO assets VALUES(?,?,?,?,?)',(i,title,len(reader.pages),json.dumps(meta),now()))
                 return self.send(200,{'id':i,'pages':len(reader.pages),'meta':meta,'format':pdf_format(meta)})

@@ -35,6 +35,7 @@ def handle(path,environ,app):
             count=int(body['parts'])
             if not 1<=count<=100:raise ValueError('Ongeldig aantal delen.')
             archive=stage/'library.zip'
+            if hasattr(app,'ensure_capacity'):app.ensure_capacity(sum(p.stat().st_size for p in parts.glob('*.part')))
             with archive.open('wb') as out:
                 for i in range(count):
                     with (parts/f'{i:03d}.part').open('rb') as source:shutil.copyfileobj(source,out,1024*1024)
@@ -47,6 +48,7 @@ def handle(path,environ,app):
                 if set(rows)!=set(TABLES) or len(files)>10000:raise ValueError('Onvolledige bibliotheek.')
                 if set(z.namelist())!={'manifest.json',*files} or len(z.namelist())!=len(files)+1:raise ValueError('Onverwachte bestanden.')
                 if sum(i.file_size for i in z.infolist())>MAX_TOTAL:raise ValueError('Import is te groot.')
+                if hasattr(app,'ensure_capacity'):app.ensure_capacity(sum(i.file_size for i in z.infolist()))
                 extracted=stage/'validated';extracted.mkdir(exist_ok=True)
                 for name,checksum in files.items():
                     if not re.fullmatch(r'(pdfs|exports)/[a-f0-9]{32}\.pdf',name):raise ValueError('Ongeldige bestandsnaam.')

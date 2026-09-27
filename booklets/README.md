@@ -14,8 +14,10 @@ Set healthcheck `/health`, port 8080, restart on failure (5 retries) in Railway.
 Do not use the root railway.json (that starts Node). New services can no longer
 opt into legacy Config as Code after 2026-08-28; configure this service in the UI.
 Use one replica in the same region as live-board, a dedicated volume at `/data`,
-and no public domain/TCP proxy. Initial proposed limits: 2 GB RAM, 1 CPU, 5 GB
-volume. Obtain cost agreement before creating the service/volume. Enable daily
+and no public domain/TCP proxy. Limits: 2 GB RAM, 1 CPU, 5 GB application storage
+quota. Railway provisioned a 50 GB volume and does not offer shrinking in this UI;
+it bills used space. The app enforces the agreed 5 GB usage in upload/render/import
+paths with metadata headroom. Obtain cost agreement before raising limits. Enable daily
 volume backups. No PostgreSQL schema or KM-media bucket changes are required.
 
 Python variables:
