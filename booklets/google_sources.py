@@ -1,5 +1,6 @@
 """Google source assets and generation checks. Existing PDFs remain immutable."""
-import copy, hashlib, json, secrets, time
+import copy, hashlib, io, json, secrets, time
+from pypdf import PdfReader, PdfWriter
 import google_connection as connection
 import google_layout
 
@@ -19,15 +20,38 @@ def load(s,source,cache):
         cache[key]=google_layout.normalize(doc,connection.fetch_image)
     model,images=cache[key]
     digest=hashlib.sha256((model['digest']+json.dumps(cfg,sort_keys=True)).encode()).hexdigest()
-    if digest==source.get('digest') and source.get('asset'):
-        a=s.asset(source['asset'])
+    selection=source.get('selectedPages')
+    if selection is not None and digest!=source.get('sourceDigest'):
+        raise ValueError('De Google-bron of pagina-indeling is gewijzigd. Controleer de paginaselectie via Nu vernieuwen / pagina’s kiezen bij de bouwsteen, of Pagina’s kiezen / vernieuwen bij het eenmalige reisschema. De opgeslagen selectie blijft behouden.')
+    if digest==source.get('sourceDigest',source.get('digest')) and source.get('fullAsset',source.get('asset')):
+        a=s.asset(source.get('fullAsset',source.get('asset')))
     else:
         raw=google_layout.render(model,images,cfg['format'],cfg['layout']);r,meta=s.inspect_pdf(raw);i=s.ident()
         s.ensure_capacity(len(raw))
         (s.DATA/'pdfs'/f'{i}.pdf').write_bytes(raw)
         with s.db() as c:c.execute('INSERT INTO assets VALUES(?,?,?,?,?)',(i,model['title'],len(r.pages),json.dumps(meta),s.now()))
         a=s.asset(i)
-    return {'title':model['title'],'asset':a['id'],'pages':a['pages'],'meta':a['meta'],'format':cfg['format'],'googleDoc':{**cfg,'digest':digest,'asset':a['id'],'checkedAt':s.now()},'warnings':model['warnings']}
+    result={'title':model['title'],'asset':a['id'],'pages':a['pages'],'meta':a['meta'],'format':cfg['format'],'googleDoc':{**cfg,'digest':digest,'asset':a['id'],'checkedAt':s.now()},'warnings':model['warnings']}
+    if selection is not None:
+        if source.get('asset') and source.get('sourceDigest')==digest:
+            chosen=s.asset(source['asset'])
+            return {**result,'asset':chosen['id'],'pages':chosen['pages'],'meta':chosen['meta'],'googleDoc':{**source,'checkedAt':s.now()}}
+        return select_pages(s,result,selection)
+    return result
+
+def select_pages(s,result,pages):
+    source=result['googleDoc'];settings(source)
+    asset=s.asset(result['asset']);count=asset['pages']
+    if not isinstance(pages,list) or not pages or any(type(n) is not int or not 0<=n<count for n in pages) or pages!=sorted(set(pages)):
+        raise ValueError('Kies minstens één geldige pagina, in de oorspronkelijke volgorde.')
+    if pages==list(range(count)):return result
+    reader=PdfReader(s.DATA/'pdfs'/f"{asset['id']}.pdf");writer=PdfWriter()
+    for n in pages:writer.add_page(reader.pages[n])
+    out=io.BytesIO();writer.write(out);raw=out.getvalue();r,meta=s.inspect_pdf(raw);s.ensure_capacity(len(raw));ident=s.ident()
+    (s.DATA/'pdfs'/f'{ident}.pdf').write_bytes(raw)
+    with s.db() as c:c.execute('INSERT INTO assets VALUES(?,?,?,?,?)',(ident,result['title'],len(r.pages),json.dumps(meta),s.now()))
+    digest=hashlib.sha256((source['digest']+json.dumps(pages)).encode()).hexdigest()
+    return {**result,'asset':ident,'pages':len(r.pages),'meta':meta,'googleDoc':{**source,'asset':ident,'digest':digest,'sourceDigest':source['digest'],'fullAsset':asset['id'],'sourcePages':count,'selectedPages':pages}}
 
 def number_fields(s,body,pages):
     # Source text is edited in Google Docs, so reflow cannot strand personal overlays.

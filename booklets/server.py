@@ -450,6 +450,7 @@ class Handler(BaseHTTPRequestHandler):
                     if action=='connect':return self.send(200,{'url':google_connection.connect(DATA,self.server.server_port)})
                     google_connection.disconnect(DATA);return self.send(200,{'ok':True})
                 if action=='import':return self.send(200,google_sources.load(context,b,{}))
+                if action=='select-pages':return self.send(200,google_sources.select_pages(context,b['document'],b['pages']))
                 if action=='prepare':return self.send(200,google_sources.prepare(context,b['body'],b.get('allowCached') is True))
                 return self.send(404,{'error':'Niet gevonden.'})
             if path=='/api/upload':
