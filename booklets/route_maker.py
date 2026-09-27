@@ -4,7 +4,7 @@ from urllib.request import Request, urlopen
 from urllib.parse import urlencode
 from urllib.error import HTTPError, URLError
 from PIL import Image as PILImage, ImageOps
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Image, Spacer, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Image, Spacer, Table, TableStyle, KeepTogether
 from reportlab.lib.styles import ParagraphStyle
 
 ATTRIBUTION='Powered by Geoapify | © OpenStreetMap contributors | © OpenMapTiles'
@@ -12,6 +12,9 @@ ATTRIBUTION='Powered by Geoapify | © OpenStreetMap contributors | © OpenMapTil
 def text(value,limit=500):
     if not isinstance(value,str) or len(value)>limit:raise ValueError('Deze tekst is te lang of ongeldig.')
     return value.strip()
+
+def formal(t):
+    return re.sub(r'\b[Jj]e bestemming\b',lambda m:'Uw bestemming' if m[0][0].isupper() else 'uw bestemming',t).replace('Je bent','U bent')
 
 def folder(s):
     p=s.DATA/'routes';p.mkdir(exist_ok=True);return p
@@ -105,7 +108,7 @@ def configuration(s,b):
     title=text(b.get('title',''),160) or 'Route - '+hotel+(' - '+city if city and city.casefold() not in hotel.casefold() else '')
     steps=b.get('instructions')
     if steps is None:steps='\n'.join(x['text']+(f" ({x['distance']} m)" if x['distance'] else '') for x in model['steps'])
-    cfg={'id':model['id'],'format':fmt,'country':country,'destination':city,'hotel':hotel,'title':title,'instructions':text(steps,16000),'extra':text(b.get('extra',''),8000),'checkedAt':model['checkedAt']}
+    cfg={'id':model['id'],'format':fmt,'country':country,'destination':city,'hotel':hotel,'title':title,'instructions':formal(text(steps,16000)),'extra':text(b.get('extra',''),8000),'checkedAt':model['checkedAt']}
     if not cfg['instructions']:raise ValueError('Vul de route-instructies in.')
     if b.get('photoData'):
         raw=photo(b['photoData']);i=s.ident();s.ensure_capacity(len(raw));(folder(s)/(i+'.jpg')).write_bytes(raw);cfg['photo']=i
@@ -113,16 +116,16 @@ def configuration(s,b):
     return model,cfg
 
 def render_pdf(s,model,cfg):
-    W,H=s.SIZES[cfg['format']];width=W-56
+    W,H=s.SIZES[cfg['format']];width=W-68
     style=ParagraphStyle('route',fontName='Booklet',fontSize=10.5,leading=16.8,spaceAfter=6,textColor='#000000')
-    bold=ParagraphStyle('routeheading',parent=style,fontName='Booklet-Bold',spaceBefore=6)
+    bold=ParagraphStyle('routeheading',parent=style,fontName='Booklet-Bold',spaceBefore=6,keepWithNext=True)
     small=ParagraphStyle('source',parent=style,fontSize=7,leading=10,spaceAfter=7)
     title=ParagraphStyle('title',parent=style,fontName='Montserrat-Bold',fontSize=19,leading=24,spaceAfter=9)
     def para(t,st=style):return Paragraph(html.escape(t).replace('\n','<br/>'),st)
     def pic(path,w,h):
         with PILImage.open(path) as im:iw,ih=im.size
         scale=min(w/iw,h/ih);return Image(str(path),width=iw*scale,height=ih*scale,hAlign='LEFT')
-    steps=[para(f'{n+1}. {line}') for n,line in enumerate(cfg['instructions'].splitlines()) if line.strip()]
+    steps=[para(f'{n+1}. {formal(line)}') for n,line in enumerate(cfg['instructions'].splitlines()) if line.strip()]
     heading=[para(cfg['title'],title),para(f"Vanaf {model['start']['name']} | circa {model['distance']} meter | {model['minutes']} minuten lopen")]
     leftwidth=width*.55;rightwidth=width-leftwidth-18
     left=[pic(stored(s,model['id'],'.png'),leftwidth,210),para(ATTRIBUTION,small)]
@@ -133,10 +136,20 @@ def render_pdf(s,model,cfg):
     if cfg['extra']:tail=[para('Goed om te weten',bold),para(cfg['extra'])]
     if cfg.get('photo'):tail += [pic(stored(s,cfg['photo'],'.jpg'),width,130),Spacer(1,8)]
     tailheight=sum(p.wrap(width,H)[1]+p.getSpaceBefore()+p.getSpaceAfter() for p in tail)
-    # Keep a compact one-page route when it fits; otherwise flow every instruction
-    # at its original readable size instead of shrinking or clipping a table.
+    # Keep a compact one-page route when it fits. For longer routes, put a
+    # measured prefix beside the map and continue below at full width.
     if pair.wrap(width,H)[1]+tailheight<=available:story=heading+[pair]+tail
-    else:story=heading+[pic(stored(s,model['id'],'.png'),width,200 if cfg['format']=='A5' else 320),para(ATTRIBUTION,small),*right]+tail
+    else:
+        available-=12
+        count=0
+        for n in range(1,len(steps)+1):
+            candidate=Table([[left,[para('Uw looproute',bold),*steps[:n]]]],colWidths=[leftwidth+18,rightwidth])
+            candidate.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'TOP'),('LEFTPADDING',(0,0),(-1,-1),0),('RIGHTPADDING',(0,0),(0,0),18),('RIGHTPADDING',(1,0),(1,0),0),('TOPPADDING',(0,0),(-1,-1),0),('BOTTOMPADDING',(0,0),(-1,-1),0)]))
+            if candidate.wrap(width,H)[1]>available:break
+            count=n;pair=candidate
+        if count:story=heading+[pair]+steps[count:]
+        else:story=heading+left+[para('Uw looproute',bold)]+steps
+        story += [KeepTogether([para('Uw hotel',bold),para(model['end']['address'])])]+tail
     buf=io.BytesIO();doc=SimpleDocTemplate(buf,pagesize=(W,H),leftMargin=28,rightMargin=28,topMargin=28,bottomMargin=44,title=cfg['title'],author='Treinrondreis')
     doc.build(story);return buf.getvalue()
 
