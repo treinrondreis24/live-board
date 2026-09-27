@@ -9,6 +9,9 @@
 <div id="app"><p style="padding:32px">Boekjesmaker wordt geladen…</p></div><dialog id="modal"></dialog><div id="toast" hidden></div>
 
 <script>
+window.addEventListener('error',event=>{document.querySelector('#app').textContent='Laden niet gelukt: '+event.message});
+</script>
+<script>
 
 let fitExamples={},fitRun=0;
 
@@ -352,7 +355,7 @@ async function prepareGoogleBook(){if(!draft.body.sections.some(s=>(s.choice?s.s
 
 
 
-async function init(){const s=await api('/api/session');user=s.user;if(!user){location.href='/seinhuis';return}await refresh();shell()}
+async function init(){document.querySelector('#app').textContent='Toegang controleren…';const s=await api('/api/session');user=s.user;if(!user){location.href='/seinhuis';return}document.querySelector('#app').textContent='Bibliotheek ophalen…';await refresh();shell()}
 
 function login(setup){run(async()=>{await api(setup?'/api/setup':'/api/login',{name:$('#name').value,password:$('#pass').value});await init()})}
 
