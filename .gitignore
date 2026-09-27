@@ -1,1 +1,6 @@
 .playwright-browsers/
+node_modules/
+booklets/data/
+**/__pycache__/
+*.sqlite*
+*.env

@@ -1,0 +1,5 @@
+data
+__pycache__
+*.sqlite*
+*.env
+test_*.py

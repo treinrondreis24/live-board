@@ -1,6 +1,7 @@
 import {handlePasswordReset} from './password-reset.mjs';
 import {handleAnalytics,startAnalyticsBackfill} from './train-analytics.mjs';
 import {handleAdminHub} from './admin-hub.mjs';
+import {handleBooklets} from './booklets-gateway.mjs';
 import {handlePlatformAdmin} from './platform-admin.mjs';
 import {handleTreinhuisAccess} from './treinhuis-access.mjs';
 import {handleConnectionAdmin} from './connections-admin.mjs';
@@ -1069,6 +1070,7 @@ const handleTreinreiziger=createTreinreizigerHandler({stations:[...new Map(appSt
 const server=http.createServer(async(req,res)=>{
   try{
     const url=new URL(req.url,`http://${req.headers.host}`);
+    if(await handleBooklets(req,res,url))return;
     if(await handleAnalytics(req,res,url))return;
     if(await handleDayReports(req,res,url))return;
     if(await handlePlatformAdmin(req,res,url))return;
