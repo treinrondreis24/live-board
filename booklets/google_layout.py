@@ -5,7 +5,7 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import BaseDocTemplate, PageTemplate, Frame, Paragraph, Spacer, Image, Table, TableStyle, KeepTogether
 from features import SIZES
 
-LAYOUT_VERSION='2026.09.27.1-160'
+LAYOUT_VERSION='2026.09.27.2-compact-routes'
 
 def normalize(doc,fetch_image):
     tabs=[]
@@ -29,7 +29,7 @@ def normalize(doc,fetch_image):
             p=p.crop((round(l*p.width),round(t*p.height),round((1-r)*p.width),round((1-b)*p.height)))
         out=io.BytesIO();p.convert('RGB').save(out,format='PNG');raw=out.getvalue();key=hashlib.sha256(raw).hexdigest()
         images[key]=raw
-        return {'type':'image','key':key,'width':p.width,'height':p.height}
+        return {'type':'image','key':key,'width':p.width,'height':p.height,'sourceX':obj.get('positioning',{}).get('leftOffset',{}).get('magnitude',0)}
     def content(elements,tab):
         out=[];counters={}
         for e in elements:
@@ -135,7 +135,9 @@ def render(model,images,fmt,layout):
             def is_qr(b):
                 if not .85<b['width']/b['height']<1.15:return False
                 im=PILImage.open(io.BytesIO(images[b['key']])).convert('RGB');im.thumbnail((120,120));px=list(im.getdata())
-                return sum(max(v)-min(v)<12 for v in px)/len(px)>.99 and .18<sum(max(v)<80 for v in px)/len(px)<.7
+                # QR modules can be dark blue instead of neutral black. Require
+                # a predominantly light/dark image, rather than grayscale only.
+                return sum(max(v)<100 or min(v)>180 for v in px)/len(px)>.8 and .18<sum(max(v)<100 for v in px)/len(px)<.7
             qrs=[b for b in pics if is_qr(b)];pics=[b for b in pics if b not in qrs]
             if not pics:raise ValueError('Deze route bevat alleen QR-codes. Kies Tekstpagina voor dit document.')
             first=pics[0];cw=(width-gap)/2
@@ -156,18 +158,40 @@ def render(model,images,fmt,layout):
                 left=[picture(first,cw,avail-contact_height-90)]+flows(body,cw);right=[picture(pics[1],cw,avail-contact_height-10)];remaining=pics[2:]
             else:left=[picture(first,cw,avail-20)];right=flows(body,cw);remaining=[]
             if qrs:
-                qrrow=Table([[[picture(qrs[0],72,72)],flows([{**b,'renderSize':9.5} for b in caption],cw-84)]],colWidths=[84,cw-84])
+                qrs.sort(key=lambda b:b.get('sourceX',0))
+                qrrow=Table([[picture(q,72,72) for q in qrs[:2]]],colWidths=[90]*min(2,len(qrs)),hAlign='LEFT')
                 qrrow.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'TOP'),('LEFTPADDING',(0,0),(-1,-1),0),('RIGHTPADDING',(0,0),(-1,-1),0),('TOPPADDING',(0,0),(-1,-1),0),('BOTTOMPADDING',(0,0),(-1,-1),0)]))
-                (right if wide_a4 else left).extend([Spacer(1,8),qrrow]);remaining+=qrs[1:]
+                (right if wide_a4 else left).extend([Spacer(1,8),*flows(caption,cw),qrrow]);remaining+=qrs[2:]
             else:right.extend(flows(caption,cw))
             pair=Table([[left,right]],colWidths=[cw+gap,cw],hAlign='LEFT')
             pair.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'TOP'),('LEFTPADDING',(0,0),(-1,-1),0),('RIGHTPADDING',(0,0),(0,0),gap),('RIGHTPADDING',(1,0),(1,0),0),('TOPPADDING',(0,0),(-1,-1),0),('BOTTOMPADDING',(0,0),(-1,-1),10)]))
             _,ph=pair.wrap(width,avail)
-            if ph>avail-contact_height:story.extend(flows((pics[1:]+qrs+caption) if wide_a4 else (body+pics+qrs+caption),width));remaining=[]
+            if ph>avail-contact_height:
+                # Do not enlarge every image to a full page when a combined
+                # map/text column is too tall. Put maps in bounded pairs and
+                # let ordinary text flow separately at the approved size.
+                compact=pics[1:] if wide_a4 else pics
+                for n in range(0,len(compact),2):
+                    height=min(250,avail-contact_height-16) if n==0 else min(250,avail-16)
+                    if height<120:height=min(250,avail-16)
+                    row=[picture(pic,cw,height) for pic in compact[n:n+2]]
+                    row+=['']*(2-len(row))
+                    maps=Table([row],colWidths=[cw+gap,cw],hAlign='LEFT')
+                    maps.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'TOP'),('LEFTPADDING',(0,0),(-1,-1),0),('RIGHTPADDING',(0,0),(0,0),gap),('RIGHTPADDING',(1,0),(1,0),0),('TOPPADDING',(0,0),(-1,-1),0),('BOTTOMPADDING',(0,0),(-1,-1),10)]))
+                    story.append(maps)
+                if not wide_a4:story.extend(flows(body,width))
+                story.extend(flows(caption,width))
+                if qrs:
+                    ordered=sorted(qrs,key=lambda b:b.get('sourceX',0))
+                    for n in range(0,len(ordered),4):
+                        codes=Table([[picture(q,72,72) for q in ordered[n:n+4]]],colWidths=[90]*len(ordered[n:n+4]),hAlign='LEFT')
+                        codes.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'TOP'),('LEFTPADDING',(0,0),(-1,-1),0),('TOPPADDING',(0,0),(-1,-1),0)]))
+                        story.append(codes)
+                remaining=[]
             else:story.append(pair)
             for pic in remaining:
-                limit=(110 if fmt=='A5' else 135) if pic['width']/pic['height']>3 else (180 if fmt=='A5' else 150)
-                story.extend([picture(pic,width,limit),Spacer(1,10)])
+                limit=72 if pic in qrs else ((110 if fmt=='A5' else 135) if pic['width']/pic['height']>3 else (180 if fmt=='A5' else 150))
+                story.extend([picture(pic,72 if pic in qrs else width,limit),Spacer(1,10)])
         else:story=flows(blocks,width)
     doc.addPageTemplates(PageTemplate(id='content',frames=frames,onPage=heading))
     try:doc.build(story)
