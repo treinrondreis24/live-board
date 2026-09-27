@@ -34,7 +34,15 @@ def request(host,path,params=None,body=None):
     except HTTPError as e:
         if e.code in (401,403):raise ValueError('Geoapify weigert de sleutel. Controleer de sleutel en eventuele beperkingen in Geoapify.') from None
         if e.code==429:raise ValueError('Geoapify is tijdelijk druk of de gebruikslimiet is bereikt. Probeer later opnieuw.') from None
-        raise ValueError('Geoapify kon deze locatie of route niet verwerken. Controleer de gekozen locaties en probeer opnieuw.') from None
+        stage='kaartbeeld' if host=='maps.geoapify.com' else 'looproute' if path.endswith('/routing') else 'zoekopdracht'
+        # Only expose validation field names, never provider URLs or credential values.
+        fields=[]
+        try:
+            message=str(json.loads(e.read(30000)).get('message',''))
+            fields=[f for f in ('center','markers','size','format','geojson','waypoints','lang','details','zoom') if re.search(r'\b'+f+r'\b',message)]
+        except Exception:pass
+        detail=(' Controleer: '+', '.join(fields)+'.') if fields else ''
+        raise ValueError(f'Geoapify kon het {stage} niet verwerken (code {e.code}).'+detail+' Probeer opnieuw.') from None
     except (URLError,TimeoutError,OSError):raise ValueError('Geoapify is niet bereikbaar. Probeer het later opnieuw.') from None
 
 def point(p):
@@ -66,7 +74,7 @@ def calculate(s,b):
     xs=[(c[0]+180)/360 for c in coords]
     ys=[(1-math.asinh(math.tan(math.radians(c[1])))/math.pi)/2 for c in coords]
     zoom=min(18,math.log2(850/(256*max(max(xs)-min(xs),.00001))),math.log2(500/(256*max(max(ys)-min(ys),.00001))))
-    center=[(min(xs)+max(xs))/2*360-180,math.degrees(math.atan(math.sinh(math.pi*(1-(min(ys)+max(ys))))))]
+    center={'lon':(min(xs)+max(xs))/2*360-180,'lat':math.degrees(math.atan(math.sinh(math.pi*(1-(min(ys)+max(ys))))))}
     map_body={'style':'osm-bright','width':1100,'height':700,'format':'png','center':center,'zoom':zoom,'geojson':{'type':'Feature','geometry':geometry,'properties':{'linecolor':'#176b58','linewidth':6}},'markers':[{'lon':a['lon'],'lat':a['lat'],'color':color,'type':'circle','text':label,'size':36} for a,color,label in [(start,'#176b58','A'),(end,'#b54727','B')]]}
     raw=request('maps.geoapify.com','/v1/staticmap',body=map_body)
     try:
