@@ -1,6 +1,6 @@
 """Local pilot. PDF originals and published exports are immutable. No AI services; optional read-only Google Docs connection."""
 import copy
-import bulk_ops, preflight, google_sources, google_connection
+import bulk_ops, preflight, google_sources, google_connection, route_maker
 from types import SimpleNamespace
 from features import COUNTRIES, SIZES, pdf_format, resolved, plan, insert_fillers, refresh_blocks, library_stamp
 import base64, hashlib, hmac, io, json, os, re, secrets, socket, sqlite3, subprocess, threading, time, uuid
@@ -29,7 +29,7 @@ pdfmetrics.registerFontFamily('Montserrat',normal='Montserrat',bold='Montserrat-
 def font_name(f):return 'Montserrat' if f.get('font')=='Montserrat' else 'Booklet'
 LOCK = threading.RLock()
 SESSIONS = {}
-APP_VERSION = '2026.09.27.16'
+APP_VERSION = '2026.09.28.1'
 
 def storage_remaining():
     limit=int(os.environ.get('BOOKLETS_STORAGE_LIMIT','5000000000'))
@@ -365,6 +365,10 @@ class Handler(BaseHTTPRequestHandler):
         if not session:return self.send(401,{'error':'Log eerst in.'})
         if path=='/api/google/status':
             return self.send(200,google_connection.status(DATA))
+        if path=='/api/routes/status':
+            return self.send(200,{'configured':bool(os.environ.get('GEOAPIFY_API_KEY','').strip())})
+        m=re.fullmatch(r'/files/route/([a-f0-9]{32})',path)
+        if m:return self.send(200,route_maker.stored(SimpleNamespace(**globals()),m[1],'.png').read_bytes(),'image/png')
         if path=='/api/state':
             with db() as c:
                 rows=[{**dict(r),'body':json.loads(r['body'])} for r in c.execute("SELECT objects.*, COALESCE((SELECT rowid FROM assets WHERE assets.id=json_extract(objects.body,'$.asset')),0) AS uploadOrder FROM objects ORDER BY title")]
@@ -447,11 +451,23 @@ class Handler(BaseHTTPRequestHandler):
                 if action in ('configure','connect','disconnect'):
                     if not session['user']['admin']:return self.send(403,{'error':'Alleen de beheerder kan Google koppelen.'})
                     if action=='configure':google_connection.configure(DATA,b.get('config',''));return self.send(200,{'ok':True})
-                    if action=='connect':return self.send(200,{'url':google_connection.connect(DATA,self.server.server_port)})
+                    if action=='connect':return self.send(200,{'url':google_connection.connect(DATA,self.server.server_port,b.get('create') is True)})
                     google_connection.disconnect(DATA);return self.send(200,{'ok':True})
                 if action=='import':return self.send(200,google_sources.load(context,b,{}))
                 if action=='select-pages':return self.send(200,google_sources.select_pages(context,b['document'],b['pages']))
                 if action=='prepare':return self.send(200,google_sources.prepare(context,b['body'],b.get('allowCached') is True))
+                return self.send(404,{'error':'Niet gevonden.'})
+            if path.startswith('/api/routes/'):
+                context=SimpleNamespace(**globals());action=path.rsplit('/',1)[-1]
+                if action=='search':return self.send(200,route_maker.search(b))
+                if action=='calculate':return self.send(200,route_maker.calculate(context,b))
+                if action=='load':
+                    model=json.loads(route_maker.stored(context,b.get('id'),'.json').read_text(encoding='utf-8'))
+                    return self.send(200,{k:v for k,v in model.items() if k!='geometry'})
+                if action=='render':return self.send(200,route_maker.render(context,b))
+                if action=='google-export':
+                    import route_google
+                    return self.send(200,route_google.export(context,b))
                 return self.send(404,{'error':'Niet gevonden.'})
             if path=='/api/upload':
                 reader,meta=inspect_pdf(raw);i=ident();title=parse_qs(urlparse(self.path).query).get('title',['Bouwsteen'])[0][:160]

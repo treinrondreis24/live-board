@@ -31,6 +31,25 @@ Python variables:
 - Optional GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET: Google **web** OAuth client,
   Docs API enabled, documents.readonly. Exact authorized redirect:
   https://treinbord.up.railway.app/seinhuis/boekjesmaker/google/callback
+- GEOAPIFY_API_KEY: server-only Geoapify key for location search, Dutch walking
+  directions and OSM Bright static maps. Never include this key in browser URLs.
+- Creating route copies in Google Docs additionally requires Drive API enabled
+  and explicit OAuth consent for drive.file. Existing documents.readonly access
+  continues to work without that extra grant. Copies do not sync back to routes.
+
+## Routemaker
+
+Library → Routemaker. Search and explicitly select both locations, calculate the
+walking route, review the static map/instructions, optionally edit text and upload
+a licensed photo, then generate a PDF and save the normal library block. A4/A5,
+country/destination and standard numbering are preserved. Full route geometry,
+attributed maps and normalized photos live in /data/routes under random IDs;
+they are private and covered by the volume backup. Generation is serialized by
+the existing worker semaphore. Existing PDFs remain immutable. Reopening a route
+does not call Geoapify or change its stored instructions. Map/API failures show a
+sanitized message, never a URL containing the provider key. Google export only
+creates new copies, reuses the recorded copy for the same PDF asset, and requires
+the block to have been saved first.
 
 live-board variables:
 

@@ -7,6 +7,7 @@ from urllib.error import HTTPError, URLError
 LOCK=threading.RLock()
 PENDING={}
 SCOPE='https://www.googleapis.com/auth/documents.readonly'
+CREATE_SCOPE='https://www.googleapis.com/auth/drive.file'
 
 def document_id(url):
     p=urlparse(str(url))
@@ -63,7 +64,7 @@ def write(data,value):
 def status(data):
     with LOCK:
         v=read(data)
-        return {'configured':bool(v.get('client_id') and v.get('client_secret')),'connected':bool(v.get('refresh_token'))}
+        return {'configured':bool(v.get('client_id') and v.get('client_secret')),'connected':bool(v.get('refresh_token')),'canCreate':bool(v.get('refresh_token')) and CREATE_SCOPE in v.get('scope','').split()}
 
 def configure(data,config):
     try:v=json.loads(config)['installed']
@@ -72,7 +73,7 @@ def configure(data,config):
         raise ValueError('Het Google OAuth-clientbestand is niet compleet.')
     with LOCK:write(data,{'client_id':v['client_id'],'client_secret':v['client_secret']})
 
-def connect(data,port):
+def connect(data,port,create=False):
     with LOCK:
         v=read(data)
         if not v.get('client_id'):raise ValueError('Stel eerst de Google Desktop-app in.')
@@ -82,8 +83,9 @@ def connect(data,port):
             redirect=os.environ['BOOKLETS_PUBLIC_ORIGIN'].rstrip('/')+'/seinhuis/boekjesmaker/google/callback'
         for key,p in list(PENDING.items()):
             if p['expires']<time.time():PENDING.pop(key,None)
-        PENDING[state]={'expires':time.time()+600,'verifier':verifier,'redirect':redirect,'client':v}
-        return 'https://accounts.google.com/o/oauth2/v2/auth?'+urlencode(dict(client_id=v['client_id'],redirect_uri=redirect,response_type='code',scope=SCOPE,state=state,access_type='offline',prompt='consent',code_challenge_method='S256',code_challenge=base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).decode().rstrip('=')))
+        scope=SCOPE+(' '+CREATE_SCOPE if create or CREATE_SCOPE in v.get('scope','').split() else '')
+        PENDING[state]={'expires':time.time()+600,'verifier':verifier,'redirect':redirect,'client':v,'scope':scope}
+        return 'https://accounts.google.com/o/oauth2/v2/auth?'+urlencode(dict(client_id=v['client_id'],redirect_uri=redirect,response_type='code',scope=scope,state=state,access_type='offline',prompt='consent',code_challenge_method='S256',code_challenge=base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).decode().rstrip('=')))
 
 def callback(data,query):
     q=parse_qs(query)
@@ -94,7 +96,7 @@ def callback(data,query):
         v=p['client'];result=json.loads(request('https://oauth2.googleapis.com/token',dict(client_id=v['client_id'],client_secret=v['client_secret'],code=q['code'][0],code_verifier=p['verifier'],redirect_uri=p['redirect'],grant_type='authorization_code')))
         if not result.get('refresh_token'):raise ValueError('Google gaf geen blijvende toegang. Trek de oude toestemming bij Google in en koppel opnieuw.')
         if read(data).get('client_id')!=v['client_id']:raise ValueError('De Google-instellingen zijn inmiddels gewijzigd. Koppel opnieuw.')
-        write(data,{**v,'refresh_token':result['refresh_token']})
+        write(data,{**v,'refresh_token':result['refresh_token'],'scope':result.get('scope',p.get('scope',SCOPE))})
 
 def disconnect(data):
     with LOCK:
