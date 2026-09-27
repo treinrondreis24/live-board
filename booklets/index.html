@@ -23,7 +23,7 @@ const clone=x=>structuredClone(x);const byKind=k=>state.objects.filter(o=>o.kind
 
 function toast(t){const modal=$('#modal');if(modal.open){let box=$('#modalMessage');if(!box){box=document.createElement('div');box.id='modalMessage';box.className='error';box.setAttribute('role','alert');box.style.cssText='position:sticky;top:0;z-index:5;margin-bottom:12px';modal.prepend(box)}box.textContent=t;box.scrollIntoView({block:'nearest'});return}$('#toast').textContent=t;$('#toast').hidden=false;clearTimeout(window.tt);window.tt=setTimeout(()=>$('#toast').hidden=true,6500)}
 
-async function api(path,b,raw=false){const r=await fetch(path,b===undefined?{}:{method:'POST',headers:{'X-Booklets':'1','Content-Type':raw?'application/pdf':'application/json'},body:raw?b:JSON.stringify(b)});const data=await r.json();if(!r.ok)throw Error(data.error||'Verzoek mislukt');return data}
+async function api(path,b,raw=false){const r=await fetch(path,b===undefined?{signal:AbortSignal.timeout(30000)}:{method:'POST',headers:{'X-Booklets':'1','Content-Type':raw?'application/pdf':'application/json'},body:raw?b:JSON.stringify(b),signal:AbortSignal.timeout(180000)});const data=await r.json();if(!r.ok)throw Error(data.error||'Verzoek mislukt');return data}
 
 async function run(fn){try{await fn()}catch(e){toast(e.message)}}
 
