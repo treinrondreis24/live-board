@@ -392,5 +392,5 @@ function routeSourcePanel(b){return `<div class="notice"><b>Gemaakt met Routemak
 
 function routeGoogleExport(button){run(async()=>{if(!editor.id)throw Error('Sla de bouwsteen eerst op en open hem daarna opnieuw.');const saved=find(editor.id);if(!saved||JSON.stringify(saved.body)!==JSON.stringify(editor.body)||saved.title!==editor.title)throw Error('Sla uw wijzigingen eerst op en open de bouwsteen opnieuw.');button.disabled=true;try{const result=await api('/api/routes/google-export',{id:editor.id,revision:editor.revision});await refresh();editor=clone(find(editor.id));renderEditor();toast('Google-kopie opgeslagen. Gebruik Open Google-kopie.');}finally{button.disabled=false}})}
 
-function routeRecalculate(button){if(!confirm('De looproute opnieuw ophalen? Aangepaste route-instructies worden vervangen door de nieuwe berekening. Uw aanvullende tekst blijft behouden.'))return;routeCalculate(button)}
+function routeRecalculate(button){if(!button.dataset.confirmed){button.dataset.confirmed='1';button.textContent='Ja, route-instructies opnieuw ophalen';toast('Opnieuw berekenen vervangt aangepaste route-instructies. Uw aanvullende tekst blijft behouden. Klik nogmaals om te berekenen.');return}routeCalculate(button)}
 </script></html>
