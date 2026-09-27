@@ -66,16 +66,16 @@ def calculate(s,b):
     f=data['features'][0];p=f['properties'];geometry=f['geometry']
     distance=float(p['distance']);seconds=float(p['time'])
     if distance>25000:raise ValueError('Deze looproute is langer dan 25 km. Controleer de gekozen locaties.')
-    steps=[{'text':str(x.get('instruction',{}).get('text','')).strip(),'distance':round(float(x.get('distance',0)))} for leg in p.get('legs',[]) for x in leg.get('steps',[]) if x.get('instruction',{}).get('text')]
+    steps=[{'text':str(x.get('instruction',{}).get('text','')).strip().replace('Je bent','U bent').replace('je bestemming','uw bestemming'),'distance':round(float(x.get('distance',0)))} for leg in p.get('legs',[]) for x in leg.get('steps',[]) if x.get('instruction',{}).get('text')]
     if not steps:raise ValueError('De route bevat geen aanwijzingen. Probeer andere vertrek- en aankomstpunten.')
     coords=geometry['coordinates'] if geometry['type']=='LineString' else [c for line in geometry['coordinates'] for c in line]
     if not coords:raise ValueError('Geen kaartlijn gevonden.')
     # Fit the full route with a generous margin, capped at street-level zoom.
     xs=[(c[0]+180)/360 for c in coords]
     ys=[(1-math.asinh(math.tan(math.radians(c[1])))/math.pi)/2 for c in coords]
-    zoom=min(18,math.log2(850/(256*max(max(xs)-min(xs),.00001))),math.log2(500/(256*max(max(ys)-min(ys),.00001))))
+    zoom=min(18,math.log2(850/(512*max(max(xs)-min(xs),.00001))),math.log2(500/(512*max(max(ys)-min(ys),.00001))))
     center={'lon':(min(xs)+max(xs))/2*360-180,'lat':math.degrees(math.atan(math.sinh(math.pi*(1-(min(ys)+max(ys))))))}
-    map_body={'style':'osm-bright','width':1100,'height':700,'format':'png','center':center,'zoom':zoom,'geojson':{'type':'Feature','geometry':geometry,'properties':{'linecolor':'#176b58','linewidth':6}},'markers':[{'lon':a['lon'],'lat':a['lat'],'color':color,'type':'circle','text':label,'size':36} for a,color,label in [(start,'#176b58','A'),(end,'#b54727','B')]]}
+    map_body={'style':'osm-bright','width':1100,'height':700,'format':'png','center':center,'zoom':zoom,'geojson':{'type':'Feature','geometry':geometry,'properties':{'linecolor':'#176b58','linewidth':6}},'markers':[{'lon':a[0],'lat':a[1],'color':color,'type':'material','text':label,'size':48,'contentsize':24,'contentcolor':'#ffffff','whitecircle':'no'} for a,color,label in [(coords[0],'#176b58','A'),(coords[-1],'#b54727','B')]]}
     raw=request('maps.geoapify.com','/v1/staticmap',body=map_body)
     try:
         with PILImage.open(io.BytesIO(raw)) as im:im.verify()
