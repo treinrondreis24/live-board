@@ -1,6 +1,6 @@
 """Local pilot. PDF originals and published exports are immutable. No AI services; optional read-only Google Docs connection."""
 import copy
-import bulk_ops, preflight, google_sources, google_connection, route_maker
+import bulk_ops, preflight, google_sources, google_connection, route_maker, station_catalog
 from types import SimpleNamespace
 from features import COUNTRIES, SIZES, pdf_format, resolved, plan, insert_fillers, refresh_blocks, library_stamp
 import base64, hashlib, hmac, io, json, os, re, secrets, socket, sqlite3, subprocess, threading, time, uuid
@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parent
 DATA = Path(os.environ.get('BOOKLETS_DATA', str(ROOT / 'data')))
 DATA.mkdir(parents=True, exist_ok=True)
 for folder in ('pdfs','exports','previews'): (DATA/folder).mkdir(exist_ok=True)
+station_catalog.initialize(DATA)
 POPPLER = Path.home()/'.cache/codex-runtimes/codex-primary-runtime/dependencies/native/poppler/Library/bin/pdftoppm.exe'
 FONT = ROOT/'fonts/OpenSans-Regular.ttf'
 pdfmetrics.registerFont(TTFont('Booklet', str(FONT)))
@@ -459,7 +460,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(404,{'error':'Niet gevonden.'})
             if path.startswith('/api/routes/'):
                 context=SimpleNamespace(**globals());action=path.rsplit('/',1)[-1]
-                if action=='search':return self.send(200,route_maker.search(b))
+                if action=='stations':return self.send(200,station_catalog.search(DATA,b))
+                if action=='station-location':return self.send(200,station_catalog.resolve(DATA,b,route_maker.request,route_maker.point))
+                if action=='search':
+                    if b.get('kind')=='station' and not b.get('skipCatalog'):
+                        matches=station_catalog.search(DATA,b)
+                        if matches['results']:return self.send(200,matches)
+                    query=', '.join(filter(None,[route_maker.text(b.get('query',''),300),route_maker.text(b.get('city',''),160),route_maker.text(b.get('country',''),100)]))
+                    return self.send(200,route_maker.search({'query':query}))
                 if action=='calculate':return self.send(200,route_maker.calculate(context,b))
                 if action=='load':
                     model=json.loads(route_maker.stored(context,b.get('id'),'.json').read_text(encoding='utf-8'))

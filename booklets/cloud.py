@@ -76,7 +76,7 @@ def application(environ,start_response):
         return [] if method=='HEAD' else FileWrapper(filename.open('rb'),64*1024)
     # One mutation/render at a time. Mutations fail fast; the fixed four HTTP
     # threads may briefly wait for previews, which browsers request in parallel.
-    heavy=(method=='POST' and path!='/api/routes/load') or path.startswith('/files/') or path=='/google/callback'
+    heavy=(method=='POST' and path not in ('/api/routes/load','/api/routes/stations')) or path.startswith('/files/') or path=='/google/callback'
     acquired=not heavy or (BUSY.acquire(timeout=30) if method in ('GET','HEAD') and path.startswith('/files/') else BUSY.acquire(blocking=False))
     if not acquired:
         return response(429,{'error':'Er wordt al een boekje of pagina verwerkt. Probeer het zo nog eens.'},headers={'Retry-After':'3'})
