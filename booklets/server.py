@@ -477,6 +477,20 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200,{'id':i,'pages':len(reader.pages),'meta':meta,'format':pdf_format(meta)})
             if path=='/api/check-layout':
                 return self.send(200,check_layout(b['body'],b.get('values',{})))
+            if path=='/api/template-status':
+                action=b.get('action')
+                if action not in ('archive','unarchive','trash','restore'):raise ValueError('Ongeldige actie.')
+                with LOCK,db() as c:
+                    old=c.execute('SELECT * FROM objects WHERE id=?',(b['id'],)).fetchone()
+                    if not old or old['kind']!='template':raise ValueError('Sjabloon niet gevonden.')
+                    if old['revision']!=b.get('revision'):return self.send(409,{'error':'Dit sjabloon is gewijzigd. Vernieuw het overzicht en probeer opnieuw.'})
+                    body=json.loads(old['body'])
+                    if action=='restore':body.pop('deletedAt',None)
+                    elif action=='trash':body['deletedAt']=now()
+                    elif body.get('deletedAt'):raise ValueError('Herstel dit sjabloon eerst uit de prullenbak.')
+                    else:body['archived']=action=='archive'
+                    c.execute('UPDATE objects SET body=?,revision=revision+1 WHERE id=?',(json.dumps(body,ensure_ascii=False),b['id']))
+                return self.send(200,{'ok':True})
             if path=='/api/book-trash':
                 with LOCK,db() as c:
                     old=c.execute('SELECT * FROM objects WHERE id=?',(b['id'],)).fetchone()
@@ -504,7 +518,7 @@ class Handler(BaseHTTPRequestHandler):
                 with LOCK,db() as c:
                     old=c.execute('SELECT * FROM objects WHERE id=?',(i,)).fetchone()
                     if old and (old['revision']!=b.get('revision') or old['kind']!=kind):return self.send(409,{'error':'Een collega heeft dit onderdeel gewijzigd. Herlaad voordat u verdergaat.'})
-                    if old and json.loads(old['body']).get('deletedAt'):raise ValueError('Deze boeking staat in de prullenbak. Herstel hem eerst vanuit het overzicht.')
+                    if old and json.loads(old['body']).get('deletedAt'):raise ValueError('Dit onderdeel staat in de prullenbak. Herstel het eerst vanuit het overzicht.')
                     b['body'].pop('deletedAt',None)
                     rev=old['revision']+1 if old else 1
                     c.execute('INSERT OR REPLACE INTO objects VALUES(?,?,?,?,?)',(i,kind,title,rev,json.dumps(b['body'],ensure_ascii=False)))
