@@ -23,7 +23,7 @@ async function verifyPassword(p,encoded){const [salt,digest]=encoded.split(':');
 export function clientIP(req){const raw=process.env.RAILWAY_ENVIRONMENT_ID?req.headers['x-real-ip']:req.socket.remoteAddress;const ip=String(raw||'').replace(/^::ffff:/,'');return isIP(ip)?ip:null;}
 export function countryFor(req){const ip=clientIP(req);return ip?geoip.lookup(ip)?.country||null:null;}
 function cookies(req){return Object.fromEntries(String(req.headers.cookie||'').split(';').map(s=>s.trim().split('=')));}
-function cookie(res,name,value,seconds){const existing=res.getHeader('Set-Cookie')||[];res.setHeader('Set-Cookie',[...(Array.isArray(existing)?existing:[existing]),`${name}=${value}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${seconds}`]);}
+function cookie(res,name,value,seconds){const existing=res.getHeader('Set-Cookie')||[];res.setHeader('Set-Cookie',[...(Array.isArray(existing)?existing:[existing]),`${name}=${value}; Path=/; HttpOnly; Secure; SameSite=${name===SESSION?'Lax':'Strict'}; Max-Age=${seconds}`]);}
 function headers(res){res.setHeader('X-Robots-Tag','noindex, nofollow, noarchive');res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');res.setHeader('X-Frame-Options','DENY');}
 function reply(res,status,data){headers(res);res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(data));}
 function fail(message,status=400){const e=Error(message);e.status=status;throw e;}
@@ -31,12 +31,13 @@ async function body(req){let n=0,parts=[];for await(const b of req){n+=b.length;
 const fresh=()=>({user:null,pending:{},sessions:{},devices:{},attempts:{},countries:[{code:'NL',until:null}]});
 function prune(s,now){for(const group of ['pending','sessions','devices'])for(const [id,v] of Object.entries(s[group]))if(v.expires<=now)delete s[group][id];for(const [id,v] of Object.entries(s.attempts))if(v.start<now-15*60000)delete s.attempts[id];}
 export function allowed(s,country,now=Date.now()){return !!country&&s.countries.some(c=>c.code===country&&(!c.until||c.until>now));}
-export function sessionFor(req,s,country,now=Date.now()){const v=s.sessions[hash(cookies(req)[SESSION]||'')];if(!v||v.expires<=now)return null;if(v.username&&v.username!==s.user?.name&&!s.members?.[v.username]?.active)return null;if(v.recovery)return v;return v.country===country&&allowed(s,country,now)?v:null;}
+export function sessionFor(req,s,country,now=Date.now()){const v=s.sessions[hash(cookies(req)[SESSION]||'')];if(!v||v.expires<=now)return null;if(v.username&&v.username!==s.user?.name&&!s.members?.[v.username]?.active)return null;if(v.recovery)return v;if(v.device){const d=s.devices[v.device];if(country!=='NL'||hash(cookies(req)[TRUST]||'')!==v.device||!d||d.expires<=now||(d.username||s.user.name)!==(v.username||s.user.name))return null;}return v.country===country&&allowed(s,country,now)?v:null;}
 export async function securityStatus(){return !!(await readAdminSecurity()).value?.user;}
 export async function adminAuthenticated(req,scope='owner'){const s=(await readAdminSecurity()).value;if(!s?.user)return false;const session=sessionFor(req,s,countryFor(req));return !!session&&!session.recovery&&(!session.username||session.username===s.user.name||scope==='treinhuis'&&s.members?.[session.username]?.scope==='treinhuis');}
 function consumeRecovery(user,code){const h=hash(String(code||'').replace(/[\s-]/g,'').toUpperCase());const i=user.recovery.findIndex(x=>safe(x,h));if(i<0)return false;user.recovery.splice(i,1);return true;}
 function codes(){return Array.from({length:10},()=>randomBytes(10).toString('hex').toUpperCase());}
-export function newSession(s,res,now,recovery=false,country=null,username=null){const t=token();s.sessions[hash(t)]={expires:now+(recovery?15*60000:12*3600000),recovery,created:now,country,username};cookie(res,SESSION,t,recovery?900:43200);}
+export function newSession(s,res,now,recovery=false,country=null,username=null,device=null){const t=token(),seconds=recovery?900:device?Math.max(0,Math.min(30*86400,Math.floor((s.devices[device].expires-now)/1000))):43200;s.sessions[hash(t)]={expires:now+seconds*1000,recovery,created:now,country,username,...(device?{device}:{})};cookie(res,SESSION,t,seconds);}
+
 function countryList(input){if(!Array.isArray(input)||!input.length||input.length>250)fail('Kies minstens één land.');const display=new Intl.DisplayNames(['nl'],{type:'region'});return input.map(v=>{const code=String(v.code||'').toUpperCase();if(!/^[A-Z]{2}$/.test(code)||display.of(code)===code)fail('Onbekend land.');const until=v.until?Number(v.until):null;if(until&&(!Number.isFinite(until)||until<=Date.now()))fail('De einddatum moet in de toekomst liggen.');return {code,until};});}
 
 // Mutation requests use a durable CAS revision. Racing requests fail rather than
@@ -53,7 +54,7 @@ export async function handleAdminSecurity(req,res,url){
  try{
   const record=await readAdminSecurity(),s=record.value||fresh(),now=Date.now(),country=countryFor(req);prune(s,now);
   const session=sessionFor(req,s,country,now),action=path.slice('/api/admin-security/'.length);
-  if(req.method==='GET'&&action==='session'){reply(res,200,{setup:!s.user,authenticated:!!session,recovery:!!session?.recovery,country,username:session?(session.username||s.user.name):undefined,scope:session?.username&&session.username!==s.user?.name?'treinhuis':'owner'});return true;}
+  if(req.method==='GET'&&action==='session'){reply(res,200,{setup:!s.user,authenticated:!!session,recovery:!!session?.recovery,country,username:session?(session.username||s.user.name):undefined,scope:session?.username&&session.username!==s.user?.name?'treinhuis':'owner',trustedUsername:country==='NL'?s.devices[hash(cookies(req)[TRUST]||'')]?.username:undefined});return true;}
   if(req.method==='GET'&&action==='settings'){
    if(session?.username&&session.username!==s.user.name)fail('Alleen toegang tot Treinhuis.',403);
    if(!session)fail('Log eerst in.',401);
@@ -94,7 +95,7 @@ export async function handleAdminSecurity(req,res,url){
    const user=[s.user,...Object.values(s.members||{}).filter(u=>u.active)].find(u=>u.name.toLowerCase()===String(input.username||'').toLowerCase())||s.user;
    const valid=await verifyPassword(input.password||'',user.password);
    if(!valid||!safe(String(input.username||'').toLowerCase(),user.name.toLowerCase()))fail('Inloggegevens kloppen niet.',401);
-   const recovery=!!input.recoveryCode;
+   const recovery=!!input.recoveryCode;let rememberedDevice=null;
    if(recovery){if(user!==s.user)fail('Vraag de eigenaar om je toegang opnieuw in te stellen.',403);if(!consumeRecovery(user,input.recoveryCode))fail('Herstelcode klopt niet of is al gebruikt.',401);}
    else{
     if(!allowed(s,country,now))fail('Dit land is niet toegestaan of kon niet worden vastgesteld. Gebruik de herstelroute.',403);
@@ -102,9 +103,10 @@ export async function handleAdminSecurity(req,res,url){
     const trusted=country==='NL'&&device&&device.expires>now&&(device.username||s.user.name)===user.name;
     const verified=trusted?false:consumeTotp(user,input.code,now);
     if(!trusted&&!verified)fail('Vul een geldige authenticatorcode in. Elke code kan eenmaal gebruikt worden.',401);
-    if(input.trust&&country==='NL'&&verified){const t=token();s.devices[hash(t)]={created:now,expires:now+30*DAY,username:user.name,label:String(input.deviceName||'Mijn browser').slice(0,80)};cookie(res,TRUST,t,30*86400);}
+    if(input.trust&&country==='NL'&&verified){const t=token();s.devices[hash(t)]={created:now,expires:now+30*DAY,username:user.name,label:String(input.deviceName||'Mijn browser').slice(0,80)};cookie(res,TRUST,t,30*86400);rememberedDevice=hash(t);}
+    if(input.trust&&trusted)rememberedDevice=hash(cookies(req)[TRUST]||'');
    }
-   newSession(s,res,now,recovery,country,user.name);await commit({ok:true,recovery});return true;
+   newSession(s,res,now,recovery,country,user.name,rememberedDevice);await commit({ok:true,recovery});return true;
   }
   if(!session)fail('Log eerst in.',401);
   if(action==='logout'){delete s.sessions[hash(cookies(req)[SESSION]||'')];cookie(res,SESSION,'',0);await commit({ok:true});return true;}

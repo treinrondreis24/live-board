@@ -20,8 +20,16 @@ await call('logout',{});assert.equal((await call('session')).data.authenticated,
 const creds={username:'hilde',password:'new-personal-password-123'};
 assert.equal((await call('login',{...creds,code:totp(secret,now)})).status,401,'TOTP replay blocked');
 now+=30000;assert.equal((await call('login',{...creds,code:totp(secret,now),trust:true,deviceName:'Laptop'})).status,200);
-assert.ok(jar.tr_admin_device);await call('logout',{});
+assert.ok(jar.tr_admin_device);
+now+=13*3600000;
+assert.equal((await call('session')).data.authenticated,true,'Remembered login survives twelve hours');
+assert.equal((await call('session',null,{jar:{tr_admin_session:jar.tr_admin_session}})).data.authenticated,false,'Remembered session requires its device cookie');
+assert.equal((await call('session')).data.trustedUsername,'hilde');
+await call('logout',{});
 assert.equal((await call('login',creds)).status,200,'Trusted NL browser skips TOTP');
+now+=13*3600000;
+assert.equal((await call('session')).data.authenticated,false,'Without remember option login still expires after twelve hours');
+assert.equal((await call('login',creds)).status,200);
 const settings=await call('settings');assert.equal(settings.data.devices.length,1);
 // Reset rate window to exercise further independent scenarios.
 now+=16*60000;
