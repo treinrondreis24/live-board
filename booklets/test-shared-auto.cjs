@@ -1,0 +1,17 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const nodes=new Map();const node=s=>{if(!nodes.has(s))nodes.set(s,{innerHTML:'',open:true,showModal(){}});return nodes.get(s)};
+const ctx=vm.createContext({document:{querySelector:node},window:{addEventListener(){}},structuredClone,console,clearTimeout,setTimeout});
+vm.runInContext(fs.readFileSync(__dirname+'/index.html','utf8').split('<script>')[2].split('</script>')[0].replace(/init\(\)\.catch\(e=>\{[^\n]+/,''),ctx);
+vm.runInContext(`state={countries:['Oostenrijk'],objects:[{id:'one',kind:'block',title:'Hotel A',body:{format:'A5',categories:['Routes'],country:'Oostenrijk',destination:'Wenen'}},{id:'two',kind:'block',title:'Hotel B',body:{format:'A5',categories:['Routes'],country:'Oostenrijk',destination:'wenen'}},{id:'three',kind:'block',title:'Hotel C',body:{format:'A4',categories:['Routes'],country:'Oostenrijk',destination:'Wenen'}},{id:'archived',kind:'block',body:{format:'A5',categories:['Routes'],country:'Oostenrijk',destination:'Graz',archived:true}}]};view='choices';render();`,ctx);
+assert.equal(vm.runInContext('allSharedChoices().length',ctx),2);
+assert(node('#main').innerHTML.includes('Automatisch'));
+assert(!node('#main').innerHTML.includes('Graz'));
+assert.equal(vm.runInContext("routeOptions(allSharedChoices()[0].body.slot,'A5').length",ctx),2);
+vm.runInContext("editSharedChoice(allSharedChoices()[0].id)",ctx);
+assert.equal(vm.runInContext('sharedEditor.id',ctx),undefined);
+vm.runInContext("state.objects.push({id:'saved',kind:'choice',title:'Eigen Wenen',body:{format:'A5',archived:true,slot:{choice:'route',country:'Oostenrijk',destination:'Wenen',options:[]}}})",ctx);
+assert.equal(vm.runInContext('allSharedChoices().length',ctx),2,'Manual or archived configuration replaces automatic group');
+vm.runInContext("draft={body:{format:'A4',sections:[]}};renderDraft=()=>{};closeModal=()=>{};useSharedChoice(allSharedChoices().find(o=>o.automatic).id)",ctx);
+assert.equal(vm.runInContext('draft.body.sections[0].destination',ctx),'Wenen');
+assert.equal(vm.runInContext("routeOptions(draft.body.sections[0],'A4').length",ctx),1);
+console.log('Automatic destination choices, format separation, archived override and adding to book verified.');
