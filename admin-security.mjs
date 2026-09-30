@@ -31,7 +31,7 @@ async function body(req){let n=0,parts=[];for await(const b of req){n+=b.length;
 const fresh=()=>({user:null,pending:{},sessions:{},devices:{},attempts:{},countries:[{code:'NL',until:null}]});
 function prune(s,now){for(const group of ['pending','sessions','devices'])for(const [id,v] of Object.entries(s[group]))if(v.expires<=now)delete s[group][id];for(const [id,v] of Object.entries(s.attempts))if(v.start<now-15*60000)delete s.attempts[id];}
 export function allowed(s,country,now=Date.now()){return !!country&&s.countries.some(c=>c.code===country&&(!c.until||c.until>now));}
-export function sessionFor(req,s,country,now=Date.now()){const v=s.sessions[hash(cookies(req)[SESSION]||'')];if(!v||v.expires<=now)return null;if(v.username&&v.username!==s.user?.name&&!s.members?.[v.username]?.active)return null;if(v.recovery)return v;if(v.device){const d=s.devices[v.device];if(country!=='NL'||hash(cookies(req)[TRUST]||'')!==v.device||!d||d.expires<=now||(d.username||s.user.name)!==(v.username||s.user.name))return null;}return v.country===country&&allowed(s,country,now)?v:null;}
+export function sessionFor(req,s,country,now=Date.now()){const v=s.sessions[hash(cookies(req)[SESSION]||'')];if(!v||v.expires<=now)return null;if(v.username&&v.username!==s.user?.name&&!s.members?.[v.username]?.active)return null;if(v.recovery)return v;if(v.device){const d=s.devices[v.device];if(hash(cookies(req)[TRUST]||'')!==v.device||!d||d.expires<=now||(d.username||s.user.name)!==(v.username||s.user.name))return null;}return (v.device||v.country===country)&&allowed(s,country,now)?v:null;}
 export async function securityStatus(){return !!(await readAdminSecurity()).value?.user;}
 export async function adminAuthenticated(req,scope='owner'){const s=(await readAdminSecurity()).value;if(!s?.user)return false;const session=sessionFor(req,s,countryFor(req));return !!session&&!session.recovery&&(!session.username||session.username===s.user.name||scope==='treinhuis'&&s.members?.[session.username]?.scope==='treinhuis');}
 function consumeRecovery(user,code){const h=hash(String(code||'').replace(/[\s-]/g,'').toUpperCase());const i=user.recovery.findIndex(x=>safe(x,h));if(i<0)return false;user.recovery.splice(i,1);return true;}
@@ -54,7 +54,7 @@ export async function handleAdminSecurity(req,res,url){
  try{
   const record=await readAdminSecurity(),s=record.value||fresh(),now=Date.now(),country=countryFor(req);prune(s,now);
   const session=sessionFor(req,s,country,now),action=path.slice('/api/admin-security/'.length);
-  if(req.method==='GET'&&action==='session'){reply(res,200,{setup:!s.user,authenticated:!!session,recovery:!!session?.recovery,country,username:session?(session.username||s.user.name):undefined,scope:session?.username&&session.username!==s.user?.name?'treinhuis':'owner',trustedUsername:country==='NL'?s.devices[hash(cookies(req)[TRUST]||'')]?.username:undefined});return true;}
+  if(req.method==='GET'&&action==='session'){reply(res,200,{setup:!s.user,authenticated:!!session,recovery:!!session?.recovery,country,username:session?(session.username||s.user.name):undefined,scope:session?.username&&session.username!==s.user?.name?'treinhuis':'owner',trustedUsername:allowed(s,country,now)?s.devices[hash(cookies(req)[TRUST]||'')]?.username:undefined});return true;}
   if(req.method==='GET'&&action==='settings'){
    if(session?.username&&session.username!==s.user.name)fail('Alleen toegang tot Treinhuis.',403);
    if(!session)fail('Log eerst in.',401);
@@ -100,10 +100,10 @@ export async function handleAdminSecurity(req,res,url){
    else{
     if(!allowed(s,country,now))fail('Dit land is niet toegestaan of kon niet worden vastgesteld. Gebruik de herstelroute.',403);
     const device=s.devices[hash(cookies(req)[TRUST]||'')];
-    const trusted=country==='NL'&&device&&device.expires>now&&(device.username||s.user.name)===user.name;
+    const trusted=allowed(s,country,now)&&device&&device.expires>now&&(device.username||s.user.name)===user.name;
     const verified=trusted?false:consumeTotp(user,input.code,now);
     if(!trusted&&!verified)fail('Vul een geldige authenticatorcode in. Elke code kan eenmaal gebruikt worden.',401);
-    if(input.trust&&country==='NL'&&verified){const t=token();s.devices[hash(t)]={created:now,expires:now+30*DAY,username:user.name,label:String(input.deviceName||'Mijn browser').slice(0,80)};cookie(res,TRUST,t,30*86400);rememberedDevice=hash(t);}
+    if(input.trust&&allowed(s,country,now)&&verified){const t=token();s.devices[hash(t)]={created:now,expires:now+30*DAY,username:user.name,label:String(input.deviceName||'Mijn browser').slice(0,80)};cookie(res,TRUST,t,30*86400);rememberedDevice=hash(t);}
     if(input.trust&&trusted)rememberedDevice=hash(cookies(req)[TRUST]||'');
    }
    newSession(s,res,now,recovery,country,user.name,rememberedDevice);await commit({ok:true,recovery});return true;

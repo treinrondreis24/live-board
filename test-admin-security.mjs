@@ -39,7 +39,10 @@ const recoveryJar={};const recovery=await call('login',{...creds,recoveryCode:fi
 assert.equal(await adminAuthenticated({headers:{'x-real-ip':'8.8.8.8',cookie:Object.entries(recoveryJar).map(([k,v])=>k+'='+v).join('; ')},socket:{}}),false,'Recovery session cannot edit boards');
 assert.equal((await call('login',{...creds,recoveryCode:finish.data.recoveryCodes[0]},{ip:'8.8.8.8',jar:{}})).status,401,'Recovery code single use');
 assert.equal((await call('countries',{countries:[{code:'NL'},{code:'US',until:now+86400000}],recoveryCode:finish.data.recoveryCodes[1]},{ip:'8.8.8.8',jar:recoveryJar})).status,200);
-assert.equal((await call('login',creds,{ip:'8.8.8.8'})).status,401,'NL device still requires MFA abroad');
+assert.equal((await call('login',{...creds,trust:true},{ip:'8.8.8.8'})).status,200,'Trusted browser works in an allowed travel country');
+assert.equal((await call('session')).data.authenticated,true,'Remembered session follows browser back to NL');
+assert.equal((await call('session',null,{ip:'8.8.8.8'})).data.authenticated,true,'Remembered session follows browser abroad');
+const checkpoint=now;now+=2*86400000;assert.equal((await call('session',null,{ip:'8.8.8.8'})).data.authenticated,false,'Expired country permission still blocks remembered sessions');now=checkpoint;
 now+=30000;assert.equal((await call('login',{...creds,code:totp(secret,now)},{ip:'8.8.8.8'})).status,200);
 assert.equal((await call('session')).data.authenticated,false,'Cross-country sessions require a new login');
 assert.equal((await call('login',creds)).status,200,'Return to trusted NL browser');
@@ -49,4 +52,4 @@ assert.equal((await call('login',creds)).status,401,'Revoked device requires MFA
 const a=await readAdminSecurity();await writeAdminSecurity(a.value,a.revision);await assert.rejects(()=>writeAdminSecurity(a.value,a.revision),/ondertussen/);
 now+=16*60000;for(let n=0;n<12;n++)assert.equal((await call('login',{...creds,password:'bad'})).status,401);assert.equal((await call('login',creds)).status,429);
 assert.ok(!(await readAdminSecurity()).value.user.secret.includes(secret),'TOTP secret encrypted');
-Date.now=originalNow;db.close();console.log('PASS: setup, TOTP vector/replay, sessions, NL-only browser trust, countries, recovery, revocation, CAS and rate limits');
+Date.now=originalNow;db.close();console.log('PASS: setup, TOTP vector/replay, sessions, trusted travel browsers, countries, recovery, revocation, CAS and rate limits');
