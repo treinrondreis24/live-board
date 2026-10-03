@@ -25,6 +25,6 @@ export function applyFollowup(state,{now=new Date().toISOString(),mode='manual',
  state.checkpoint={at:now,booking:plan.booking,evidence:plan.evidence};
  const run={at:now,from,mode,user,selected:plan.trips.size,changed:plan.changed.size,recurring:plan.recurring.size};
  (state.checkRuns??=[]).push(run);
- state.audit.push({at:now,user,action:mode==='weekly'?'Woensdagcontrole':'Extra controle',detail:`Vanaf ${from||'eerste controle'}: ${run.selected} boekingen geselecteerd (${run.changed} nieuw/gewijzigd, ${run.recurring} met hercontrole; kan overlappen). Ongewijzigde overige aandachtspunten behouden.`});
+ state.audit.push({at:now,user,action:mode==='daily'?'Dagelijkse controle':'Extra controle',detail:`Vanaf ${from||'eerste controle'}: ${run.selected} boekingen geselecteerd (${run.changed} nieuw/gewijzigd, ${run.recurring} met hercontrole; kan overlappen). Ongewijzigde overige aandachtspunten behouden.`});
  return run;
 }

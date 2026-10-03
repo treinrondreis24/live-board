@@ -3,10 +3,40 @@ const num=(s,re)=>{const m=s.match(re);return m?Number(m[1]):null;};
 export function dateValue(s){const numeric=String(s).match(/\b(\d{1,2})[./-](\d{1,2})[./-](20\d{2})\b/);if(numeric)return `${numeric[3]}-${numeric[2].padStart(2,'0')}-${numeric[1].padStart(2,'0')}`;const m=String(s).toLowerCase().match(/\b(\d{1,2})\s+(jan\w*|feb\w*|mar\w*|maa\w*|apr\w*|may|mei|jun\w*|jul\w*|aug\w*|sep\w*|oct\w*|okt\w*|nov\w*|dec\w*)\.?\s+(20\d{2})/);if(!m)return '';const month={jan:1,feb:2,mar:3,maa:3,apr:4,may:5,mei:5,jun:6,jul:7,aug:8,sep:9,oct:10,okt:10,nov:11,dec:12}[m[2].slice(0,3)];return `${m[3]}-${String(month).padStart(2,'0')}-${m[1].padStart(2,'0')}`;}
 const numericDate='\\d{1,2}[./-]\\d{1,2}[./-]20\\d{2}';
 function afterDate(s,label){const m=s.match(new RegExp(label+'[^\\d]{0,25}('+numericDate+')','i'));return m?dateValue(m[1]):'';}
-function roomCapacity(s){if(/single|eenpersoons/i.test(s))return 1;if(/double|twin|tweepersoons/i.test(s))return 2;if(/triple|driepersoons/i.test(s))return 3;return null;}
-// Only supported supplier layouts produce evidence. Free-form replies and quoted requests remain candidates.
+export function roomCapacity(s){
+ const alternatives=String(s).split(/\s+(?:of|or|oder)\s+/i);if(alternatives.length>1){const values=alternatives.map(roomCapacity);return values.every(v=>v!=null)?Math.min(...values):null;}
+ const beds=[...String(s).matchAll(/(\d+)\s*(tweepersoonsbed(?:den)?|eenpersoonsbed(?:den)?|double beds?|single beds?|queen(?: beds?)?|king(?: beds?)?)/gi)];
+ if(beds.length)return beds.reduce((n,m)=>n+Number(m[1])*(/eenpersoons|single/i.test(m[2])?1:2),0);
+ if(/\b1 twee-$/i.test(s))return 2;
+ if(/triple|driepersoons/i.test(s))return 3;if(/double|twin|tweepersoons|doppelzimmer/i.test(s))return 2;if(/single|eenpersoons|einzelzimmer/i.test(s))return 1;return null;
+}
+export function hotelReplyReview(message){
+ const domain=message.from.match(/@([a-z0-9.-]+)/i)?.[1]?.toLowerCase(),provider=domain==='bernerhof-interlaken.ch'?'Hotel Bernerhof':domain==='hotel-federale.ch'?'Hotel Federale':'';
+ const head=message.docs.filter(d=>d.label==='E-mail').map(d=>d.text).join(' ').replace(/\s+/g,' ').split(/Best regards|Sincerely|Kind regards|\bVon:|\bFrom:|\bDa:|\bOn .{0,100}wrote:|\bOp .{0,100}schreef:/i)[0];
+ return provider&&/confirm|reserv|book|cancel|storn|annul|room|date|fully booked/i.test(head)?provider:'';
+}
+function directHotel(s,message){
+ const domain=message.from.match(/@([a-z0-9.-]+)/i)?.[1]?.toLowerCase(),provider=domain==='bernerhof-interlaken.ch'?'Hotel Bernerhof':domain==='hotel-federale.ch'?'Hotel Federale':'';
+ if(!provider)return null;
+ // Only the hotel's own opening reply can confirm; never a quoted older reply or our request.
+ const head=s.split(/Best regards|Sincerely|Kind regards|\bVon:|\bFrom:|\bDa:|\bOn .{0,100}wrote:|\bOp .{0,100}schreef:/i)[0];
+ if(!/\bwe confirm\b|\b(?:reservation|booking)\s+[\w(). -]{0,35}\bconfirmed\b|\bnew confirmation:/i.test(head)||/cannot|can't|not confirm|shall we|would|could|\?|cancel|storn|annul/i.test(head))return null;
+ const requests=[...s.matchAll(/Arrival date:\s*(.*?)\s*Departure date:\s*(.*?)\s*Customer name:\s*(.*?)\s*Rooms:\s*(.*?)\s*Persons:\s*(.*?)\s*Our reference:\s*(\d{4,6})A/gi)];
+ if(!requests.length||new Set(requests.map(m=>JSON.stringify(m.slice(1)))).size!==1)return null;
+ const r=requests[0],trip=message.subject.match(/\b(\d{4,6})A\b/i)?.[1];if(trip!==r[6])return null;
+ // Amendments need their own explicit dates and room interpretation; do not reuse an older request.
+ if(/new confirmation|chang|instead|rather|different|tomorrow|earlier|later|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\b|\b\d{1,2}[./-]\d{1,2}\b/i.test(head))return null;
+ const qty=Number(r[4].match(/^(\d+)\s*x/i)?.[1]||0);if(qty!==1)return null;
+ const room=roomCapacity(head)!=null?head:r[4],occupants=[...r[5].matchAll(/\([^)]*\d{4}\)/g)].length;
+ return {provider,reference:head.match(/HCN:\s*(\w+)/i)?.[1]||'EMAIL-'+trip,start:dateValue(r[1]),end:dateValue(r[2]),name:r[3],occupants:occupants||null,capacity:roomCapacity(room),room,product:provider,tripHint:trip};
+}
+// Supported supplier layouts and explicit hotel replies produce evidence; requests alone never do.
 export function parseDocument(doc,message){
- if(doc.label==='E-mail'&&/cancel|annul|refund|storn/i.test(message.subject))return null;
+ if(doc.label==='E-mail'&&/cancel|annul|refund|storn/i.test(message.subject)){
+  const c=cancellation(message);if(c?.provider!=='Premier Inn')return null;
+  const text=doc.text.replace(/\s+/g,' '),germanDate=s=>dateValue(String(s||'').replace(/(\d)\.\s+/g,'$1 ').replace(/Dezember/gi,'December').replace(/Oktober/gi,'October').replace(/März/gi,'March'));
+  try{return {...validateEvidence([{...c,source:c.source,status:'cancelled',start:germanDate(text.match(/Check-in\s+(.*?)\s+-/i)?.[1]),end:germanDate(text.match(/Check-out\s+(.*?)\s+-/i)?.[1])}])[0],product:'Premier Inn',messageId:message.id,document:doc.label,observedAt:message.at};}catch{return null;}
+ }
  const s=doc.text.replace(/\s+/g,' ').trim(),n=normalize(s);let e=null;
  if(/expediataap\./i.test(message.from)&&/je boeking is bevestigd/i.test(s)&&/Reisplannummer\s+\d+/i.test(s)){
   const d=s.match(/Boekingsdatums\s+(.*?)\s+-\s+(.*?)\s+Reisplannummer/i),name=s.match(/Geboekt voor\s+(.+?)\s+(\d+)\s+volwassenen/i),room=s.match(/\bKamer\s+(.*?)\s+Kamervoorkeuren/i);
@@ -28,15 +58,21 @@ export function parseDocument(doc,message){
   e={provider:'RateHawk',reference:s.match(/Reservering\s+(\d+)/i)?.[1],start:afterDate(s,'Inchecken'),end:afterDate(s,'Uitchecken:'),name:s.match(/Gasten:\s*(.*?)(?:,|Belangrijk)/i)?.[1]||'',occupants:num(s,/voor\s+(\d+)\s+volwassenen/i),capacity:roomCapacity(s.match(/Klassiek(.*?)Gasten:/i)?.[0]||''),product:s.match(/door onze partner\s+(.*?)\s+\d{4,}/i)?.[1]||'',room:s.match(/Klassiek(.*?)Gasten:/i)?.[0]||''};
  }else if(doc.label!=='E-mail'&&/Voucher\s*\/\s*Confirmation/i.test(s)&&/Switzerland Travel Centre/i.test(s)){
   e={provider:'STC',reference:s.match(/Booking\s+(TRR\d+)/i)?.[1],start:afterDate(s,'Check in day'),end:afterDate(s,'Check out day'),name:s.match(/Booking name\s+(?:Ms\.|Mr\.)?\s*(.*?),/i)?.[1]||'',occupants:num(s,/Occupancy\s+(\d+)\s+adults/i),capacity:roomCapacity(s.match(/Room description\s+(.*?)Room type/i)?.[1]||''),product:s.match(/Hotel\/Service\s+(.*?)\s+(?:Bleicheplatz|Via|[A-Z][a-z]+strasse)/i)?.[1]||'',room:s.match(/Room description\s+(.*?)Room type/i)?.[1]||''};
- }
+ }else if(doc.label==='E-mail')e=directHotel(s,message);
  if(!e?.reference||!e.start||!e.end)return null;
  try{return {...validateEvidence([{...e,source:message.url,status:'confirmed'}])[0],product:e.product,room:e.room,messageId:message.id,document:doc.label,observedAt:message.at,ticketLink:doc.link||'',tripHint:message.subject.match(/\b(\d{4,6})A\b/i)?.[1]||s.match(/(?:\bRef:|Our reference:)\s*(\d{4,6})A\b/i)?.[1]||'',sourceText:s.slice(0,7000)};}catch{return null;}
 }
-export function cancellation(message){const text=message.docs.filter(d=>d.label==='E-mail').map(d=>d.text).join(' ');if(/@oebb\.at/i.test(message.from)&&/refund/i.test(message.subject)&&/refund.*processed successfully/i.test(text)&&/refunded tickets become invalid/i.test(text)){const ref=text.match(/Booking code:\s*([\d ]{16,25})/i);if(ref)return {provider:'ÖBB',reference:ref[1].replace(/\s/g,''),at:message.at,source:message.url};}return null;}
+export function cancellation(message){
+ const text=message.docs.filter(d=>d.label==='E-mail').map(d=>d.text).join(' ');let provider='',reference='';
+ if(/@oebb\.at\b/i.test(message.from)&&/refund/i.test(message.subject)&&/refund.*processed successfully/i.test(text)&&/refunded tickets become invalid/i.test(text)){provider='ÖBB';reference=text.match(/Booking code:\s*([\d ]{16,25})/i)?.[1]?.replace(/\s/g,'');}
+ if(/@expediataap\.nl\b/i.test(message.from)&&/Annuleringsbevestiging/i.test(message.subject)&&/Je hebt geannuleerd/i.test(text)){provider='Expedia';reference=text.match(/TAAP-reisplannummer:\s*(\d+)/i)?.[1];}
+ if(/@(?:[\w-]+\.)*premierinn\.com\b/i.test(message.from)&&/Stornierung|Cancellation/i.test(message.subject)&&/Buchung storniert|booking (?:has been |is )?cancelled/i.test(text)){provider='Premier Inn';reference=text.match(/(?:Buchungsnummer|Booking reference)\s*:?\s*([A-Z0-9]+)/i)?.[1];}
+ return reference?{provider,reference,at:message.at,source:message.url}:null;
+}
 const quoted=s=>'"'+String(s).replace(/["\\{}\r\n]/g,' ').trim()+'"';
 export function bookingQuery(b){const ss=stays(b),terms=[quoted(String(b.index)+'A'),...ss.map(t=>t.reference).filter(r=>r.length>=5).map(quoted),...(b.passengers||[]).filter(p=>p.lastName?.length>=3&&p.firstName?.trim()).map(p=>'('+quoted(p.firstName.trim().split(/\s+/)[0])+' '+quoted(p.lastName)+')')];return '('+[...new Set(terms)].join(' OR ')+') -in:spam -in:trash';}
 export function matchEvidence(e,b){if(e.tripHint&&e.tripHint!==String(b.index))return null;const ss=stays(b),ref=normalize(e.reference).replace(/ /g,''),exact=ss.filter(t=>t.reference&&ref.startsWith(normalize(t.reference).replace(/ /g,'')));let candidates=exact;
- if(!candidates.length){if(b.dateDeparture&&b.dateReturn&&(Date.parse(e.end)<Date.parse(b.dateDeparture)-60*86400000||Date.parse(e.start)>Date.parse(b.dateReturn)+60*86400000))return null;const name=normalize(e.name);if(!(b.passengers||[]).some(p=>name.includes(normalize(p.lastName))&&name.includes(normalize(p.firstName).split(' ')[0])))return null;const productWords=normalize(e.product).split(' ').filter(w=>w.length>3&&!['hotel','premier','international','centraal'].includes(w));candidates=ss.filter(t=>e.provider==='NS International'||e.provider==='ÖBB'?t.type==='Nachttrein'&&((e.direction==='outbound'&&t.start===b.dateDeparture)||(e.direction==='inbound'&&t.end===b.dateReturn)||t.start===e.start):e.provider==='Finnlines'?t.provider==='Finnlines':productWords.some(w=>normalize(t.title).includes(w)));}
+ if(!candidates.length){if(b.dateDeparture&&b.dateReturn&&(Date.parse(e.end)<Date.parse(b.dateDeparture)-60*86400000||Date.parse(e.start)>Date.parse(b.dateReturn)+60*86400000))return null;const name=normalize(e.name);if(!e.tripHint&&!(b.passengers||[]).some(p=>name.includes(normalize(p.lastName))&&name.includes(normalize(p.firstName).split(' ')[0])))return null;const productWords=normalize(e.product).split(' ').filter(w=>w.length>3&&!['hotel','premier','international','centraal'].includes(w));candidates=ss.filter(t=>e.provider==='NS International'||e.provider==='ÖBB'?t.type==='Nachttrein'&&((e.direction==='outbound'&&t.start===b.dateDeparture)||(e.direction==='inbound'&&t.end===b.dateReturn)||t.start===e.start):e.provider==='Finnlines'?t.provider==='Finnlines':productWords.some(w=>normalize(t.title).includes(w)));}
  if(candidates.length>1){const dated=candidates.filter(t=>t.start===e.start);if(dated.length===1)candidates=dated;}
  if(candidates.length!==1)return null;const t=candidates[0];const words=normalize(e.product).split(' ').filter(w=>w.length>3&&!['hotel','international'].includes(w)),same=words.length>0&&words.every(w=>normalize(t.title).includes(w))||normalize(t.title.split('|')[0]).replace(/roma/g,'rome').split(' ').filter(w=>w.length>3&&!['hotel','teldar','mecure','stc'].includes(w)).filter(w=>normalize(e.product).includes(w)).length>=2||normalize(b.notes).includes(normalize(e.product))&&normalize(e.product).length>10;
  const productMatch=(t.type==='Nachttrein'&&!!e.direction)||(e.provider==='Finnlines'&&/helsinki/i.test(e.product)&&(/helsinki/i.test(t.title)||stays(b).some(x=>x.start===e.end&&/helsinki/i.test(x.title))))||same;

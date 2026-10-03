@@ -31,7 +31,7 @@ export function evaluate(state,now=new Date().toISOString(),options={}){
    if(check&&check.state!=='found'&&linked.some(e=>e.todoKey===t._key&&e.status==='confirmed'))emit(b,t,'email-incomplete','attention','E-mailcontrole nog niet afgerond',check.explanation);
    const all=linked.filter(e=>e.todoKey===t._key),live=all.filter(e=>e.status==='confirmed');
    if(!check&&live.some(e=>e.automaticEmail))emit(b,t,'email-incomplete','attention','Boekingsgerichte e-mailcontrole nodig','Een reservering is bij de mailboxcontrole gevonden; de volledige zoekronde voor deze overnachting volgt nog.',live);
-   if(!live.length)emit(b,t,'missing','attention','Overnachting nog niet gecontroleerd',check?check.explanation:t.confirmed?'Afgevinkt in Sanity; nog niet in e-mail gezocht.':'Nog niet bevestigd of bevestiging nog niet verwerkt; nog niet in e-mail gezocht.',all);
+   if(!live.length){const backup=/backup|annul|storn/i.test(t.title+' '+(t.description||''))&&all.some(e=>e.status==='cancelled');emit(b,t,backup?'cancelled-todo':'missing','attention',backup?'Geannuleerde backup: todo bijwerken':'Overnachting nog niet gecontroleerd',backup?'Annulering in de e-mail bevestigd. Deze reservering telt niet als actieve boeking; controleer de verouderde todo.':check?check.explanation:t.confirmed?'Afgevinkt in Sanity; nog niet in e-mail gezocht.':'Nog niet bevestigd of bevestiging nog niet verwerkt; nog niet in e-mail gezocht.',all);}
    // Distinct reservations may legitimately cover multiple rooms. Explicit group + total occupancy
    // is required; repeated messages for one reservation are not duplicate reservations.
    const refs=new Set(live.map(e=>e.provider+'|'+e.reference));
