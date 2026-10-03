@@ -1,3 +1,4 @@
+import {floraGoogle} from './flora-google.mjs';
 import {readFile} from 'node:fs/promises';
 import {adminAuthenticated} from './admin-security.mjs';
 import {readAdminSecurity} from './board-cache.mjs';
@@ -8,13 +9,14 @@ import {applyFollowup} from './flora-followup.mjs';
 import {scheduleInfo} from './flora-schedule.mjs';
 
 const prefix='/seinhuis/flora';
+const googleSession=req=>String(req.headers.cookie||'').split(';').map(c=>c.trim()).find(c=>c.startsWith('tr_admin_session='))||'';
 export function parseCSV(text){
  const rows=[];let row=[],value='',quoted=false;const delimiter=text.split(/\r?\n/)[0].includes(';')?';':',';
  for(let i=0;i<text.length;i++){const c=text[i];if(c==='"'){if(quoted&&text[i+1]==='"'){value+='"';i++;}else quoted=!quoted;}else if(!quoted&&c===delimiter){row.push(value);value='';}else if(!quoted&&(c==='\n'||c==='\r')){if(c==='\r'&&text[i+1]==='\n')i++;row.push(value);if(row.some(Boolean))rows.push(row);row=[];value='';}else value+=c;}
  if(quoted)throw Error('Niet afgesloten aanhalingstekens in CSV.');row.push(value);if(row.some(Boolean))rows.push(row);
  const headers=(rows.shift()||[]).map(x=>x.trim().replace(/^\uFEFF/,''));if(new Set(headers).size!==headers.length)throw Error('Dubbele kolomnamen in CSV.');return rows.map(r=>{if(r.length!==headers.length)throw Error('CSV-regel heeft een afwijkend aantal kolommen.');return Object.fromEntries(headers.map((h,i)=>[h,r[i]]));});
 }
-export function createFloraHandler({authenticate=adminAuthenticated,read=readFlora,write=writeFlora,sync=fetchBookings,actor=async()=>((await readAdminSecurity()).value?.user?.name||'Seinhuis-beheerder'),configuration=sanityConfig}={}){
+export function createFloraHandler({authenticate=adminAuthenticated,read=readFlora,write=writeFlora,sync=fetchBookings,actor=async()=>((await readAdminSecurity()).value?.user?.name||'Seinhuis-beheerder'),configuration=sanityConfig,google=floraGoogle}={}){
  return async(req,res,url)=>{
   if(url.pathname!==prefix&&!url.pathname.startsWith(prefix+'/'))return false;
   for(const [k,v] of Object.entries({'Cache-Control':'no-store','X-Robots-Tag':'noindex, nofollow','X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"}))res.setHeader(k,v);
@@ -23,9 +25,10 @@ export function createFloraHandler({authenticate=adminAuthenticated,read=readFlo
   const path=url.pathname.slice(prefix.length);
   try{
    if(req.method==='GET'){
+    if(path==='/google/callback'){let result='connected';try{await google.callback(url.searchParams,googleSession(req));}catch(e){result=e.message;}res.writeHead(303,{Location:prefix+'/?gmail='+encodeURIComponent(result)});res.end();return true;}
     const files={'':'flora.html','/':'flora.html','/flora.js':'flora.js','/flora.css':'flora.css'};
     if(files[path]){const ext=files[path].split('.').pop();res.writeHead(200,{'Content-Type':({html:'text/html',js:'text/javascript',css:'text/css'})[ext]+'; charset=utf-8'});res.end(await readFile(new URL('./'+files[path],import.meta.url)));return true;}
-    if(path==='/api/state'){const data=await read();return reply(200,{...data,schedule:scheduleInfo(data.state),connection:{sanityConfigured:!!configuration().token,lastSync:data.state.lastSync,syncError:data.state.syncError||null,email:'Nog niet gekoppeld',payment:'Betaallink aanwezig: hotelbevestiging wordt gecontroleerd'}});}
+    if(path==='/api/state'){const data=await read(),gmail=await google.status();return reply(200,{...data,gmail,schedule:scheduleInfo(data.state),connection:{sanityConfigured:!!configuration().token,lastSync:data.state.lastSync,syncError:data.state.syncError||null,email:gmail.email,payment:'Betaallink aanwezig: hotelbevestiging wordt gecontroleerd'}});}
     return reply(404,{error:'Niet gevonden.'});
    }
    if(req.method!=='POST')return reply(405,{error:'Methode niet toegestaan.'});
@@ -33,6 +36,8 @@ export function createFloraHandler({authenticate=adminAuthenticated,read=readFlo
    if(req.headers.origin!==origin||req.headers['x-flora']!=='1'||!String(req.headers['content-type']).startsWith('application/json'))return reply(403,{error:'Open FloRA vanuit Seinhuis.'});
    let text='';for await(const chunk of req){text+=chunk;if(Buffer.byteLength(text)>3*1024*1024)return reply(413,{error:'Bestand is te groot (maximaal 3 MB).'});}
    let input;try{input=JSON.parse(text);}catch{return reply(400,{error:'Ongeldige invoer.'});}
+   if(path==='/api/google/start')return reply(200,{url:await google.start(googleSession(req))});
+   if(path==='/api/google/test')return reply(200,await google.test());
    const {state,revision}=await read();if(input.revision!==revision)return reply(409,{error:'FloRA is ondertussen gewijzigd. Herlaad eerst.'});
    const now=new Date().toISOString(),user=await actor(),audit=(action,detail)=>state.audit.push({at:now,user,action,detail});
    let evaluated=false;
