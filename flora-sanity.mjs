@@ -5,7 +5,7 @@ export async function fetchBookings({fetcher=fetch,config=sanityConfig()}={}){
  if(!/^[a-z0-9]+$/.test(config.project)||!/^[-a-z0-9]+$/.test(config.dataset))throw Error('Ongeldige Sanity-configuratie.');
  const all=[];let after='';
  for(let page=0;page<1000;page++){
-  const query='*[_type == "tourBooking" && _id > $after] | order(_id asc)[0...100]{_id,_updatedAt,index,status,dateDeparture,dateReturn,firstName,lastName,passengers[]{firstName,lastName},todos[]{_key,title,description,done,status,tag,quantity,startDate,endDate,supplierBookingNumber},notes}';
+  const query='*[_type == "tourBooking" && _id > $after] | order(_id asc)[0...100]{_id,_updatedAt,index,status,dateDeparture,dateReturn,firstName,lastName,"floraPaymentLinkCreated":count(payments[defined(checkoutUrl)]) > 0,passengers[]{firstName,lastName},todos[]{_key,title,description,done,status,tag,quantity,startDate,endDate,supplierBookingNumber},notes}';
   const url=new URL(`https://${config.project}.api.sanity.io/v2026-10-03/data/query/${config.dataset}`);url.searchParams.set('query',query);url.searchParams.set('$after',JSON.stringify(after));url.searchParams.set('perspective','raw');
   const response=await fetcher(url,{method:'GET',headers:{Authorization:`Bearer ${config.token}`},signal:AbortSignal.timeout(30000)});
   if(!response.ok)throw Error(`Sanity lezen mislukt (${response.status}). Controleer project, dataset en Viewer-rechten.`);

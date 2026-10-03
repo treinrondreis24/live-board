@@ -11,7 +11,7 @@ FloRA is beschikbaar onder `/seinhuis/flora/`, uitsluitend voor de bestaande Sei
 
 Project `il9cyh3m` en dataset `production` zijn de standaard. Optionele overrides: `FLORA_SANITY_PROJECT`, `FLORA_SANITY_DATASET`. `FLORA_PUBLIC_ORIGIN` is standaard `https://treinbord.up.railway.app` en moet bij een ander domein expliciet worden ingesteld.
 
-De server-adapter kent uitsluitend GET-queryverzoeken. Dit vervangt geen Viewer-rechten op de token zelf. Hij vraagt bewust de ruwe documenten op en geeft concepten voorrang boven gepubliceerde versies, inclusief alleen als concept bestaande boekingen. Geen geboortedata, adressen of betaalgegevens worden ingelezen. Na configuratie wordt maximaal om de zes uur opnieuw ingelezen en gecontroleerd; een mislukte synchronisatie behoudt eerdere data en wordt zichtbaar gemeld.
+De server-adapter kent uitsluitend GET-queryverzoeken. Dit vervangt geen Viewer-rechten op de token zelf. Hij vraagt bewust de ruwe documenten op en geeft concepten voorrang boven gepubliceerde versies, inclusief alleen als concept bestaande boekingen. Geen geboortedata, adressen, betaallinks of bedragen worden ingelezen. Alleen de aanwezigheid van een betaallink wordt als ja/nee vastgelegd. Na configuratie wordt maximaal om de zes uur opnieuw ingelezen en gecontroleerd; een mislukte synchronisatie behoudt eerdere data en wordt zichtbaar gemeld.
 
 ## Bewijs en imports
 
@@ -25,7 +25,7 @@ Identiteit van bewijs: provider + referentie + reisnummer + todoKey. Herhaalde i
 
 Alarmen kunnen met reden als aandachtspunt of gecontroleerd worden beoordeeld. Oorspronkelijke ernst en geschiedenis blijven behouden. Een materiële wijziging van bewijs, reizigers, todo of ernst laat de automatische beoordeling opnieuw gelden. Opgeloste meldingen worden gearchiveerd.
 
-Een groene boeking heeft gekoppeld actief bewijs voor elke overnachting en geen open meldingen. Dit zegt niets over toekomstige controles op Interrail, betaaltransacties of andere treinreserveringen. De daadwerkelijke Sanity-veldtoewijzing voor aangemaakte betaallinks is nog niet vastgesteld; de betaalregel is daarom niet actief gekoppeld. De wekelijkse wacht-op-klantcontrole begint wanneer een gekoppelde bevestiging voor het eerst in FloRA wordt gevonden, niet op de datum van een oudere e-mail. De automatische cyclus hercontroleert vaker dan wekelijks.
+Een groene boeking heeft gekoppeld actief bewijs voor elke overnachting en geen open meldingen. Dit zegt niets over toekomstige controles op Interrail, betaaltransacties of andere treinreserveringen. De hotelbevestigingsregel bij een aangemaakte betaallink is gekoppeld aan `count(payments[defined(checkoutUrl)]) > 0`; beide manieren van afvinken gelden als bevestigd. Dit is geverifieerd met boeking 6656. De wekelijkse wacht-op-klantcontrole begint wanneer een gekoppelde bevestiging voor het eerst in FloRA wordt gevonden, niet op de datum van een oudere e-mail. De automatische cyclus hercontroleert vaker dan wekelijks.
 
 ## Verificatie
 

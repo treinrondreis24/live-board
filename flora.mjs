@@ -23,7 +23,7 @@ export function createFloraHandler({authenticate=adminAuthenticated,read=readFlo
    if(req.method==='GET'){
     const files={'':'flora.html','/':'flora.html','/flora.js':'flora.js','/flora.css':'flora.css'};
     if(files[path]){const ext=files[path].split('.').pop();res.writeHead(200,{'Content-Type':({html:'text/html',js:'text/javascript',css:'text/css'})[ext]+'; charset=utf-8'});res.end(await readFile(new URL('./'+files[path],import.meta.url)));return true;}
-    if(path==='/api/state'){const data=await read();return reply(200,{...data,connection:{sanityConfigured:!!configuration().token,lastSync:data.state.lastSync,syncError:data.state.syncError||null,email:'Nog niet gekoppeld',payment:'Veldkoppeling nog niet ingericht'}});}
+    if(path==='/api/state'){const data=await read();return reply(200,{...data,connection:{sanityConfigured:!!configuration().token,lastSync:data.state.lastSync,syncError:data.state.syncError||null,email:'Nog niet gekoppeld',payment:'Betaallink aanwezig: hotelbevestiging wordt gecontroleerd'}});}
     return reply(404,{error:'Niet gevonden.'});
    }
    if(req.method!=='POST')return reply(405,{error:'Methode niet toegestaan.'});
