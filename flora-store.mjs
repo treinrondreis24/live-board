@@ -1,0 +1,6 @@
+import {DEFAULT_RULES} from './flora-engine.mjs';
+let db;
+export async function initFlora(database){db=database;const sql='CREATE TABLE IF NOT EXISTS flora_state (id INTEGER PRIMARY KEY, revision INTEGER NOT NULL, payload TEXT NOT NULL)';if(db.pool)await db.pool.query(sql);else db.sqlite.exec(sql);}
+export const emptyState=()=>({bookings:[],evidence:[],findings:[],summary:[],imports:[],audit:[],rules:{...DEFAULT_RULES},ruleHistory:[],deferrals:{},lastSync:null});
+export async function readFlora(){if(!db)throw Error('FloRA-opslag is nog niet gereed.');const r=db.pool?(await db.pool.query('SELECT revision,payload FROM flora_state WHERE id=1')).rows[0]:db.sqlite.prepare('SELECT revision,payload FROM flora_state WHERE id=1').get();return r?{revision:Number(r.revision),state:JSON.parse(r.payload)}:{revision:0,state:emptyState()};}
+export async function writeFlora(state,revision){const sql='INSERT INTO flora_state(id,revision,payload) VALUES(1,1,$1) ON CONFLICT(id) DO UPDATE SET revision=flora_state.revision+1,payload=excluded.payload WHERE flora_state.revision=$2 RETURNING revision',args=[JSON.stringify(state),revision],r=db.pool?(await db.pool.query(sql,args)).rows[0]:db.sqlite.prepare(sql.replace(/\$\d/g,'?')).get(...args);if(!r){const e=Error('Een andere beheerder heeft iets gewijzigd. Herlaad FloRA.');e.status=409;throw e;}return Number(r.revision);}

@@ -1,6 +1,8 @@
 import {handlePasswordReset} from './password-reset.mjs';
 import {handleAnalytics,startAnalyticsBackfill} from './train-analytics.mjs';
 import {handleAdminHub} from './admin-hub.mjs';
+import {handleFlora} from './flora.mjs';
+import {startFlora} from './flora-schedule.mjs';
 import {handleBooklets} from './booklets-gateway.mjs';
 import {handlePlatformAdmin} from './platform-admin.mjs';
 import {handleTreinhuisAccess} from './treinhuis-access.mjs';
@@ -1070,6 +1072,7 @@ const handleTreinreiziger=createTreinreizigerHandler({stations:[...new Map(appSt
 const server=http.createServer(async(req,res)=>{
   try{
     const url=new URL(req.url,`http://${req.headers.host}`);
+    if(await handleFlora(req,res,url))return;
     if(await handleBooklets(req,res,url))return;
     if(await handleAnalytics(req,res,url))return;
     if(await handleDayReports(req,res,url))return;
@@ -1224,6 +1227,7 @@ await initBoardAdmin({config,swissStations,norwegianStations,belgianStations,rfi
 await Promise.all([restoreSwiss(),restoreEntur(),restoreBelgium(),restoreDutchPlan(),restoreRfi(),restoreFrance(),restoreInternational(),restoreSweden(),restoreDbBoards().catch(e=>console.error('DB-bordcache laden mislukt:',e.message))]);
 for(const row of await loadBoardCache('NDOV:rows')||[])if(row.plannedTimestamp>Date.now()-86400000)ndovRows.set(row.id,row);
 server.listen(PORT,async()=>{
+  startFlora();
   void checkNdovAccess();
   void startNdov();
   startBelgium();

@@ -3,3 +3,5 @@ let code=readFileSync('admin-hub.mjs','utf8').replace("import {readFile} from 'n
 
 assert.match(owner.body.match(/<nav>([\s\S]*?)<\/nav>/)[1],/href="\/seinhuis\/boekjesmaker\/"/);
 assert.doesNotMatch(member.body,/Boekjesmaker/);
+assert.match(owner.body,/href="\/seinhuis\/flora\/"/);
+assert.doesNotMatch(member.body,/FloRA/);
