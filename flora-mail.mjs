@@ -1,7 +1,7 @@
 import {randomUUID} from 'node:crypto';
 import {floraGoogle} from './flora-google.mjs';
 import {readMail,writeMail,readFlora,writeFlora} from './flora-store.mjs';
-import {currentBookings,normalize,stays,hash,evaluate} from './flora-engine.mjs';
+import {activeBooking,waitingBooking,reservationScope,currentBookings,normalize,stays,hash,evaluate} from './flora-engine.mjs';
 import {planFollowup} from './flora-followup.mjs';
 import {extractMessage} from './flora-mail-source.mjs';
 import {bookingQuery,parseDocument,matchEvidence,cancellation,hotelReplyReview} from './flora-mail-parser.mjs';
@@ -11,7 +11,7 @@ const needsRead=m=>![4,5].includes(m.version)||m.version!==5&&/@(?:bernerhof-int
 export function rememberCancellation(state,c){const key=c.provider+'|'+c.reference,map=state.emailCancellations??={};if(!map[key]||map[key].at<c.at)map[key]=c;}
 export function latestReservationState(state,e){const c=state.emailCancellations?.[e.provider+'|'+e.reference];return c&&(!e.observedAt||e.observedAt<=c.at)?{...e,status:'cancelled',source:c.source,observedAt:c.at}:e;}
 
-export function mailPlan(state,pilot=false){const selected=planFollowup(state).trips;return currentBookings(state.bookings).filter(b=>pilot?[6685,6677,6667,6657,6656].includes(Number(b.index)):(['te verwerken','wacht op reactie klant'].includes(normalize(b.status))||state.evidence.some(e=>e.trip===String(b.index)&&e.status==='confirmed'))&&(selected.has(String(b.index))||state.emailChecks?.[b.index]?.parserVersion!==5)).map(b=>String(b.index));}
+export function mailPlan(state,pilot=false,now=stamp()){const selected=planFollowup(state).trips;return currentBookings(state.bookings).filter(b=>pilot?[6685,6677,6667,6657,6656].includes(Number(b.index)):((activeBooking(b.status)||waitingBooking(b.status))||state.evidence.some(e=>e.trip===String(b.index)&&e.status==='confirmed'))&&(reservationScope(b,state.evidence,now)||state.findings.some(f=>f.trip===String(b.index)&&f.status==='alarm'))&&(selected.has(String(b.index))||state.emailChecks?.[b.index]?.parserVersion!==5)).map(b=>String(b.index));}
 export function createMailControl({read=readMail,write=writeMail,readState=readFlora,writeState=writeFlora,google=floraGoogle,extract=extractMessage,clock=()=>Date.now()}={}){
  let running=false;
  async function status(){const {value}=await read('job');const {queue,...publicJob}=value;return {...publicJob,total:queue?.length||0,stalled:value.status==='running'&&value.lease<clock()};}

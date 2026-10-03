@@ -2,10 +2,16 @@ import {createHash} from 'node:crypto';
 
 export const DEFAULT_RULES={version:1,partialNames:'low',waitingDays:7,exceptions:['Hildebrand van Kuijeren','Nicoleta Andrei','Florentina Niculae','Marc van der Meer','Lucas Kielman','Jelle de Boer']};
 export const normalize=s=>String(s??'').normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+export const activeBooking=status=>['te verwerken','afgerond','boeking afgerond','afgehandeld','wacht op betaling','verwerkt','interrail leveren','tickets versturen'].includes(normalize(status));
+export const waitingBooking=status=>['wacht op reactie klant','wacht klant'].includes(normalize(status));
 export const tripNumber=s=>String(s??'').trim().replace(/a$/i,'');
 export const hash=x=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
 export const categoryFor=code=>code==='missing'?'Ontbrekend boekingsbewijs':code==='duplicate'?'Mogelijk dubbel geboekt':code.startsWith('dates-')?'Verkeerde datums':code.startsWith('name-')?'Reizigersnaam':code==='capacity'?'Te weinig slaapplaatsen':code.startsWith('capacity-')?'Slaapplaatsen onbekend':code.startsWith('occupancy')?'Geboekte bezetting':code.startsWith('product-')?'Hotel of traject':code.startsWith('room-')?'Kamertype':code==='waiting'?'Wacht op klant':code==='payment'?'Betaallink zonder bevestiging':code.startsWith('unmatched-')||code.startsWith('inactive-')?'Geen actieve reis':code.startsWith('unlinked-')?'Niet gekoppeld aan todo':'Overige controles';
 const day=s=>String(s||'').slice(0,10);
+export function reservationScope(b,evidence=[],now=new Date().toISOString()){
+ const end=day(b.dateReturn)||(b.todos||[]).map(t=>day(t.endDate)).filter(Boolean).sort().at(-1);
+ return !end||end>=day(now)||evidence.some(e=>e.trip===tripNumber(b.index)&&e.status==='confirmed'&&e.end>=day(now));
+}
 const addDays=(s,n)=>new Date(new Date(day(s)+'T12:00:00Z').getTime()+n*86400000).toISOString().slice(0,10);
 export function twoMonthsBefore(s){const d=new Date(day(s)+'T12:00:00Z'),wanted=d.getUTCDate();d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()-2);const last=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0)).getUTCDate();d.setUTCDate(Math.min(wanted,last));return d.toISOString().slice(0,10);}
 export function currentBookings(docs){const byId=new Map();for(const d of docs){const id=d._id.replace(/^drafts\./,'');if(!byId.has(id)||d._id.startsWith('drafts.'))byId.set(id,d);}return [...byId.values()];}
@@ -23,9 +29,10 @@ export function evaluate(state,now=new Date().toISOString(),options={}){
  };
  for(const b of bookings){
   if(!selected(tripNumber(b.index)))continue;
-  const active=normalize(b.status)==='te verwerken',waiting=normalize(b.status)==='wacht op reactie klant';
+  const active=activeBooking(b.status),waiting=waitingBooking(b.status);
   const linked=evidence.filter(e=>e.trip===tripNumber(b.index));
   if(!active&&!waiting){for(const e of linked.filter(e=>e.status==='confirmed'))emit(b,null,'inactive-'+e.id,rules.exceptions.some(n=>normalize(n)===normalize(e.name))?'attention':'alarm','Reservering bij niet-actieve boeking','Controleer annulering of wijziging van de reisstatus.',[e]);continue;}
+  if(!reservationScope(b,linked,now)&&!(state.findings||[]).some(f=>f.trip===tripNumber(b.index)&&f.status==='alarm'))continue;
   for(const t of stays(b)){
    const check=state.emailChecks?.[String(b.index)]?.stays?.find(c=>c.todoKey===t._key);
    if(check&&check.state!=='found'&&linked.some(e=>e.todoKey===t._key&&e.status==='confirmed'))emit(b,t,'email-incomplete','attention','E-mailcontrole nog niet afgerond',check.explanation);
@@ -47,7 +54,10 @@ export function evaluate(state,now=new Date().toISOString(),options={}){
     const next=(b.todos||[]).find(x=>/zelfde hut|same cabin/i.test(x.title||'')&&day(x.startDate)===t.end);
     const end=t.provider==='Finnlines'&&next?day(next.endDate):t.end;
     if(!start||!end)emit(b,t,'todo-dates','attention','Datums ontbreken in todo','Controleer de verblijfsdatums.',[e]);
-    else if(e.start!==start||e.end!==end)emit(b,t,'dates-'+e.id,'alarm','Verkeerde verblijfsdatums',`Todo verwacht ${start} t/m ${end}; reservering ${e.start} t/m ${e.end}.`,[e]);
+    else if(e.start!==start||e.end!==end){
+     const shifted=d=>String(Number(d.slice(0,4))+1)+d.slice(4),oldYear=end<day(now)&&e.start===shifted(start)&&e.end===shifted(end);
+     emit(b,t,'dates-'+e.id,oldYear?'attention':'alarm',oldYear?'Vermoedelijk verkeerd jaar in todo':'Verkeerde verblijfsdatums',oldYear?`Todo ${start} t/m ${end} ligt in het verleden; de bevestiging heeft dezelfde dagen een jaar later (${e.start} t/m ${e.end}). Werk het todo-jaar bij.`:`Todo verwacht ${start} t/m ${end}; reservering ${e.start} t/m ${e.end}.`,[e]);
+    }
     if(!e.productMatch)emit(b,t,'product-'+e.id,'attention','Accommodatie of traject nog te beoordelen','Bevestig de juiste accommodatie of een passend alternatief. Bij een alternatief hoort doorgaans een todo-notitie.',[e]);
     if(t.type==='Nachttrein'&&e.direction==='outbound'&&e.originCountry!=='NL')emit(b,t,'origin-'+e.id,e.originCountry?'alarm':'attention','Vertrekstation heenreis controleren','De heenreis moet geboekt zijn vanaf een Nederlands station.',[e]);
     if(t.type==='Nachttrein'&&!e.direction)emit(b,t,'direction-'+e.id,'attention','Reisrichting ontbreekt','Stel heen- of terugreis vast; Wien Meidling is toegestaan voor de terugreis.',[e]);

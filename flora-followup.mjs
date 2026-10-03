@@ -1,4 +1,4 @@
-import {currentBookings,evaluate,hash,normalize,recurringFinding,stays,tripNumber} from './flora-engine.mjs';
+import {activeBooking,waitingBooking,reservationScope,currentBookings,evaluate,hash,recurringFinding,stays,tripNumber} from './flora-engine.mjs';
 
 // Bookkeeping timestamps do not invalidate a completed substantive check.
 function bookingHashes(state){
@@ -15,8 +15,8 @@ export function planFollowup(state){
  const changed=new Set();
  for(const trip of new Set([...Object.keys(booking),...Object.keys(evidence),...Object.keys(old?.booking||{}),...Object.keys(old?.evidence||{})]))if(!old||booking[trip]!==old.booking?.[trip]||evidence[trip]!==old.evidence?.[trip])changed.add(trip);
  const recurring=new Set((state.findings||[]).filter(recurringFinding).map(f=>f.trip));
- for(const b of currentBookings(state.bookings||[]))if(['te verwerken','wacht op reactie klant'].includes(normalize(b.status))&&stays(b).some(t=>t.type==='Hotel'&&!t.confirmed))recurring.add(tripNumber(b.index));
- for(const b of currentBookings(state.bookings||[]))if(normalize(b.status)==='wacht op reactie klant'&&(state.evidence||[]).some(e=>e.trip===tripNumber(b.index)&&e.status==='confirmed'))recurring.add(tripNumber(b.index));
+ for(const b of currentBookings(state.bookings||[]))if((activeBooking(b.status)||waitingBooking(b.status))&&reservationScope(b,state.evidence)&&stays(b).some(t=>t.type==='Hotel'&&!t.confirmed))recurring.add(tripNumber(b.index));
+ for(const b of currentBookings(state.bookings||[]))if(waitingBooking(b.status)&&(state.evidence||[]).some(e=>e.trip===tripNumber(b.index)&&e.status==='confirmed'))recurring.add(tripNumber(b.index));
  return {trips:new Set([...changed,...recurring]),changed,recurring,booking,evidence};
 }
 export function applyFollowup(state,{now=new Date().toISOString(),mode='manual',user='FloRA'}={}){
