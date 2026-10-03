@@ -1,3 +1,5 @@
+import {floraMail,startFloraMail} from './flora-mail.mjs';
+import {floraGoogle} from './flora-google.mjs';
 import {readFlora,writeFlora} from './flora-store.mjs';
 import {fetchBookings,sanityConfig} from './flora-sanity.mjs';
 import {applyFollowup} from './flora-followup.mjs';
@@ -16,7 +18,7 @@ export function scheduleInfo(state,now=new Date().toISOString()){
  const due=latestWeeklySlot(now),pending=!!state.scheduleStartedAt&&due>=state.scheduleStartedAt&&state.lastWeeklySlot!==due;
  return {label:SCHEDULE_LABEL,next:pending?due:nextWeeklySlot(now),overdue:pending,lastRun:state.checkpoint?.at||null,lastWeekly:state.lastWeeklySlot||null};
 }
-export function createFloraCycle({read=readFlora,write=writeFlora,sync=fetchBookings,configured=()=>!!sanityConfig().token,clock=()=>new Date().toISOString()}={}){
+export function createFloraCycle({read=readFlora,write=writeFlora,sync=fetchBookings,configured=()=>!!sanityConfig().token,clock=()=>new Date().toISOString(),email=async()=>{if((await floraGoogle.status()).connected){await floraMail.start({mode:'weekly'});void floraMail.tick();}}}={}){
  let running=false;
  return async function runFloraCycle(){
   if(running)return;running=true;
@@ -30,10 +32,10 @@ export function createFloraCycle({read=readFlora,write=writeFlora,sync=fetchBook
    state.lastWeeklyAttempt=now;
    try{state.bookings=await sync();state.lastSync=now;state.syncError=null;applyFollowup(state,{now,mode:'weekly'});state.lastWeeklySlot=due;}
    catch{state.syncError='Woensdagcontrole niet voltooid: Sanity inlezen mislukt. Het vorige voortgangspunt blijft behouden; FloRA probeert het opnieuw.';}
-   await write(state,revision);
+   await write(state,revision);if(state.lastWeeklySlot===due)await email();
   }catch(e){console.error('FloRA hercontrole:',e.status===409?'Gelijktijdige wijziging; volgende cyclus probeert opnieuw.':'Kon hercontrole niet opslaan.');}
   finally{running=false;}
  };
 }
 export const runFloraCycle=createFloraCycle();
-export function startFlora(){setTimeout(()=>void runFloraCycle(),15000).unref();setInterval(()=>void runFloraCycle(),60000).unref();}
+export function startFlora(){startFloraMail();setTimeout(()=>void runFloraCycle(),15000).unref();setInterval(()=>void runFloraCycle(),60000).unref();}
