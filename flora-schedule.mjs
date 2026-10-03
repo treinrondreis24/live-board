@@ -1,16 +1,39 @@
 import {readFlora,writeFlora} from './flora-store.mjs';
 import {fetchBookings,sanityConfig} from './flora-sanity.mjs';
-import {evaluate} from './flora-engine.mjs';
-let running=false;
-export async function runFloraCycle(){
- if(running||!sanityConfig().token)return;running=true;
- try{
-  const {state,revision}=await readFlora();
-  if(state.lastSync&&Date.now()-Date.parse(state.lastSync)<6*3600000)return;
-  try{state.bookings=await fetchBookings();state.lastSync=new Date().toISOString();state.syncError=null;Object.assign(state,evaluate(state));state.audit.push({at:state.lastSync,user:'FloRA',action:'Automatische hercontrole',detail:'Sanity opnieuw gelezen; controles bijgewerkt.'});}
-  catch{state.syncError='Automatisch inlezen mislukt. De laatste resultaten kunnen verouderd zijn. Probeer Sanity inlezen.';}
-  await writeFlora(state,revision);
- }catch(e){console.error('FloRA hercontrole:',e.status===409?'Gelijktijdige wijziging; volgende cyclus probeert opnieuw.':'Kon hercontrole niet opslaan.');}
- finally{running=false;}
+import {applyFollowup} from './flora-followup.mjs';
+
+export const SCHEDULE_LABEL='Woensdag 06:00 · Europe/Amsterdam';
+const parts=now=>Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',hourCycle:'h23'}).formatToParts(new Date(now)).map(p=>[p.type,p.value]));
+const dateOf=p=>`${p.year}-${p.month}-${p.day}`;
+function shift(date,days){return new Date(Date.parse(date+'T12:00:00Z')+days*86400000).toISOString().slice(0,10);}
+function atSix(date){let ms=Date.parse(date+'T06:00:00Z');for(let i=0;i<2;i++)ms+=(6-Number(parts(ms).hour))*3600000;return new Date(ms).toISOString();}
+export function latestWeeklySlot(now=new Date().toISOString()){
+ const p=parts(now),date=dateOf(p),weekday=new Date(date+'T12:00:00Z').getUTCDay();
+ let due=shift(date,-((weekday+4)%7));if(due===date&&Number(p.hour)<6)due=shift(due,-7);return atSix(due);
 }
-export function startFlora(){setTimeout(()=>void runFloraCycle(),15000).unref();setInterval(()=>void runFloraCycle(),3600000).unref();}
+export function nextWeeklySlot(now=new Date().toISOString()){return atSix(shift(dateOf(parts(latestWeeklySlot(now))),7));}
+export function scheduleInfo(state,now=new Date().toISOString()){
+ const due=latestWeeklySlot(now),pending=!!state.scheduleStartedAt&&due>=state.scheduleStartedAt&&state.lastWeeklySlot!==due;
+ return {label:SCHEDULE_LABEL,next:pending?due:nextWeeklySlot(now),overdue:pending,lastRun:state.checkpoint?.at||null,lastWeekly:state.lastWeeklySlot||null};
+}
+export function createFloraCycle({read=readFlora,write=writeFlora,sync=fetchBookings,configured=()=>!!sanityConfig().token,clock=()=>new Date().toISOString()}={}){
+ let running=false;
+ return async function runFloraCycle(){
+  if(running)return;running=true;
+  try{
+   const {state,revision}=await read(),now=clock();
+   if(!state.scheduleStartedAt){state.scheduleStartedAt=now;await write(state,revision);return;}
+   const due=latestWeeklySlot(now);
+   if(!configured()||due<state.scheduleStartedAt||state.lastWeeklySlot===due)return;
+   // A failure or conflicting write never moves the checkpoint.
+   if(state.lastWeeklyAttempt&&Date.parse(now)-Date.parse(state.lastWeeklyAttempt)<3600000)return;
+   state.lastWeeklyAttempt=now;
+   try{state.bookings=await sync();state.lastSync=now;state.syncError=null;applyFollowup(state,{now,mode:'weekly'});state.lastWeeklySlot=due;}
+   catch{state.syncError='Woensdagcontrole niet voltooid: Sanity inlezen mislukt. Het vorige voortgangspunt blijft behouden; FloRA probeert het opnieuw.';}
+   await write(state,revision);
+  }catch(e){console.error('FloRA hercontrole:',e.status===409?'Gelijktijdige wijziging; volgende cyclus probeert opnieuw.':'Kon hercontrole niet opslaan.');}
+  finally{running=false;}
+ };
+}
+export const runFloraCycle=createFloraCycle();
+export function startFlora(){setTimeout(()=>void runFloraCycle(),15000).unref();setInterval(()=>void runFloraCycle(),60000).unref();}
