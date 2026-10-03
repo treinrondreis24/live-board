@@ -9,7 +9,7 @@ export const hash=x=>createHash('sha256').update(JSON.stringify(x)).digest('hex'
 export const categoryFor=code=>code==='missing'?'Ontbrekend boekingsbewijs':code==='duplicate'?'Mogelijk dubbel geboekt':code.startsWith('dates-')?'Verkeerde datums':code.startsWith('name-')?'Reizigersnaam':code==='capacity'?'Te weinig slaapplaatsen':code.startsWith('capacity-')?'Slaapplaatsen onbekend':code.startsWith('occupancy')?'Geboekte bezetting':code.startsWith('product-')?'Hotel of traject':code.startsWith('room-')?'Kamertype':code==='waiting'?'Wacht op klant':code==='payment'?'Betaallink zonder bevestiging':code.startsWith('unmatched-')||code.startsWith('inactive-')?'Geen actieve reis':code.startsWith('unlinked-')?'Niet gekoppeld aan todo':'Overige controles';
 const day=s=>String(s||'').slice(0,10);
 export function reservationScope(b,evidence=[],now=new Date().toISOString()){
- const end=day(b.dateReturn)||(b.todos||[]).map(t=>day(t.endDate)).filter(Boolean).sort().at(-1);
+ const end=[day(b.dateReturn),day(b.dateDeparture),...(b.todos||[]).map(t=>day(t.endDate))].filter(Boolean).sort().at(-1);
  return !end||end>=day(now)||evidence.some(e=>e.trip===tripNumber(b.index)&&e.status==='confirmed'&&e.end>=day(now));
 }
 const addDays=(s,n)=>new Date(new Date(day(s)+'T12:00:00Z').getTime()+n*86400000).toISOString().slice(0,10);
@@ -31,8 +31,8 @@ export function evaluate(state,now=new Date().toISOString(),options={}){
   if(!selected(tripNumber(b.index)))continue;
   const active=activeBooking(b.status),waiting=waitingBooking(b.status);
   const linked=evidence.filter(e=>e.trip===tripNumber(b.index));
+  if(!reservationScope(b,linked,now))continue;
   if(!active&&!waiting){for(const e of linked.filter(e=>e.status==='confirmed'))emit(b,null,'inactive-'+e.id,rules.exceptions.some(n=>normalize(n)===normalize(e.name))?'attention':'alarm','Reservering bij niet-actieve boeking','Controleer annulering of wijziging van de reisstatus.',[e]);continue;}
-  if(!reservationScope(b,linked,now)&&!(state.findings||[]).some(f=>f.trip===tripNumber(b.index)&&f.status==='alarm'))continue;
   for(const t of stays(b)){
    const check=state.emailChecks?.[String(b.index)]?.stays?.find(c=>c.todoKey===t._key);
    if(check&&check.state!=='found'&&linked.some(e=>e.todoKey===t._key&&e.status==='confirmed'))emit(b,t,'email-incomplete','attention','E-mailcontrole nog niet afgerond',check.explanation);
