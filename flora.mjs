@@ -45,7 +45,7 @@ export function createFloraHandler({authenticate=adminAuthenticated,read=readFlo
    if(path==='/api/trains/start'){if(['queued','running'].includes((await mail.status()).status))return reply(409,{error:'Stop eerst de algemene e-mailcontrole.'});const result=await trains.start(input.trips);void trains.tick();return reply(202,result);}
    if(path==='/api/trains/review')return reply(200,await trains.review(input));
    if(path==='/api/mail/stop')return reply(200,await mail.stop());
-   if(path==='/api/mail/start'){if(input.mode&&!['attention','rules-only','manual','targeted'].includes(input.mode))return reply(400,{error:'Onbekende controle.'});const result=await mail.start({pilot:input.pilot===true,mode:input.mode||'manual',trips:input.trips});void mail.tick();return reply(202,result);}
+   if(path==='/api/mail/start'){if(input.mode&&!['attention','rules-only','manual','targeted'].includes(input.mode))return reply(400,{error:'Onbekende controle.'});const result=await mail.start({pilot:input.pilot===true,mode:input.mode||'manual',trips:input.trips,findingIds:input.findingIds});void mail.tick();return reply(202,result);}
    if(path==='/api/google/start')return reply(200,{url:await google.start(googleSession(req))});
    if(path==='/api/google/test')return reply(200,await google.test());
    if(path==='/api/archive'){
