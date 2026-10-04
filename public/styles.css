@@ -475,3 +475,10 @@ html,body{
 .planning-clock{display:inline-block;width:.85em;height:.85em;vertical-align:-.08em;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
 
 .db-from,.db-to{font-size:2.5vw}.time-delay{font-size:.55em;white-space:nowrap;margin-left:.2em}.time-delay.late{color:#c7192d}
+
+/* Readable second line for FloRA booking numbers, spanning train and route. */
+.db-train-row.has-bookings{grid-template-rows:minmax(0,1fr) auto;row-gap:2px;padding-bottom:5px}
+.db-train-row.has-bookings>.db-cell{grid-row:1}
+.board-bookings{grid-column:2 / 5;grid-row:2;display:flex;gap:8px;min-width:0;overflow:hidden;align-items:center;padding-right:1.1vw}
+.booking-badge{display:inline-flex;flex:none;background:#003082;color:#fff;font-size:clamp(22px,1.45vw,30px);font-weight:800;line-height:1.15;border-radius:5px;padding:3px 10px;white-space:nowrap;font-variant-numeric:tabular-nums;text-decoration:none}
+.booking-badge[hidden]{display:none}

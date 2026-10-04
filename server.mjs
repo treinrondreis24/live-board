@@ -6,6 +6,7 @@ import {startFlora} from './flora-schedule.mjs';
 import {handleBooklets} from './booklets-gateway.mjs';
 import {handlePlatformAdmin} from './platform-admin.mjs';
 import {handleTreinhuisAccess} from './treinhuis-access.mjs';
+import {attachBoardBookings} from './board-bookings.mjs';
 import {initScreenSettings,handleScreenSettings,screenSettings,screenTrainNumbers,screenTrainMatches,screenTrainKey} from './screen-settings.mjs';
 import {handleConnectionAdmin} from './connections-admin.mjs';
 import {handleAppCms} from './app-cms.mjs';
@@ -1211,7 +1212,7 @@ const server=http.createServer(async(req,res)=>{
       const screenId=url.searchParams.get("screen"),settings=screenId===null?null:screenSettings(screenId);
       if(screenId!==null&&!settings)return sendJson(res,404,{error:"Onbekend scherm"});
       if(!dbState.lastScanAt&&!dbState.scanning)await performScan();if(!dbState.lastScanAt&&dbState.warnings.length&&(!settings||settings.trains.every(t=>t.source==='DB')))return sendJson(res,503,{error:dbState.warnings.join(" | ")});
-      return sendJson(res,200,{source:"DB Timetables",updatedAt:dbState.lastScanAt,lastScanAt:dbState.lastScanAt,nextScanAt:dbState.nextScanAt,currentIntervalMinutes:dbState.currentIntervalMinutes,warnings:dbState.warnings,stations:dbState.stations,settings,trains:screenBoardTrains(Date.now(),settings)});
+      return sendJson(res,200,{source:"DB Timetables",updatedAt:dbState.lastScanAt,lastScanAt:dbState.lastScanAt,nextScanAt:dbState.nextScanAt,currentIntervalMinutes:dbState.currentIntervalMinutes,warnings:dbState.warnings,stations:dbState.stations,settings,...await attachBoardBookings(screenBoardTrains(Date.now(),settings))});
     }
     const embedPage=url.pathname.match(/^\/embed\/([a-z0-9-]+)\/?$/)?.[1];
     if(embedPage&&boardSource(embedPage))return sendFile(res,path.join(publicDir,'koeln-embed.html'));

@@ -148,7 +148,7 @@ function renderDb(){
       </div>`;
   }else{
     dbRowsEl.innerHTML = items.map(t=>`
-      <div class="db-train-row ${t.type === "cancel" ? "db-cancelled-row" : ""}">
+      <div class="db-train-row ${t.type === "cancel" ? "db-cancelled-row" : ""} ${t.bookingNumbers?.length?"has-bookings":""}">
         <div class="db-cell db-time-cell"><div class="db-time">${dbTimeHtml(t)}</div><div class="db-scanpoint">${escapeHtml(shortStation(t.observedAt))}</div></div>
         <div class="db-cell db-train">${escapeHtml(t.train)}<small style="display:block;font-size:.5em;font-weight:400">${escapeHtml(({DB:'DB',NDOV:'NDOV',OJP:'Zwitserland',NMBS:'België'})[t.source]||'DB')}</small></div>
         <div class="db-cell db-from">${escapeHtml(shortStation(t.from))}</div>
@@ -156,10 +156,12 @@ function renderDb(){
         <div class="db-cell db-status ${escapeHtml(t.type)}">
           ${screenStatus(t)}${trendHtml(t)}
         </div>
+        ${bookingBadgesHtml(t.bookingNumbers)}
       </div>
     `).join("");
   }
 
+  fitBookingBadges(dbRowsEl);
   dbPageIndicatorEl.textContent = `${Math.min(dbPage+1,pages)} / ${pages}`;
 }
 
