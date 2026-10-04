@@ -149,11 +149,12 @@ export function startSwiss(){
   void tick();
 }
 
-export function swissPayload(page,now=Date.now()){
+export function swissPayload(page,now=Date.now(),raw=false){
   if(!Object.hasOwn(swissStations,page))return null;
   const saved=cache.get(page),state=swissState.stations[page],stale=!saved||now-saved.at>MAX_AGE;
   const rows=(saved?.rows||[]).map(r=>stale?{...r,hasRealtime:false,expectedTimestamp:r.plannedTimestamp,currentTime:r.plannedTime,delay:0,status:r.cancelled?'Geannuleerd':'',currentTrack:'',track:r.cancelled?'—':r.plannedTrack||'—'}:r)
     .filter(r=>r.expectedTimestamp>=now-60000).sort((a,b)=>a.plannedTimestamp-b.plannedTimestamp).map(({rawStop,...r})=>r);
+  if(raw)return rows;
   const fern=r=>r.transportMode!=='water'&&/^(IC|ICE|EC|ECE|IR|TGV|RJ|RJX|NJ|EN|PE|BEX|GEX)$/.test(r.category);
   return {title:'Vertrektijden '+swissStations[page].name,country:swissStations[page].country,source:'OJP',notice:swissStations[page].notice||'',lastScanAt:state.lastSuccessAt,status:!saved?state.status:stale?'stale':state.status,quick:swissQuick(page,mergeSwissRows(rows)),departures:{all:mergeSwissRows(rows),fernverkehr:mergeSwissRows(rows.filter(fern)),regional:mergeSwissRows(rows.filter(r=>!fern(r)))}};
 }

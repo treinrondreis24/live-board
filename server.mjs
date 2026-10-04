@@ -6,7 +6,7 @@ import {startFlora} from './flora-schedule.mjs';
 import {handleBooklets} from './booklets-gateway.mjs';
 import {handlePlatformAdmin} from './platform-admin.mjs';
 import {handleTreinhuisAccess} from './treinhuis-access.mjs';
-import {initScreenSettings,handleScreenSettings,screenSettings,screenTrainNumbers,screenTrainMatches} from './screen-settings.mjs';
+import {initScreenSettings,handleScreenSettings,screenSettings,screenTrainNumbers,screenTrainMatches,screenTrainKey} from './screen-settings.mjs';
 import {handleConnectionAdmin} from './connections-admin.mjs';
 import {handleAppCms} from './app-cms.mjs';
 import {startDayReports,handleDayReports} from './day-reports.mjs';
@@ -27,7 +27,7 @@ import {restoreDutchPlan,startDutchPlan,dutchPlannedRows,combineDutchRows,nlPlan
 import {loadBoardCache,saveBoardCache} from './board-cache.mjs';
 import {swissStations,swissState,startSwiss,restoreSwiss,swissPayload} from './swiss.mjs';
 import {norwegianStations,enturState,startEntur,restoreEntur,norwegianPayload} from './entur.mjs';
-import {belgianStations,belgiumState,startBelgium,restoreBelgium,belgianPayload} from './belgium.mjs';
+import {belgianStations,belgiumState,startBelgium,restoreBelgium,belgianPayload,belgianScreenRows} from './belgium.mjs';
 import {startJourneyPlanning,parseRitJourneys,recordJourneySnapshot,getJourney,listJourneys,getJourneyRevisions,journeyImportState,journeyPage} from "./journeys.mjs";
 import http from "node:http";
 import fs from "node:fs";
@@ -315,9 +315,9 @@ async function fetchMergedStation(name,windowCfg={}){
   for(const c of changes){if(!planIds.has(c.id))rows.push({...c,hasRealtime:true});}
   return {station,stops:rows};
 }
-function dedupeRows(rows){
+function dedupeRows(rows,bySource=false){
   const map=new Map();
-  for(const r of rows){const key=`${r.id}|${r.observedAt}|${r.eventMode}|${r.number}`;const old=map.get(key);if(!old||(!old.hasRealtime&&r.hasRealtime))map.set(key,r);}
+  for(const r of rows){const key=`${bySource?r.source||'DB':''}|${r.id}|${r.observedAt}|${r.eventMode}|${r.number}`;const old=map.get(key);if(!old||(!old.hasRealtime&&r.hasRealtime))map.set(key,r);}
   return [...map.values()];
 }
 // Passenger displays exclude charter trains, FlixTrain and WESTbahn.
@@ -454,13 +454,15 @@ function screenBoardTrains(now=Date.now(),settings=null){
   const categories=new Set((config.allowedCategories||[]).map(c=>String(c).toUpperCase()));
   const ndovFresh=ndovStatus().fresh;
   const liveNl=[...ndovRows.values()].map(r=>ndovFresh?r:{...r,hasRealtime:false,delay:0,status:'',expectedTimestamp:r.plannedTimestamp,currentTime:r.plannedTime});
-  const rows=dedupeRows([...dbState.trains.flatMap(r=>r.mergedServices||[r]),...Object.values(collectorState.byStation).flat(),...liveNl.map(r=>({...r,hasChangedTime:r.currentTime!==r.plannedTime}))]);
+  const extra=settings?[...(settings.trains.some(t=>t.source==='OJP')?Object.keys(swissStations).flatMap(page=>swissPayload(page,now,true)):[]),...(settings.trains.some(t=>t.source==='NMBS')?belgianScreenRows(now):[])]:[];
+  const rows=dedupeRows([...extra,...dbState.trains.flatMap(r=>r.mergedServices||[r]),...Object.values(collectorState.byStation).flat(),...liveNl.map(r=>({...r,hasChangedTime:r.currentTime!==r.plannedTime}))],true);
   const groups=new Map();
   for(const r of rows){if((settings?!screenTrainMatches(r,settings):(!numbers.has(String(r.number))||(categories.size&&!categories.has(String(r.category).toUpperCase()))))||!visibleOnBoard(r,now)||r.departed)continue;
-    if(!groups.has(String(r.number)))groups.set(String(r.number),[]);groups.get(String(r.number)).push(r);
+    const key=settings?screenTrainKey(r):String(r.number);
+    if(!groups.has(key))groups.set(key,[]);groups.get(key).push(r);
   }
   const selected=[...groups.values()].map(items=>{const realtime=items.filter(r=>r.hasRealtime);return chooseBest(realtime.length?realtime:items);});
-  return mergeEquivalentBoardTrains(selected).sort((a,b)=>Number(Number(b.delay)>=20)-Number(Number(a.delay)>=20)||(a.plannedTimestamp||0)-(b.plannedTimestamp||0));
+  return (settings?[...new Set(selected.map(r=>r.source||'DB'))].flatMap(source=>mergeEquivalentBoardTrains(selected.filter(r=>(r.source||'DB')===source))):mergeEquivalentBoardTrains(selected)).sort((a,b)=>Number(Number(b.delay)>=20)-Number(Number(a.delay)>=20)||(a.plannedTimestamp||0)-(b.plannedTimestamp||0));
 }
 async function performScan(){
   if(dbState.scanning)return;dbState.scanning=true;
@@ -1208,7 +1210,7 @@ const server=http.createServer(async(req,res)=>{
     if(url.pathname==="/api/trains"){
       const screenId=url.searchParams.get("screen"),settings=screenId===null?null:screenSettings(screenId);
       if(screenId!==null&&!settings)return sendJson(res,404,{error:"Onbekend scherm"});
-      if(!dbState.lastScanAt&&!dbState.scanning)await performScan();if(!dbState.lastScanAt&&dbState.warnings.length)return sendJson(res,503,{error:dbState.warnings.join(" | ")});
+      if(!dbState.lastScanAt&&!dbState.scanning)await performScan();if(!dbState.lastScanAt&&dbState.warnings.length&&(!settings||settings.trains.every(t=>t.source==='DB')))return sendJson(res,503,{error:dbState.warnings.join(" | ")});
       return sendJson(res,200,{source:"DB Timetables",updatedAt:dbState.lastScanAt,lastScanAt:dbState.lastScanAt,nextScanAt:dbState.nextScanAt,currentIntervalMinutes:dbState.currentIntervalMinutes,warnings:dbState.warnings,stations:dbState.stations,settings,trains:screenBoardTrains(Date.now(),settings)});
     }
     const embedPage=url.pathname.match(/^\/embed\/([a-z0-9-]+)\/?$/)?.[1];
@@ -1219,7 +1221,7 @@ const server=http.createServer(async(req,res)=>{
 });
 
 await initStorage();
-await initScreenSettings(config);
+await initScreenSettings(config,{OJP:Object.values(swissStations).map(s=>s.name),NMBS:Object.values(belgianStations).map(s=>s.name)});
 startConnectionMonitor(getStationPlatformLayout);
 startAnalyticsBackfill();
 startDayReports(()=>{

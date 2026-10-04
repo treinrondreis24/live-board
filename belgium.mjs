@@ -108,6 +108,7 @@ async function tick(){
 }
 export async function restoreBelgium(){const saved=await loadBoardCache('NMBS:plan'),restored=restorePlan(saved?.plan);if(restored){plan=restored.schedule;planDay=restored.needsRefresh||!Object.keys(belgianStations).every(page=>plan.rows.some(r=>r.page===page))?'':saved.planDay;live=await loadBoardCache('NMBS:live');if(live)belgiumState.lastRealtimeAt=new Date(Number(live.header.timestamp)*1000).toISOString();}}
 export function startBelgium(){void tick();setInterval(()=>void tick(),30000).unref();}
+export function belgianScreenRows(now=Date.now()){return plan?rowsWithRealtime(plan,live,now).filter(r=>r.expectedTimestamp>=now-60000&&r.plannedTimestamp<now+86400000):[];}
 export function belgianPayload(page){
   if(!belgianStations[page])return null;
   const now=Date.now(),rows=plan?rowsWithRealtime(plan,live,now).filter(r=>r.page===page&&r.expectedTimestamp>=now-60000&&r.plannedTimestamp<now+86400000).sort((a,b)=>a.plannedTimestamp-b.plannedTimestamp):[];
