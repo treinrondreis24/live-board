@@ -38,7 +38,7 @@ export function evaluate(state,now=new Date().toISOString(),options={}){
  const selected=trip=>correctExceptions||!options.trips||options.trips.has(trip);
  const findings=(state.findings||[]).filter(f=>!selected(f.trip)),bookings=currentBookings(state.bookings||[]),evidence=state.evidence||[],previous=new Map((state.findings||[]).map(f=>[f.id,f]));
  const byNumber=new Map();for(const b of bookings){const key=tripNumber(b.index);if(!byNumber.has(key))byNumber.set(key,[]);byNumber.get(key).push(b);}
- const duplicateNumbers=new Set([...byNumber].filter(([,rows])=>rows.length>1&&rows.filter(b=>reservationScope(b,[],now)).length>1).map(([key])=>key));
+ const duplicateNumbers=new Set([...byNumber].filter(([key,rows])=>rows.length>1&&rows.some(b=>reservationScope(b,evidence.filter(e=>e.trip===key),now))).map(([key])=>key));
  const seenDuplicates=new Set();
  const emit=(b,t,code,severity,title,detail,related=[])=>{
   const id=[tripNumber(b.index),t?._key||'booking',code].join(':'),fingerprint=hash({code,severity,detail,t,related:related.map(({importedAt,...e})=>e),passengers:b.passengers,status:b.status}),old=previous.get(id),override=old?.fingerprint===fingerprint?old.override:null;
