@@ -1,0 +1,22 @@
+const normal=s=>String(s||'').normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+const cities=['Wenen|Wien|Vienna','Rome|Roma','Praag|Prague|Praha','München|Munich','Luxemburg|Luxembourg','Neurenberg|Nürnberg|Nuremberg','Milaan|Milano|Milan','Venetië|Venezia|Venice','Edinburgh','Chur','Interlaken','Brig','Lugano','Zürich|Zurich','Basel','Schaffhausen','Montpellier','Krakau|Krakow','Wroclaw','Vejle','Arezzo','Verona','Budapest','Zaragoza','Granada','Cádiz|Cadiz','Madrid','Málaga|Malaga','Córdoba|Cordoba','Ronda','Koblenz','Hamburg','Osnabrück|Osnabruck','Agrigento','Cefalù|Cefalu','Oslo','Trondheim','Bodø|Bodo','Narvik','Stockholm','Shrewsbury','Helsinki','Newcastle','IJmuiden','Kopenhagen|Copenhagen','Parijs|Paris','Berlijn|Berlin','Arnhem','Amsterdam','Utrecht','Rotterdam','Innsbruck','Salzburg','Luzern|Lucerne','Tirano','Zermatt','Chamonix'];
+export function cityFrom(text){const value=' '+normal(String(text).replace(/de Francia y Par[ií]s/gi,'').replace(/CHAJD/gi,'Zurich').replace(/ATALA/gi,'Innsbruck').replace(/ATWIH/gi,'Wien'))+' ',matches=cities.filter(row=>row.split('|').some(alias=>value.includes(' '+normal(alias)+' ')));return matches.length===1?matches[0].split('|')[0]:'';}
+
+const canonical=s=>normal(String(s||'').split('|')[0].replace(/\([^)]*\)/g,''))
+ .replace(/\bic hotel\b/g,'intercityhotel').replace(/\b(wien|vienna)\b/g,'wenen').replace(/\b(hbf|hauptbahnhof)\b/g,'centralstation').replace(/\b(nurnberg|nuremberg)\b/g,'neurenberg');
+const tokens=s=>canonical(s).split(' ').filter(w=>w.length>1&&!['hotel','hotels','the','by','straat','calle','piazza'].includes(w));
+export function hotelIdentity(todo,proof,booking){
+ const title=todo.title||'',product=proof.product||'',address=proof.provider==='Expedia'?(proof.sourceText||'').match(/Hoteloverzicht\s+(.{1,600}?)\s+Hotel bekijken/i)?.[1]||'':'';
+ const city=cityFrom(title),bookedCity=cityFrom(address||product);if(city&&bookedCity&&city!==bookedCity)return false;
+ const sameCity=city&&city===bookedCity,a=tokens(title),b=tokens(product),cityTokens=tokens(city),distinct=a.filter(w=>!cityTokens.includes(w)&&w!=='centralstation');
+ const shorter=a.length<b.length?a:b,longer=a.length<b.length?b:a;
+ if(sameCity&&shorter.length&&shorter.every(w=>longer.includes(w)||cityTokens.includes(w))&&distinct.some(w=>b.includes(w)))return true;
+ // A specifically approved alternative, not a general hotel alias.
+ if(city==='Cádiz'&&bookedCity==='Cádiz'&&/francia.*paris/.test(normal(title))&&/cadiz bahia/.test(normal(product))&&todo.start==='2026-10-03'&&todo.end==='2026-10-04')return true;
+ if(!sameCity)return canonical(title)===canonical(product)&&canonical(product).length>4;
+ const supporting=[todo.description,booking.notes,...(booking.lines||[]).filter(l=>l.visible!==false).map(l=>l.title)].filter(Boolean);
+ const key=b.filter(w=>!tokens(bookedCity).includes(w)&&!['centralstation','glorieta','strasse'].includes(w));
+ return supporting.some(text=>{const words=tokens(text);return key.length&&key.slice(0,2).every(w=>words.includes(w))&&(!cityFrom(text)||cityFrom(text)===city);});
+}
+export function trainRoom(text){const s=normal(text);return /\bpa1am\b|mini.?cabin|mini.?coupe/.test(s)?'mini':/\b(pa1ad|ritad)\b|priv.*coupe|private.*compartment/.test(s)?'private':'';}
+export function trainStations(text){return String(text||'').replace(/\bCHAJD\b/gi,'Zürich').replace(/\bATALA\b/gi,'Innsbruck').replace(/\bATWIH\b/gi,'Wien');}
