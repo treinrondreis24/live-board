@@ -9,6 +9,12 @@ export function hotelIdentity(todo,proof,booking){
  const title=todo.title||'',product=proof.product||'',address=proof.provider==='Expedia'?(proof.sourceText||'').match(/Hoteloverzicht\s+(.{1,600}?)\s+Hotel bekijken/i)?.[1]||'':'';
  const city=cityFrom(title),bookedCity=cityFrom(address||product);if(city&&bookedCity&&city!==bookedCity)return false;
  const sameCity=city&&city===bookedCity,a=tokens(title),b=tokens(product),cityTokens=tokens(city),distinct=a.filter(w=>!cityTokens.includes(w)&&w!=='centralstation');
+ // Compare the hotel name independently of the city and address suffix.
+ const nameWords=a.filter(w=>!cityTokens.includes(w));
+ if(sameCity&&nameWords.some(w=>w.length>=4&&w!=='centralstation')&&nameWords.every(w=>b.includes(w)))return true;
+ // Explicit alternatives in a todo are allowed choices, even without a city label.
+ const alternatives=title.split('|')[0].split(/\s+(?:of|or)\s+/i);
+ if(alternatives.length>1&&alternatives.some(option=>{const words=tokens(option).filter(w=>!cityTokens.includes(w));return words.some(w=>w.length>=4&&!['double','twin','kamer','room','centralstation'].includes(w))&&words.every(w=>b.includes(w));}))return true;
  const shorter=a.length<b.length?a:b,longer=a.length<b.length?b:a;
  if(sameCity&&shorter.length&&shorter.every(w=>longer.includes(w)||cityTokens.includes(w))&&distinct.some(w=>b.includes(w)))return true;
  // A specifically approved alternative, not a general hotel alias.
