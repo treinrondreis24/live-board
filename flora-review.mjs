@@ -1,8 +1,8 @@
 import {evaluate} from './flora-engine.mjs';
 
-const normal=s=>String(s||'').normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-const cities=['Wenen|Wien|Vienna','Rome|Roma','Praag|Prague|Praha','München|Munich','Luxemburg|Luxembourg','Neurenberg|Nürnberg|Nuremberg','Milaan|Milano|Milan','Venetië|Venezia|Venice','Edinburgh','Chur','Interlaken','Brig','Lugano','Zürich|Zurich','Basel','Schaffhausen','Montpellier','Krakau|Krakow','Wroclaw','Vejle','Arezzo','Verona','Budapest','Zaragoza','Granada','Cádiz|Cadiz','Madrid','Málaga|Malaga','Córdoba|Cordoba','Ronda','Koblenz','Hamburg','Osnabrück|Osnabruck','Agrigento','Cefalù|Cefalu','Oslo','Trondheim','Bodø|Bodo','Narvik','Stockholm','Shrewsbury','Helsinki','Newcastle','IJmuiden','Kopenhagen|Copenhagen','Parijs|Paris','Berlijn|Berlin','Arnhem','Amsterdam','Utrecht','Rotterdam','Innsbruck','Salzburg','Luzern|Lucerne','Tirano','Zermatt','Chamonix'];
-export function cityFrom(text){const value=' '+normal(text)+' ',matches=cities.filter(row=>row.split('|').some(alias=>value.includes(' '+normal(alias)+' ')));return matches.length===1?matches[0].split('|')[0]:'';}
+import {cityFrom} from './flora-identity.mjs';
+export {cityFrom} from './flora-identity.mjs';
+const normal=s=>String(s||'').normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase();
 export function findingComparison(state,f){
  const bookings=state.bookings.filter(b=>String(b.index)===f.trip),b=bookings.find(b=>b._id.startsWith('drafts.')&&(b.todos||[]).some(t=>t._key===f.todoKey))||bookings.find(b=>(b.todos||[]).some(t=>t._key===f.todoKey));
  const t=b?.todos?.find(t=>t._key===f.todoKey),todo={title:t?.title||f.stay||'',start:t?.startDate?.slice(0,10)||'',end:t?.endDate?.slice(0,10)||'',note:t?.description||'',reference:t?.supplierBookingNumber||''};todo.city=cityFrom(todo.title);

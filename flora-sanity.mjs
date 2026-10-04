@@ -6,7 +6,7 @@ export async function fetchBookings({fetcher=fetch,config=sanityConfig(),trips}=
  if(trips&&(!Array.isArray(trips)||!trips.length||trips.some(t=>!/^\d+$/.test(String(t)))))throw Error('Ongeldige boekingsselectie.');
  const all=[];let after='';
  for(let page=0;page<1000;page++){
-  let query='*[_type == "tourBooking" && _id > $after] | order(_id asc)[0...100]{_id,_updatedAt,index,status,dateDeparture,dateReturn,firstName,lastName,"floraPaymentLinkCreated":count(payments[defined(checkoutUrl)]) > 0,passengers[]{firstName,lastName},todos[]{_key,title,description,done,status,tag,quantity,startDate,endDate,supplierBookingNumber},notes}';
+  let query='*[_type == "tourBooking" && _id > $after] | order(_id asc)[0...100]{_id,_updatedAt,index,status,dateDeparture,dateReturn,firstName,lastName,"floraPaymentLinkCreated":count(payments[defined(checkoutUrl)]) > 0,passengers[]{firstName,lastName},todos[]{_key,title,description,done,status,tag,quantity,startDate,endDate,supplierBookingNumber},notes,lines[]{title,visible}}';
   if(trips)query=query.replace('_id > $after','_id > $after && index in $trips');
   const url=new URL(`https://${config.project}.api.sanity.io/v2026-10-03/data/query/${config.dataset}`);url.searchParams.set('query',query);url.searchParams.set('$after',JSON.stringify(after));url.searchParams.set('perspective','raw');if(trips)url.searchParams.set('$trips',JSON.stringify(trips.map(Number)));
   const response=await fetcher(url,{method:'GET',headers:{Authorization:`Bearer ${config.token}`},signal:AbortSignal.timeout(30000)});
