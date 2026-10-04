@@ -8,6 +8,7 @@ import {evaluate,validateEvidence,hash,twoMonthsBefore,reviewSignature,alarmView
 import {fetchBookings,sanityConfig} from './flora-sanity.mjs';
 import {applyFollowup} from './flora-followup.mjs';
 import {scheduleInfo} from './flora-schedule.mjs';
+import {findingComparison,applyBulkReview} from './flora-review.mjs';
 
 const prefix='/seinhuis/flora';
 const googleSession=req=>String(req.headers.cookie||'').split(';').map(c=>c.trim()).find(c=>c.startsWith('tr_admin_session='))||'';
@@ -30,7 +31,7 @@ export function createFloraHandler({authenticate=adminAuthenticated,read=readFlo
     const files={'':'flora.html','/':'flora.html','/flora.js':'flora.js','/flora.css':'flora.css'};
     if(files[path]){const ext=files[path].split('.').pop();res.writeHead(200,{'Content-Type':({html:'text/html',js:'text/javascript',css:'text/css'})[ext]+'; charset=utf-8'});res.end(await readFile(new URL('./'+files[path],import.meta.url)));return true;}
     if(path==='/api/mail/status')return reply(200,await mail.status());
-    if(path==='/api/state'){const data=await read(),gmail=await google.status();data.state.findings=data.state.findings.map(f=>{const next={...f,reviewSignature:reviewSignature(f)};return {...next,viewStatus:alarmView(next)};});return reply(200,{...data,gmail,schedule:scheduleInfo(data.state),connection:{sanityConfigured:!!configuration().token,lastSync:data.state.lastSync,syncError:data.state.syncError||null,email:gmail.email,payment:'Betaallink aanwezig: hotelbevestiging wordt gecontroleerd'}});}
+    if(path==='/api/state'){const data=await read(),gmail=await google.status();data.state.findings=data.state.findings.map(f=>{const next={...f,reviewSignature:reviewSignature(f)};return {...next,viewStatus:alarmView(next),comparison:findingComparison(data.state,f)};});return reply(200,{...data,gmail,schedule:scheduleInfo(data.state),connection:{sanityConfigured:!!configuration().token,lastSync:data.state.lastSync,syncError:data.state.syncError||null,email:gmail.email,payment:'Betaallink aanwezig: hotelbevestiging wordt gecontroleerd'}});}
     return reply(404,{error:'Niet gevonden.'});
    }
    if(req.method!=='POST')return reply(405,{error:'Methode niet toegestaan.'});
@@ -41,6 +42,9 @@ export function createFloraHandler({authenticate=adminAuthenticated,read=readFlo
    if(path==='/api/mail/start'){if(input.mode&&!['attention','rules-only','manual'].includes(input.mode))return reply(400,{error:'Onbekende controle.'});const result=await mail.start({pilot:input.pilot===true,mode:input.mode||'manual'});void mail.tick();return reply(202,result);}
    if(path==='/api/google/start')return reply(200,{url:await google.start(googleSession(req))});
    if(path==='/api/google/test')return reply(200,await google.test());
+   if(path==='/api/archive'){
+    const user=await actor();for(let attempt=0;attempt<5;attempt++){const fresh=await read(),count=applyBulkReview(fresh.state,input,user);try{const revision=await write(fresh.state,fresh.revision);return reply(200,{ok:true,count,revision});}catch(e){if(e.status!==409||attempt===4)throw e;}}
+   }
    const {state,revision}=await read();if(input.revision!==revision)return reply(409,{error:'FloRA is ondertussen gewijzigd. Herlaad eerst.'});
    const now=new Date().toISOString(),user=await actor(),audit=(action,detail)=>state.audit.push({at:now,user,action,detail});
    let evaluated=false;
@@ -60,7 +64,7 @@ export function createFloraHandler({authenticate=adminAuthenticated,read=readFlo
    }
    else if(path==='/api/review'){
     const f=state.findings.find(x=>x.id===input.id);if(!f)return reply(404,{error:'Melding niet gevonden; voer controles opnieuw uit.'});
-    if(!['alarm','attention','checked','automatic'].includes(input.status)||typeof input.reason!=='string'||input.reason.trim().length<5)return reply(400,{error:'Kies een status en geef een toelichting (minimaal 5 tekens).'});
+    if(!['alarm','attention','checked','accepted','automatic'].includes(input.status)||typeof input.reason!=='string'||input.reason.trim().length<5)return reply(400,{error:'Kies een status en geef een toelichting (minimaal 5 tekens).'});
     f.override=input.status==='automatic'?null:{status:input.status,reason:input.reason.trim().slice(0,2000),user,at:now};f.history.push({at:now,user,status:input.status,reason:input.reason.trim().slice(0,2000)});audit('Melding beoordeeld',f.id);
    }
    else if(path==='/api/rules-preview'||path==='/api/rules'){
