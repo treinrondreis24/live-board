@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises';
 import {adminAuthenticated} from './admin-security.mjs';
 import {readAdminSecurity} from './board-cache.mjs';
 import {readFlora,writeFlora} from './flora-store.mjs';
-import {evaluate,validateEvidence,hash,twoMonthsBefore} from './flora-engine.mjs';
+import {evaluate,validateEvidence,hash,twoMonthsBefore,reviewSignature,alarmView} from './flora-engine.mjs';
 import {fetchBookings,sanityConfig} from './flora-sanity.mjs';
 import {applyFollowup} from './flora-followup.mjs';
 import {scheduleInfo} from './flora-schedule.mjs';
@@ -30,7 +30,7 @@ export function createFloraHandler({authenticate=adminAuthenticated,read=readFlo
     const files={'':'flora.html','/':'flora.html','/flora.js':'flora.js','/flora.css':'flora.css'};
     if(files[path]){const ext=files[path].split('.').pop();res.writeHead(200,{'Content-Type':({html:'text/html',js:'text/javascript',css:'text/css'})[ext]+'; charset=utf-8'});res.end(await readFile(new URL('./'+files[path],import.meta.url)));return true;}
     if(path==='/api/mail/status')return reply(200,await mail.status());
-    if(path==='/api/state'){const data=await read(),gmail=await google.status();return reply(200,{...data,gmail,schedule:scheduleInfo(data.state),connection:{sanityConfigured:!!configuration().token,lastSync:data.state.lastSync,syncError:data.state.syncError||null,email:gmail.email,payment:'Betaallink aanwezig: hotelbevestiging wordt gecontroleerd'}});}
+    if(path==='/api/state'){const data=await read(),gmail=await google.status();data.state.findings=data.state.findings.map(f=>{const next={...f,reviewSignature:reviewSignature(f)};return {...next,viewStatus:alarmView(next)};});return reply(200,{...data,gmail,schedule:scheduleInfo(data.state),connection:{sanityConfigured:!!configuration().token,lastSync:data.state.lastSync,syncError:data.state.syncError||null,email:gmail.email,payment:'Betaallink aanwezig: hotelbevestiging wordt gecontroleerd'}});}
     return reply(404,{error:'Niet gevonden.'});
    }
    if(req.method!=='POST')return reply(405,{error:'Methode niet toegestaan.'});
@@ -51,6 +51,12 @@ export function createFloraHandler({authenticate=adminAuthenticated,read=readFlo
     if(path.endsWith('preview'))return reply(200,{digest,rows,unknown,message:`${rows.length} reserveringen; ${unknown} zonder eenduidig gekoppelde todo. Controleer de tabel voor opslaan.`});
     if(input.digest!==digest)return reply(400,{error:'Bekijk eerst het importvoorbeeld.'});
     const byId=new Map(state.evidence.map(e=>[e.id,e]));for(const e of rows)byId.set(e.id,{...e,importedAt:now});state.evidence=[...byId.values()];state.imports.push({at:now,user,name:String(input.name||'Import').slice(0,200),count:rows.length,digest});audit('Bestand geïmporteerd',`${rows.length} reserveringen`);
+   }
+   else if(path==='/api/seen'){
+    const f=state.findings.find(x=>x.id===input.id);if(!f||f.status!=='alarm')return reply(404,{error:'Open alarm niet gevonden.'});
+    if(input.signature!==reviewSignature(f))return reply(409,{error:'Het alarm is gewijzigd. Open het opnieuw voordat je het markeert.'});
+    f.viewed={signature:reviewSignature(f),at:now,user,note:String(input.reason||'').trim().slice(0,2000)};
+    f.history.push({at:now,user,status:'bekeken',reason:f.viewed.note||'Bekeken; alarm blijft open.'});audit('Alarm bekeken',f.id);
    }
    else if(path==='/api/review'){
     const f=state.findings.find(x=>x.id===input.id);if(!f)return reply(404,{error:'Melding niet gevonden; voer controles opnieuw uit.'});
