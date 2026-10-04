@@ -5,6 +5,22 @@ export function directSupplier(from){
 }
 export const replyHead=s=>s.split(/Best regards|Sincerely|Kind regards|Herzliche Grüße|POSTal regards|\bVon:|\bFrom:|\bDa:|\bDe\s*:|\bOn .{0,100}wrote:|\bOp .{0,100}schreef:/i)[0];
 export function supplierDocument(s,message,doc,{dateValue,roomCapacity}){
+
+ if(/@(?:[\w-]+\.)*(?:premierinn|whitbread)\.com\b/i.test(message.from)){
+  const ordinalDate=value=>dateValue(String(value||'').replace(/(\d)(?:st|nd|rd|th)\b/gi,'$1'));
+  const product=s.match(/Premier Inn\s+Wien\s+City\s+Hauptbahnhof/i)?.[0]||'';
+  if(doc.label!=='E-mail'&&product&&/We are pleased to confirm your reservation as follows:/i.test(s)){
+   const room=s.match(/Room:\s*(\d+)\s+(.+?)\s+Persons per Room:\s*(\d+)\s+Adults/i),start=ordinalDate(s.match(/Arrival:\s*(.*?)\s+Departure:/i)?.[1]),end=ordinalDate(s.match(/Departure:\s*(.*?)\s+Guest name:/i)?.[1]);
+   if(!room||Number(room[1])!==1||!start||!end)return null;
+   return {provider:'Premier Inn',reference:s.match(/CONFIRMATION:\s*([A-Z0-9]+)/i)?.[1],start,end,name:s.match(/Guest name:\s*(.*?)\s+Room:/i)?.[1]||'',room:room[2],roomCount:1,occupants:Number(room[3]),capacity:roomCapacity(room[2]),product};
+  }
+  const head=replyHead(s);
+  if(doc.label==='E-mail'&&product&&/\b(?:we (?:would like to (?:kindly )?)?confirm the reservation for)\b/i.test(head)&&! /cannot|can't|not confirm|cancel|annul|storn|\?/i.test(head)){
+   const dates=head.match(/Stay:\s*(\d{1,2}\.\d{1,2}\.20\d{2})\s*[–-]\s*(\d{1,2}\.\d{1,2}\.20\d{2})/i),room=head.match(/\b(\d+)\s*x\s*(Twin|Double|Single)\s+Room/i),reference=head.match(/Hotel Confirmation Number:\s*([A-Z0-9]+)/i)?.[1],name=head.match(/confirm the reservation for\s+(?:(?:Mrs|Mr|Ms)\.?\s+)?([^:]+):/i)?.[1];
+   if(!dates||!room||Number(room[1])!==1||!reference||!name)return null;
+   return {provider:'Premier Inn',reference,start:dateValue(dates[1]),end:dateValue(dates[2]),name,room:room[2],roomCount:1,capacity:roomCapacity(room[2]),occupants:null,product};
+  }
+ }
  if(doc.label!=='E-mail'&&/@teldartravel\.com\b/i.test(message.from)&&/YOUR VOUCHER/.test(s)&&/confirmed by Teldar Travel/i.test(s)){
  const row=s.match(/Pax names Adult\(s\) Children Type of room\(s\)\s+(.*?)\s+(\d+)\s+(\d+)\s+(.*?)\s+FOR HOTEL USE ONLY/i);if(!row)return null;
  return {provider:'Teldar',reference:s.match(/Reference\s+([A-Z0-9]+)/i)?.[1],start:dateValue(s.match(/Arrival\s+(\S+)/i)?.[1]),end:dateValue(s.match(/Departure\s+(\S+)/i)?.[1]),name:row[1].split(/[,;|]/)[0],guestText:row[1],occupants:Number(row[2])+Number(row[3]),capacity:roomCapacity(row[4]),room:row[4],product:s.match(/paid directly at hotel check-out\s+(.*?)\s+Phone number:/i)?.[1]||'',roomCount:1};
