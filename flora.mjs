@@ -10,6 +10,7 @@ import {fetchBookings,sanityConfig} from './flora-sanity.mjs';
 import {applyFollowup} from './flora-followup.mjs';
 import {scheduleInfo} from './flora-schedule.mjs';
 import {findingComparison,applyBulkReview} from './flora-review.mjs';
+import {confirmSource} from './flora-source-review.mjs';
 
 const prefix='/seinhuis/flora';
 const googleSession=req=>String(req.headers.cookie||'').split(';').map(c=>c.trim()).find(c=>c.startsWith('tr_admin_session='))||'';
@@ -69,6 +70,7 @@ export function createFloraHandler({authenticate=adminAuthenticated,read=readFlo
     f.viewed={signature:reviewSignature(f),at:now,user,note:String(input.reason||'').trim().slice(0,2000)};
     f.history.push({at:now,user,status:'bekeken',reason:f.viewed.note||'Bekeken; alarm blijft open.'});audit('Alarm bekeken',f.id);
    }
+   else if(path==='/api/source-review')confirmSource(state,input,user,now);
    else if(path==='/api/review'){
     const f=state.findings.find(x=>x.id===input.id);if(!f)return reply(404,{error:'Melding niet gevonden; voer controles opnieuw uit.'});
     if(!['alarm','attention','checked','accepted','automatic'].includes(input.status)||input.reason!=null&&typeof input.reason!=='string'||!['checked','accepted'].includes(input.status)&&(!input.reason||input.reason.trim().length<5))return reply(400,{error:'Kies een status en geef een toelichting (minimaal 5 tekens).'});
