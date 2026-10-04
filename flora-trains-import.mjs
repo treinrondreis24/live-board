@@ -37,6 +37,7 @@ export function createNSImport({read,write,google,extract,clock=()=>Date.now(),b
   let stored=await read('trains-job'),job=stored.value,revision=stored.revision;
   if(job.mode!=='ns-import'||!active(job)||job.lease>clock())return;
   const owner=randomUUID(),deadline=clock()+budgetMs;
+  const inScope=date=>job.daily?/^20\d{2}-\d{2}-\d{2}$/.test(date):nsTravelDate(date);
   const assertOwner=async()=>{const current=await read('trains-job');if(current.value.id!==job.id||current.value.owner!==owner||!active(current.value))throw Error('Treincontrole gestopt of overgenomen.');};
   const put=async()=>{job.at=stamp();job.owner=owner;job.lease=clock()+300000;revision=await write('trains-job',job,revision);};
   const yieldJob=async()=>{await assertOwner();job.lease=0;job.at=stamp();await write('trains-job',job,revision);};
@@ -73,12 +74,12 @@ export function createNSImport({read,write,google,extract,clock=()=>Date.now(),b
       const decoded=await extract(await get('messages/'+latest.id,{format:'full'}),get);
       const trips=[...new Set([...subject.matchAll(/\b(\d{4,6})A\b/gi)].map(m=>m[1]))],trip=trips.length===1?trips[0]:'';
       const parsed=parseNSTrains(decoded,trip,{allowUnlinked:!trip});
-      rows=parsed.filter(r=>r.number&&nsTravelDate(r.date));
+      rows=parsed.filter(r=>r.number&&inScope(r.date));
       issues.push(...decoded.issues);if(rows.length&&!trip)issues.push('Treinrondreis-boekingsnummer ontbreekt of is niet eenduidig.');
       const pages=decoded.docs.filter(d=>d.label!=='E-mail');
       if(!parsed.length&&pages.some(d=>!passagePage(d.text)&&/\b(?:TREIN|TRAIN|ZUG)\s+\d|Uw reisschema|\b(?:ICE|RJX|RJ|IC|EC)\s*\d/i.test(d.text)))issues.push('Treinnummer gevonden, maar datum of traject niet volledig uitgelezen.');
       const skipped=pages.filter(d=>passagePage(d.text)).length;if(skipped)notes.push(skipped+' passagepagina’s overgeslagen.');
-      if(!rows.length&&!issues.length)notes.push('Geen trein met treinnummer in november/december 2026 of 2027 gevonden.');
+      if(!rows.length&&!issues.length)notes.push(job.daily?'Geen trein met treinnummer gevonden.':'Geen trein met treinnummer in november/december 2026 of 2027 gevonden.');
       if(decoded.retiredLinks?.length)notes.push(decoded.retiredLinks.length+' geannuleerde ticketlinks overgeslagen.');
      }
     }catch(e){await assertOwner();issues.push(e.message);}
@@ -86,7 +87,7 @@ export function createNSImport({read,write,google,extract,clock=()=>Date.now(),b
     for(let attempt=0;attempt<5;attempt++){
      const d=await read('trains-data'),old=d.value,previous=new Map((old.rows||[]).map(r=>[r.id,r]));
      // A failed source cannot erase existing evidence. Rows outside this import remain intact.
-     const next=(old.rows||[]).filter(r=>r.reference!==ref||(!cancelled&&(!nsTravelDate(r.date)||issues.length&&!rows.some(n=>n.id===r.id)))).concat(rows.map(r=>({...r,scanScope:'nov2026-2027',status:!issues.length&&previous.get(r.id)?.status==='Bevestigd'?'Bevestigd':'Te beoordelen'})));
+     const next=(old.rows||[]).filter(r=>r.reference!==ref||(!cancelled&&(!inScope(r.date)||issues.length&&!rows.some(n=>n.id===r.id)))).concat(rows.map(r=>({...r,scanScope:job.daily?'ns-daily':'nov2026-2027',status:!issues.length&&previous.get(r.id)?.status==='Bevestigd'?'Bevestigd':'Te beoordelen'})));
      const valid=new Set(next.map(r=>r.id));
      const checks={...(old.checks||{}),['NS '+ref]:{at:stamp(),messages:count,dossiers:1,issues,notes,rows:rows.length,subject:latest?header(latest,'subject'):'',source:latest?.id||'',importScope:'nov2026-2027'}};
      try{await write('trains-data',{...old,rows:next,connections:(old.connections||[]).filter(c=>valid.has(c.fromId)&&valid.has(c.toId)),checks},d.revision);break;}catch(e){if(e.status!==409||attempt===4)throw e;}

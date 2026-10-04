@@ -47,3 +47,8 @@ test('newest cancellation removes its old trains but not another dossier',async(
  await f.write('trains-data',{rows:[{id:'old',reference:'NOV',date:'2026-11-01'},{id:'other',reference:'OTHER',date:'2026-11-01'}]},0);
  await f.service.start();await finish(f);const rows=(await f.read('trains-data')).value.rows;assert.ok(!rows.some(r=>r.id==='old'));assert.ok(rows.some(r=>r.id==='other'));
 });
+test('daily newly booked trains also include dates outside the initial backfill period',async()=>{
+ const f=fixture();f.messages.a.payload.headers[1].value=f.messages.a.payload.headers[1].value.replace('01/11/2026','01/11/2028');
+ await f.service.start({daily:true});await finish(f);
+ assert.ok((await f.read('trains-data')).value.rows.some(r=>r.date==='2028-11-01'));
+});
