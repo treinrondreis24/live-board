@@ -6,6 +6,9 @@ import {createMailControl,mailPlan,rememberCancellation,latestReservationState} 
 import {emptyState} from './flora-store.mjs';
 import {evaluate} from './flora-engine.mjs';
 import {rebuildStoredEvidence} from './flora-reconcile.mjs';
+import {resolveEvidence} from './flora-mail-parser.mjs';
+
+test('a shared hotel chain in another city does not become a wrong-date match',()=>{const booking=b();booking.todos[0].supplierBookingNumber='111111111';booking.todos[0].title='IntercityHotel Berlin Hauptbahnhof';const e={...parseDocument(mail().docs[0],mail()),reference:'222222222',product:'IntercityHotel Duisburg Mercatorstrasse'};assert.equal(matchEvidence(e,booking),null);const linked=resolveEvidence(e,[booking]);assert.equal(linked.trip,'6685');assert.equal(linked.todoKey,'');assert.ok(linked.linkReview);});
 
 test('all Expedia rooms and children count, without borrowing occupancy from the trip',()=>{
  const m=mail();m.docs[0].text='Je boeking is bevestigd Boekingsdatums 13 jan 2027 - 15 jan 2027 Reisplannummer 123456789 Hoteloverzicht Test Hotel 12 Kamer 1 Gasten Geboekt voor Test Reiziger 1 volwassene, 1 kind Kamer Standaard Twin kamer Inbegrepen voorzieningen Ontbijt Kamervoorkeuren Niet roken Kamer 2 Gasten Geboekt voor Test Reiziger 2 volwassenen Kamer Double room Kamervoorkeuren Niet roken';

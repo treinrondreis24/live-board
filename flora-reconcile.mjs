@@ -1,5 +1,5 @@
-import {currentBookings,evaluate,hash} from './flora-engine.mjs';
-import {parseDocument,matchEvidence,cancellation} from './flora-mail-parser.mjs';
+import {currentBookings,evaluate} from './flora-engine.mjs';
+import {parseDocument,resolveEvidence,cancellation} from './flora-mail-parser.mjs';
 
 export const INTERPRETATION_VERSION=6;
 // Reuse the actual saved source documents, never infer corrected fields from a todo.
@@ -17,8 +17,7 @@ export function rebuildStoredEvidence(state,messages,now=new Date().toISOString(
  for(let e of latest.values()){
   const c=map[e.provider+'|'+e.reference];if(c&&e.observedAt<=c.at)e={...e,status:'cancelled',source:c.source,observedAt:c.at};
   if(retired.has(e.ticketLink))e={...e,status:'cancelled'};
-  const matches=bookings.map(b=>matchEvidence(e,b)).filter(Boolean);
-  const assigned=matches.length===1?matches[0]:{...e,trip:'',todoKey:'',id:hash([e.provider,e.reference,'','']),linkReview:matches.length>1?'Meerdere mogelijke reizen; de koppeling is niet eenduidig.':e.tripHint?'De reisreferentie of reizigersnaam sluit niet eenduidig aan bij Sanity.':''};
+  const assigned=resolveEvidence(e,bookings);
   state.evidence.push({...assigned,automaticEmail:true,interpretationVersion:INTERPRETATION_VERSION,importedAt:now});
  }
  for(const e of state.evidence){const c=map[e.provider+'|'+e.reference];if(c&&(!e.observedAt||e.observedAt<=c.at)){e.status='cancelled';e.source=c.source;e.observedAt=c.at;}}

@@ -5,7 +5,7 @@ import {readMail,writeMail,readFlora,writeFlora} from './flora-store.mjs';
 import {activeBooking,waitingBooking,reservationScope,currentBookings,normalize,stays,hash,evaluate} from './flora-engine.mjs';
 import {planFollowup} from './flora-followup.mjs';
 import {extractMessage} from './flora-mail-source.mjs';
-import {bookingQuery,parseDocument,matchEvidence,cancellation,hotelReplyReview,passengerMatches} from './flora-mail-parser.mjs';
+import {bookingQuery,parseDocument,matchEvidence,cancellation,hotelReplyReview,resolveEvidence} from './flora-mail-parser.mjs';
 
 const stamp=()=>new Date().toISOString();
 const needsRead=m=>![4,5].includes(m.version)||m.version!==5&&/@(?:bernerhof-interlaken|hotel-federale)\.ch\b/i.test(m.from||'')||m.hasLinks||m.issues?.length;
@@ -42,7 +42,7 @@ export function createMailControl({read=readMail,write=writeMail,readState=readF
     for(let retry=0;retry<4;retry++){const {state,revision}=await readState(),bookings=currentBookings(state.bookings);const changed=new Set();
      if(cancel)rememberCancellation(state,cancel);
      if(cancel)for(const e of state.evidence)if(e.provider===cancel.provider&&e.reference===cancel.reference&&(!e.observedAt||e.observedAt<=cancel.at)){e.status='cancelled';e.source=cancel.source;e.observedAt=cancel.at;changed.add(e.trip||'onbekend');}
-     for(const proof of proofs){const e=latestReservationState(state,proof);if(e.end<stamp().slice(0,10))continue;const matches=bookings.map(b=>matchEvidence(e,b)).filter(Boolean);let linked=matches.length===1?matches[0]:null;if(!linked){const known=bookings.some(b=>(b.passengers||[]).some(p=>passengerMatches(e.name,p)));if(known)continue;linked={...e,trip:'',todoKey:'',id:hash([e.provider,e.reference,'',''])};}const previous=state.evidence.find(x=>x.id===linked.id);if(previous?.observedAt>=linked.observedAt)continue;if(linked.trip&&state.emailChecks)delete state.emailChecks[linked.trip];state.evidence=state.evidence.filter(x=>x.id!==linked.id).concat({...linked,automaticEmail:true,importedAt:stamp()});changed.add(linked.trip||'onbekend');}
+     for(const proof of proofs){const e=latestReservationState(state,proof);if(e.end<stamp().slice(0,10))continue;const linked=resolveEvidence(e,bookings);const previous=state.evidence.find(x=>x.id===linked.id);if(previous?.observedAt>=linked.observedAt)continue;if(linked.trip&&state.emailChecks)delete state.emailChecks[linked.trip];state.evidence=state.evidence.filter(x=>x.id!==linked.id).concat({...linked,automaticEmail:true,importedAt:stamp()});changed.add(linked.trip||'onbekend');}
      if(changed.size)Object.assign(state,evaluate(state,stamp(),{trips:changed}));state.emailDiscovery={from,checkedAt:stamp(),coverage:'Expedia TAAP, NS International, ÖBB, Finnlines, Premier Inn, Hotel ABC, Bernerhof en Federale. Andere afzenders alleen via boekingsgerichte zoekopdrachten.'};try{await writeState(state,revision);break;}catch(e){if(e.status!==409||retry===3)throw e;}}
     job.discoveryMessages=(job.discoveryMessages||0)+1;
    }catch{job.errors++;job.discoveryErrors++;}await progress();}
