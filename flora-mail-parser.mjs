@@ -5,6 +5,7 @@ const num=(s,re)=>{const m=s.match(re);return m?Number(m[1]):null;};
 export function dateValue(s){const numeric=String(s).match(/\b(\d{1,2})[./-](\d{1,2})[./-](20\d{2})\b/);if(numeric)return `${numeric[3]}-${numeric[2].padStart(2,'0')}-${numeric[1].padStart(2,'0')}`;const m=String(s).toLowerCase().match(/\b(\d{1,2})\s+(jan\w*|feb\w*|mar\w*|maa\w*|apr\w*|may|mei|jun\w*|jul\w*|aug\w*|sep\w*|oct\w*|okt\w*|nov\w*|dec\w*)\.?\s+(20\d{2})/);if(!m)return '';const month={jan:1,feb:2,mar:3,maa:3,apr:4,may:5,mei:5,jun:6,jul:7,aug:8,sep:9,oct:10,okt:10,nov:11,dec:12}[m[2].slice(0,3)];return `${m[3]}-${String(month).padStart(2,'0')}-${m[1].padStart(2,'0')}`;}
 const numericDate='\\d{1,2}[./-]\\d{1,2}[./-]20\\d{2}';
 function afterDate(s,label){const m=s.match(new RegExp(label+'[^\\d]{0,25}('+numericDate+')','i'));return m?dateValue(m[1]):'';}
+export function voucherNames(s,provider){const block=provider==='Teldar'?s.match(/PASS[AE]NGER NAMES:\s*(.*?)(?=\s+Note that|\s+CHECKIN:|\s+HOTEL NAME:|$)/i)?.[1]:s.match(/Gasten:\s*(.*?)(?=\s+Belangrijk|\s+Incheck|$)/i)?.[1];if(!block)return [];const names=block.split(/\s*[,;|]\s*|\s+&\s+/).map(n=>n.trim()).filter(Boolean);return names.length&&names.every(n=>/^[\p{L} .'-]+$/u.test(n)&&n.trim().split(/\s+/).length>=2)?[...new Set(names)]:[];}
 export function roomCapacity(s){
  const explicit=String(s).match(/\bup to (\d+) guests\b/i);if(explicit)return Number(explicit[1]);
  const alternatives=String(s).split(/\s+(?:of|or|oder)\s+/i);if(alternatives.length>1){const values=alternatives.map(roomCapacity);return values.every(v=>v!=null)?Math.min(...values):null;}
@@ -71,7 +72,7 @@ export function parseDocument(doc,message){
  if(e?.reference?.startsWith('EMAIL-')&&(message.docs||[]).some(d=>d!==doc&&supplierDocument(d.text.replace(/\s+/g,' '),message,d,{dateValue,roomCapacity})?.provider===e.provider))return null;
  if(e?.partialEvidence&&e.reference&&e.start)return {...e,id:hash([e.provider,e.reference]),source:message.url,status:'confirmed',messageId:message.id,document:doc.label,observedAt:message.at,tripHint:'',sourceText:s.slice(0,7000)};
  if(!e?.reference||!e.start||!e.end)return null;
- try{return {...validateEvidence([{...e,source:message.url,status:'confirmed'}])[0],product:e.product,room:e.room,roomCount:e.roomCount||null,messageId:message.id,document:doc.label,observedAt:message.at,ticketLink:doc.link||'',tripHint:message.subject.match(/\b(\d{4,6})A\b/i)?.[1]||s.match(/(?:\bRef:|Our reference:)\s*(\d{4,6})A\b/i)?.[1]||'',sourceText:s.slice(0,7000)};}catch{return null;}
+ try{return {...validateEvidence([{...e,source:message.url,status:'confirmed'}])[0],product:e.product,room:e.room,guestText:e.guestText||'',guestNames:['Teldar','RateHawk'].includes(e.provider)?voucherNames(s,e.provider):[],roomCount:e.roomCount||null,messageId:message.id,document:doc.label,observedAt:message.at,ticketLink:doc.link||'',tripHint:message.subject.match(/\b(\d{4,6})A\b/i)?.[1]||s.match(/(?:\bRef:|Our reference:)\s*(\d{4,6})A\b/i)?.[1]||'',sourceText:s.slice(0,7000)};}catch{return null;}
 }
 export function cancellation(message){
  const text=message.docs.filter(d=>d.label==='E-mail').map(d=>d.text).join(' ');let provider='',reference='';
@@ -104,5 +105,6 @@ export function matchEvidence(e,b){const wrongHint=e.tripHint&&e.tripHint!==Stri
  const supplierIdentity=e.provider==='Hotel ABC Chur'&&/hotelabc|abc.*chur/i.test(t.title)||e.provider==='Hotel Post Chur'&&/post\s*chur/i.test(t.title)||e.provider==='Best Western Montpellier'&&/western.*(?:montpellier|saint.?roch)|comedie.*roch/i.test(t.title);
  const productMatch=supplierIdentity||(t.type==='Nachttrein'&&!!e.direction)||(e.provider==='Finnlines'&&/helsinki/i.test(e.product)&&(/helsinki/i.test(t.title)||stays(b).some(x=>x.start===e.end&&/helsinki/i.test(x.title))))||same;
  if(wrongHint&&!productMatch)return null;
- return {...e,trip:String(b.index),todoKey:t._key,productMatch,tripReferenceMismatch:wrongHint?e.tripHint:'',roomMismatch:roomCapacity(t.title)!==null&&roomCapacity(e.room)!==null&&roomCapacity(t.title)!==roomCapacity(e.room),id:hash([e.provider,e.reference,String(b.index),t._key])};
+ const guests=e.guestText?(b.passengers||[]).filter(p=>p.firstName&&p.lastName&&(' '+normalize(e.guestText)+' ').includes(' '+normalize(p.firstName+' '+p.lastName)+' ')).map(p=>p.firstName+' '+p.lastName):e.guestNames||[],verified=['Teldar','RateHawk'].includes(e.provider)&&guests.length>0&&guests.every(n=>(b.passengers||[]).some(p=>passengerMatches(n,p)));
+ return {...e,...(verified?{capacity:Math.max(e.capacity||0,guests.length),occupants:Math.max(e.occupants||0,guests.length),voucherGuestsVerified:true,guestNames:guests}:{}),trip:String(b.index),todoKey:t._key,productMatch,tripReferenceMismatch:wrongHint?e.tripHint:'',roomMismatch:roomCapacity(t.title)!==null&&roomCapacity(e.room)!==null&&roomCapacity(t.title)!==roomCapacity(e.room),id:hash([e.provider,e.reference,String(b.index),t._key])};
 }
