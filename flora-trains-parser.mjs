@@ -12,6 +12,15 @@ export function parseNSTrains(message,trip,{allowUnlinked=false}={}){
  const route=/(\d{2})\.(\d{2})(?:\.20\d{2})?\s+(\d{2}:\d{2})\s+(.+?)\s*(?:->|→)\s*(.+?)\s+(\d{2})\.(\d{2})(?:\.20\d{2})?\s+(\d{2}:\d{2})([\s\S]*?)(?=\d{2}\.\d{2}\s+\d{2}:\d{2}|$)/g;
  for(const m of s.matchAll(route)){const number=m[9].match(/\b(?:TREIN|TRAIN|ZUG)\s+(\d{1,6})\b/i)?.[1];if(!number)continue;let arrivalYear=Number(year);if(Number(m[7])<Number(m[2]))arrivalYear++;add({date:iso(m[1],m[2],year),arrivalDate:iso(m[6],m[7],arrivalYear),departure:m[3],arrival:m[8],from:station(m[4]),to:station(m[5]),number,document:doc.label,kind:/RESERVERING/i.test(s)?'Reservering / ticket':'Ticket'});}
  }
+ // NS reservation summaries can state the train number without printed times.
+ const mailBody=message.docs?.find(d=>d.label==='E-mail')?.text.replace(/\s+/g,' ')||'';
+ const summary=/(?:^|[.!?]\s+|klas\s+)([^:!?]{2,90}?)\s+-\s+([^:!?]{2,90}?)\s+Vertrek:\s*\w+\s+(\d{1,2})\s+(\w+)\s+(20\d{2})(.*?)(?=Reizigers:|$)/gi;
+ for(const m of mailBody.matchAll(summary)){
+  const number=m[6].match(/Treinnummer:\s*(\d{1,6})\b/i)?.[1],month=months[m[4].toLowerCase().slice(0,3)];if(!number||!month)continue;
+  const date=iso(m[3],month,m[5]);if(rows.some(r=>r.number===number&&r.date===date))continue;
+  const arr=m[6].match(/Aankomst:\s*\w+\s+(\d{1,2})\s+(\w+)\s+(20\d{2})(?:\s+om\s+(\d{2}:\d{2}))?/i),am=arr&&months[arr[2].toLowerCase().slice(0,3)];
+  add({date,arrivalDate:am?iso(arr[1],am,arr[3]):'',number,from:station(m[1].split(/\.\s+/).at(-1)),to:station(m[2]),departure:m[6].match(/^\s+om\s+(\d{2}:\d{2})/)?.[1]||'',arrival:arr?.[4]||'',document:'E-mail',kind:'Reservering; tijden mogelijk niet vermeld'});
+ }
  // Mail route details provide timetable context even when a train number is absent.
  if(!rows.length){const body=message.docs?.find(d=>d.label==='E-mail')?.text.replace(/\s+/g,' ')||'';
  const blocks=body.split(/\b(?:Heenreis|Terugreis)\b/).slice(1);for(const block of blocks){const dates=[...block.matchAll(/(?:Vertrek|Aankomst):\s*\w+\s+(\d{1,2})\s+(\w+)\s+(20\d{2})\s+om\s+(\d{2}:\d{2})/gi)];if(dates.length<2)continue;const dep=dates[0],arr=dates[1],month=months[dep[2].toLowerCase().slice(0,3)],am=months[arr[2].toLowerCase().slice(0,3)];if(!month||!am)continue;const detail=block.split('Routedetails')[1]?.split(/Tariefsoort|Belangrijke informatie/)[0]||'';
