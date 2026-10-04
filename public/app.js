@@ -1,6 +1,7 @@
 
 const CONFIG = {
   dbRowsPerPage: 8,
+  maxPinned:4,minDelay:20,pinCancelled:true,italy:true,connections:true,
   apiRefreshMs: 20000,
 
   // Weergavetijden
@@ -10,6 +11,8 @@ const CONFIG = {
   connectionScreenMs: 10000
 };
 
+const screenId=location.pathname.match(/^\/(\d+)\/?$/)?.[1]||'0';
+let settingsLoaded=false;
 let dbTrains = [];
 let italyTrains = [];
 let dbPage = 0;
@@ -104,8 +107,8 @@ function screenStatus(t){
 }
 function dbPageItems(){
   const trains=dbTrains.filter(t=>withinTrainWindow(t));
-  const cancelled=trains.filter(t=>t.cancelled||t.type==='cancel');
-  const delayed=trains.filter(t=>!cancelled.includes(t)&&Number(t.delay)>=20).sort((a,b)=>Number(b.delay)-Number(a.delay)).slice(0,4);
+  const cancelled=CONFIG.pinCancelled===false?[]:trains.filter(t=>t.cancelled||t.type==='cancel');
+  const delayed=trains.filter(t=>!cancelled.includes(t)&&!t.cancelled&&t.type!=='cancel'&&Number(t.delay)>=(CONFIG.minDelay??20)).sort((a,b)=>Number(b.delay)-Number(a.delay)).slice(0,CONFIG.maxPinned??4);
   const pinned=[...cancelled,...delayed];
   const rotating=trains.filter(t=>!pinned.includes(t));
   const size=Math.max(CONFIG.dbRowsPerPage,pinned.length+(rotating.length?1:0));
@@ -255,10 +258,19 @@ function fmtTime(iso){
 
 async function refreshDb(){
   try{
-    const response = await fetch("/api/trains",{cache:"no-store"});
+    const response = await fetch("/api/trains?screen="+encodeURIComponent(screenId),{cache:"no-store"});
     const payload = await response.json();
     if(!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
 
+    if(payload.settings){
+      const s=payload.settings,wasItaly=CONFIG.italy;
+      Object.assign(CONFIG,{italy:s.italy,connections:s.connections,maxPinned:s.maxPinned,minDelay:s.minDelay,pinCancelled:s.pinCancelled,dbRowsPerPage:s.rows,dbMinScreenMs:s.seconds*1000,dbTargetMsPerPage:s.seconds*1000,italyScreenMs:s.seconds*1000,connectionScreenMs:s.seconds*1000});
+      const frame=screens[2].querySelector('iframe'),src='/aansluitbord?screen=1'+(s.connectionIds===null?'':'&rules='+encodeURIComponent(s.connectionIds.join(',')));
+      if(frame.getAttribute('src')!==src)frame.setAttribute('src',src);
+      if((activeIndex===1&&!s.italy)||(activeIndex===2&&!s.connections))enterScreen(0);
+      const firstLoad=!settingsLoaded;settingsLoaded=true;
+      if(s.italy&&(firstLoad||!wasItaly))refreshItaly();
+    }
     dbTrains = payload.trains || [];
     renderDb();
 
@@ -274,6 +286,7 @@ async function refreshDb(){
 }
 
 async function refreshItaly(){
+  if(!settingsLoaded||!CONFIG.italy)return;
   try{
     const response = await fetch("/api/italy",{cache:"no-store"});
     const payload = await response.json();
@@ -359,7 +372,9 @@ function enterScreen(index){
   }
 
   screenTimer = setTimeout(()=>{
-    enterScreen((activeIndex + 1) % screens.length);
+    let next=(activeIndex+1)%screens.length;
+    while((next===1&&CONFIG.italy===false)||(next===2&&CONFIG.connections===false))next=(next+1)%screens.length;
+    enterScreen(next);
   }, duration);
 }
 

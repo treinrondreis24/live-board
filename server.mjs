@@ -6,6 +6,7 @@ import {startFlora} from './flora-schedule.mjs';
 import {handleBooklets} from './booklets-gateway.mjs';
 import {handlePlatformAdmin} from './platform-admin.mjs';
 import {handleTreinhuisAccess} from './treinhuis-access.mjs';
+import {initScreenSettings,handleScreenSettings,screenSettings,screenTrainNumbers,screenTrainMatches} from './screen-settings.mjs';
 import {handleConnectionAdmin} from './connections-admin.mjs';
 import {handleAppCms} from './app-cms.mjs';
 import {startDayReports,handleDayReports} from './day-reports.mjs';
@@ -448,14 +449,14 @@ async function restoreDbHistory(){
   }
 }
 
-function screenBoardTrains(now=Date.now()){
+function screenBoardTrains(now=Date.now(),settings=null){
   const numbers=new Set((config.stations||[]).flatMap(s=>s.trainNumbers||[]).map(String));
   const categories=new Set((config.allowedCategories||[]).map(c=>String(c).toUpperCase()));
   const ndovFresh=ndovStatus().fresh;
   const liveNl=[...ndovRows.values()].map(r=>ndovFresh?r:{...r,hasRealtime:false,delay:0,status:'',expectedTimestamp:r.plannedTimestamp,currentTime:r.plannedTime});
   const rows=dedupeRows([...dbState.trains.flatMap(r=>r.mergedServices||[r]),...Object.values(collectorState.byStation).flat(),...liveNl.map(r=>({...r,hasChangedTime:r.currentTime!==r.plannedTime}))]);
   const groups=new Map();
-  for(const r of rows){if(!numbers.has(String(r.number))||(categories.size&&!categories.has(String(r.category).toUpperCase()))||!visibleOnBoard(r,now)||r.departed)continue;
+  for(const r of rows){if((settings?!screenTrainMatches(r,settings):(!numbers.has(String(r.number))||(categories.size&&!categories.has(String(r.category).toUpperCase()))))||!visibleOnBoard(r,now)||r.departed)continue;
     if(!groups.has(String(r.number)))groups.set(String(r.number),[]);groups.get(String(r.number)).push(r);
   }
   const selected=[...groups.values()].map(items=>{const realtime=items.filter(r=>r.hasRealtime);return chooseBest(realtime.length?realtime:items);});
@@ -485,7 +486,7 @@ async function performScan(){
         const selectedRows=rowsForSelector(fetched.stops,fetched.station,boardSelectors[0]?{...boardSelectors[0],trainNumbers:globalSelector.trainNumbers}:globalSelector);
         boardRows.push(...selectedRows);
 
-        const cRows=[...selectedRows];
+        const cRows=[...selectedRows,...rowsForSelector(fetched.stops,fetched.station,{trainNumbers:screenTrainNumbers(),allEvents:true})];
         const connectionArrivals=connectionArrivalSelector(name,fetched.stops);
         if(connectionArrivals)collectorRows.push(...rowsForSelector(fetched.stops,fetched.station,connectionArrivals));
         for(const cfg of collectorSelectors){
@@ -1077,6 +1078,7 @@ const server=http.createServer(async(req,res)=>{
     if(await handleAnalytics(req,res,url))return;
     if(await handleDayReports(req,res,url))return;
     if(await handlePlatformAdmin(req,res,url))return;
+    if(await handleScreenSettings(req,res,url))return;
     if(await handleConnectionAdmin(req,res,url))return;
     if(await handleConnections(req,res,url))return;
     if(await handleAppCms(req,res,url))return;
@@ -1204,16 +1206,20 @@ const server=http.createServer(async(req,res)=>{
       return sendJson(res,200,{source:"ViaggiaTreno",lastScanAt:italyState.lastScanAt,nextScanAt:italyState.nextScanAt,currentIntervalMinutes:italyState.currentIntervalMinutes,warnings:italyState.warnings,trains:italyState.trains});
     }
     if(url.pathname==="/api/trains"){
+      const screenId=url.searchParams.get("screen"),settings=screenId===null?null:screenSettings(screenId);
+      if(screenId!==null&&!settings)return sendJson(res,404,{error:"Onbekend scherm"});
       if(!dbState.lastScanAt&&!dbState.scanning)await performScan();if(!dbState.lastScanAt&&dbState.warnings.length)return sendJson(res,503,{error:dbState.warnings.join(" | ")});
-      return sendJson(res,200,{source:"DB Timetables",updatedAt:dbState.lastScanAt,lastScanAt:dbState.lastScanAt,nextScanAt:dbState.nextScanAt,currentIntervalMinutes:dbState.currentIntervalMinutes,warnings:dbState.warnings,stations:dbState.stations,trains:screenBoardTrains()});
+      return sendJson(res,200,{source:"DB Timetables",updatedAt:dbState.lastScanAt,lastScanAt:dbState.lastScanAt,nextScanAt:dbState.nextScanAt,currentIntervalMinutes:dbState.currentIntervalMinutes,warnings:dbState.warnings,stations:dbState.stations,settings,trains:screenBoardTrains(Date.now(),settings)});
     }
     const embedPage=url.pathname.match(/^\/embed\/([a-z0-9-]+)\/?$/)?.[1];
     if(embedPage&&boardSource(embedPage))return sendFile(res,path.join(publicDir,'koeln-embed.html'));
+    if(/^\/[1-9]\d{0,2}\/?$/.test(url.pathname)){const id=url.pathname.replaceAll("/","");if(!screenSettings(id)){res.writeHead(404);return res.end("Onbekend scherm");}return sendFile(res,path.join(publicDir,"index.html"));}
     let requested=pageRoutes[url.pathname]||(url.pathname==="/"?"/index.html":url.pathname);requested=path.normalize(requested).replace(/^(\.\.[/\\])+/,'');const filename=path.join(publicDir,requested);if(!filename.startsWith(publicDir)){res.writeHead(403);return res.end("Forbidden");}sendFile(res,filename);
   }catch(e){sendJson(res,500,{error:e.message});}
 });
 
 await initStorage();
+await initScreenSettings(config);
 startConnectionMonitor(getStationPlatformLayout);
 startAnalyticsBackfill();
 startDayReports(()=>{
