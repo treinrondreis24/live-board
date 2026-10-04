@@ -2,9 +2,9 @@ import {hash,normalize} from './flora-engine.mjs';
 const iso=(d,m,y)=>`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 const months={jan:1,feb:2,mrt:3,mar:3,apr:4,mei:5,jun:6,jul:7,aug:8,sep:9,okt:10,nov:11,dec:12};
 const station=s=>String(s||'').trim().replace(/\s+/g,' ');
-export function parseNSTrains(message,trip){
+export function parseNSTrains(message,trip,{allowUnlinked=false}={}){
  if(!/^no-reply@confirmation\.nsinternational\.nl$/i.test(message.from.trim())&&!/<no-reply@confirmation\.nsinternational\.nl>/i.test(message.from))return [];
- if(!new RegExp('\\b'+trip+'A\\b','i').test(message.subject))return [];
+ if(!allowUnlinked&&!new RegExp('\\b'+trip+'A\\b','i').test(message.subject))return [];
  if(/optie|annul|cancel|refund|storn/i.test(message.subject))return [];
  const reference=message.subject.match(/boekingscode\s*:?\s*([A-Z0-9]+)/i)?.[1]||'',rows=[];
  const add=r=>rows.push({...r,id:hash([trip,reference,r.date,r.number,r.from,r.to,r.departure,r.arrival]),trip,reference,source:message.url,messageId:message.id,observedAt:message.at,status:'Te beoordelen'});
