@@ -1,7 +1,7 @@
 import {currentBookings,evaluate} from './flora-engine.mjs';
-import {parseDocument,resolveEvidence,cancellation,receiptCancellations,latestNSTickets,conversationCancellations} from './flora-mail-parser.mjs';
+import {cancellationApplies,parseDocument,resolveEvidence,cancellation,receiptCancellations,latestNSTickets,conversationCancellations} from './flora-mail-parser.mjs';
 
-export const INTERPRETATION_VERSION=10;
+export const INTERPRETATION_VERSION=11;
 // Reuse the actual saved source documents, never infer corrected fields from a todo.
 // Preserve the prior evidence in an audit snapshot before replacing automatic interpretations.
 export function rebuildStoredEvidence(state,messages,now=new Date().toISOString(),options={}){
@@ -18,18 +18,19 @@ export function rebuildStoredEvidence(state,messages,now=new Date().toISOString(
  const affected=options.trips?new Set(options.trips):null;
  const replacements=[];
  for(let e of latest.values()){
-  const c=map[e.provider+'|'+e.reference];if(c&&e.observedAt<=c.at)e={...e,status:'cancelled',source:c.source,observedAt:c.at};
+  const c=Object.values(map).filter(c=>cancellationApplies(c,e)).sort((a,b)=>b.at.localeCompare(a.at))[0];if(c&&e.observedAt<=c.at)e={...e,status:'cancelled',source:c.source,observedAt:c.at};
   if(retired.has(e.ticketLink))e={...e,status:'cancelled'};
   const assigned=resolveEvidence(e,bookings);
   if(!selected(assigned)&&!old.some(x=>selected(x)&&x.provider===e.provider&&x.reference===e.reference))continue;
   affected?.add(assigned.trip||'onbekend');
+  const manual=old.find(x=>x.id===assigned.id&&x.manualSourceReview&&x.messageId===assigned.messageId);if(manual)continue;
   const existing=old.find(x=>x.provider===assigned.provider&&x.reference===assigned.reference&&!x.partialEvidence);
   if(assigned.partialEvidence&&existing&&assigned.start===existing.start)continue;
   replacements.push({...assigned,automaticEmail:true,interpretationVersion:INTERPRETATION_VERSION,importedAt:now});
  }
  const replaced=new Set(replacements.map(e=>e.provider+'|'+e.reference));
  state.evidence=old.filter(e=>!selected(e)||!e.automaticEmail||!(replaced.has(e.provider+'|'+e.reference)||String(e.reference).startsWith('EMAIL-')&&replacements.some(n=>n.provider===e.provider&&n.messageId===e.messageId&&n.document===e.document&&n.start===e.start&&n.end===e.end))).map(e=>({...e})).concat(replacements);
- for(const e of state.evidence){if(!selected(e))continue;const c=map[e.provider+'|'+e.reference];if(c&&(!e.observedAt||e.observedAt<=c.at)){e.status='cancelled';e.source=c.source;e.observedAt=c.at;}}
+ for(const e of state.evidence){if(!selected(e))continue;const c=Object.values(map).filter(c=>cancellationApplies(c,e)).sort((a,b)=>b.at.localeCompare(a.at))[0];if(c&&(!e.observedAt||e.observedAt<=c.at)){e.status='cancelled';e.source=c.source;e.observedAt=c.at;}}
  state.evidence=[...new Map(state.evidence.map(e=>[e.id,e])).values()];
  for(const [trip,check] of Object.entries(state.emailChecks||{}))for(const stay of check.stays||[]){if(options.trips&&!options.trips.has(trip))continue;const rows=state.evidence.filter(e=>e.trip===trip&&e.todoKey===stay.todoKey);stay.references=rows.map(e=>e.reference);stay.fields=rows.map(e=>({reference:e.reference,provider:e.provider,start:e.start,end:e.end,name:e.name,capacity:e.capacity,occupants:e.occupants,product:e.product,document:e.document,source:e.source}));if(rows.length&&stay.state!=='incomplete'&&!stay.errors?.length){stay.state='found';stay.explanation='Opgeslagen bron opnieuw gelezen met de huidige regels; zie Meldingen voor resterende onzekerheden.';}if(!rows.length&&stay.state==='found'){stay.state='candidates';stay.explanation='Eerdere koppeling niet bevestigd door de bijgewerkte regels; opnieuw beoordelen.';}}
  (state.evidenceRevisions??=[]).push({at:now,version:INTERPRETATION_VERSION,trips:options.trips?[...options.trips]:null,evidence:old.filter(selected)});

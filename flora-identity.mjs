@@ -1,5 +1,5 @@
 const normal=s=>String(s||'').normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-const cities=['Wenen|Wien|Vienna','Rome|Roma','Praag|Prague|Praha','München|Munich','Luxemburg|Luxembourg','Neurenberg|Nürnberg|Nuremberg','Milaan|Milano|Milan','Venetië|Venezia|Venice','Edinburgh','Chur','Interlaken','Brig','Lugano','Zürich|Zurich','Basel','Schaffhausen','Montpellier','Krakau|Krakow','Wroclaw','Vejle','Arezzo','Verona','Budapest','Zaragoza','Granada','Cádiz|Cadiz','Madrid','Málaga|Malaga','Córdoba|Cordoba','Ronda','Koblenz','Hamburg','Osnabrück|Osnabruck','Agrigento','Cefalù|Cefalu','Oslo','Trondheim','Bodø|Bodo','Narvik','Stockholm','Shrewsbury','Helsinki','Newcastle','IJmuiden','Kopenhagen|Copenhagen','Parijs|Paris','Berlijn|Berlin','Arnhem','Amsterdam','Utrecht','Rotterdam','Innsbruck','Salzburg','Luzern|Lucerne','Tirano','Zermatt','Chamonix'];
+const cities=['Wenen|Wien|Vienna','Rome|Roma','Praag|Prague|Praha','München|Munich','Luxemburg|Luxembourg','Neurenberg|Nürnberg|Nuremberg','Milaan|Milano|Milan','Venetië|Venezia|Venice','Duisburg','Bratislava','Napels|Napoli|Naples','Edinburgh','Chur','Interlaken','Brig','Lugano','Zürich|Zurich','Basel','Schaffhausen','Montpellier','Krakau|Krakow','Wroclaw','Vejle','Arezzo','Verona','Budapest','Zaragoza','Granada','Cádiz|Cadiz','Madrid','Málaga|Malaga','Córdoba|Cordoba','Ronda','Koblenz','Hamburg','Osnabrück|Osnabruck','Agrigento','Cefalù|Cefalu','Oslo','Trondheim','Bodø|Bodo','Narvik','Stockholm','Shrewsbury','Helsinki','Newcastle','IJmuiden','Kopenhagen|Copenhagen','Parijs|Paris','Berlijn|Berlin','Arnhem','Amsterdam','Utrecht','Rotterdam','Innsbruck','Salzburg','Luzern|Lucerne','Tirano','Zermatt','Chamonix'];
 export function cityFrom(text){const value=' '+normal(String(text).replace(/de Francia y Par[ií]s/gi,'').replace(/CHAJD/gi,'Zurich').replace(/ATALA/gi,'Innsbruck').replace(/ATWIH/gi,'Wien'))+' ',matches=cities.filter(row=>row.split('|').some(alias=>value.includes(' '+normal(alias)+' ')));return matches.length===1?matches[0].split('|')[0]:'';}
 
 const canonical=s=>normal(String(s||'').split('|')[0].replace(/\([^)]*\)/g,''))
@@ -24,5 +24,17 @@ export function hotelIdentity(todo,proof,booking){
  const key=b.filter(w=>!tokens(bookedCity).includes(w)&&!['centralstation','glorieta','strasse'].includes(w));
  return supporting.some(text=>{const words=tokens(text);return key.length&&key.slice(0,2).every(w=>words.includes(w))&&(!cityFrom(text)||cityFrom(text)===city);});
 }
-export function trainRoom(text){const s=normal(text);return /\bpa1am\b|mini.?cabin|mini.?coupe/.test(s)?'mini':/\b(pa1ad|ritad)\b|priv.*coupe|private.*compartment/.test(s)?'private':'';}
+export function trainRoom(text){const s=normal(text);return /\b(?:pa1am|ritam)\b|mini.?cabin|mini.?coupe/.test(s)?'mini':/\b(pa1ad|ritad)\b|priv.*coupe|private.*compartment/.test(s)?'private':/\brica4\b|couchette 4|vier ligpl/.test(s)?'couchette4':'';}
 export function trainStations(text){return String(text||'').replace(/\bCHAJD\b/gi,'Zürich').replace(/\bATALA\b/gi,'Innsbruck').replace(/\bATWIH\b/gi,'Wien');}
+
+export function adjacentNightStay(proof,booking){
+ const route=normal(proof.product),out=proof.direction==='outbound',back=proof.direction==='inbound';
+ if(!out&&!back)return false;
+ const swiss=/\b(?:zwitserland|switzerland|schweiz|zurich|zuerich|basel|bern|luzern|lucerne|chur|lugano|interlaken|zermatt|brig|schaffhausen|lausanne|geneve|geneva|montreux|st moritz)\b/;
+ let area;
+ if(/\b(?:wien|vienna|wenen)\b/.test(route))area=/\b(?:wien|vienna|wenen|bratislava|budapest|boedapest|slovakia|slowakije|slovensko|kosice|zilina|poprad|trencin|banska bystrica|tatranska|strbske)\b/;
+ else if(/\b(?:zurich|zuerich|basel)\b/.test(route))area=out?new RegExp(swiss.source+'|\\b(?:milaan|milano|milan)\\b'):swiss;
+ else if(/\binnsbruck\b/.test(route))area=/\b(?:innsbruck|verona|venetie|venice|venezia|rome|roma)\b/;
+ if(!area)return false;
+ return (booking.todos||[]).some(t=>t.tag==='hotel'&&!/nightjet|nachttrein|\b(?:eun|rit|nj)\b/i.test(t.title||'')&&String(out?t.startDate:t.endDate).slice(0,10)===(out?proof.end:proof.start)&&area.test(normal(t.title+' '+(t.description||''))));
+}

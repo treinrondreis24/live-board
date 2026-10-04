@@ -1,6 +1,7 @@
 // Supplier-specific evidence, using only explicit source fields.
 export function directSupplier(from){
  const domain=String(from).match(/@([a-z0-9.-]+)/i)?.[1]?.toLowerCase();
+ if(/^(?:[\w-]+\.)*(?:premierinn|whitbread)\.com$/.test(domain||''))return 'Premier Inn';
  return ({'bernerhof-interlaken.ch':'Hotel Bernerhof','hotel-federale.ch':'Hotel Federale','hotelabc.ch':'Hotel ABC Chur','postchur.ch':'Hotel Post Chur','hotelpostchur.ch':'Hotel Post Chur','lhotel-montpellier.com':'Best Western Montpellier','finnlines.com':'Finnlines'})[domain]||'';
 }
 export const replyHead=s=>s.split(/Best regards|Sincerely|Kind regards|Herzliche Grüße|POSTal regards|\bVon:|\bFrom:|\bDa:|\bDe\s*:|\bOn .{0,100}wrote:|\bOp .{0,100}schreef:/i)[0];
@@ -23,14 +24,16 @@ export function supplierDocument(s,message,doc,{dateValue,roomCapacity}){
  }
  if(doc.label!=='E-mail'&&/@teldartravel\.com\b/i.test(message.from)&&/YOUR VOUCHER/.test(s)&&/confirmed by Teldar Travel/i.test(s)){
  const row=s.match(/Pax names Adult\(s\) Children Type of room\(s\)\s+(.*?)\s+(\d+)\s+(\d+)\s+(.*?)\s+FOR HOTEL USE ONLY/i);if(!row)return null;
- return {provider:'Teldar',reference:s.match(/Reference\s+([A-Z0-9]+)/i)?.[1],start:dateValue(s.match(/Arrival\s+(\S+)/i)?.[1]),end:dateValue(s.match(/Departure\s+(\S+)/i)?.[1]),name:row[1].split(/[,;|]/)[0],guestText:row[1],occupants:Number(row[2])+Number(row[3]),capacity:roomCapacity(row[4]),room:row[4],product:s.match(/paid directly at hotel check-out\s+(.*?)\s+Phone number:/i)?.[1]||'',roomCount:1};
+ return {provider:'Teldar',reference:s.match(/Reference\s+([A-Z0-9]+)/i)?.[1],alternateReferences:[s.match(/Supplier Booking Number\s*:?\s*([A-Z0-9]+)/i)?.[1]].filter(Boolean),start:dateValue(s.match(/Arrival\s+(\S+)/i)?.[1]),end:dateValue(s.match(/Departure\s+(\S+)/i)?.[1]),name:row[1].split(/[,;|]/)[0],guestText:row[1],occupants:Number(row[2])+Number(row[3]),capacity:roomCapacity(row[4]),room:row[4],product:s.match(/paid directly at hotel check-out\s+(.*?)\s+Phone number:/i)?.[1]||'',roomCount:1};
  }
 
  const provider=directSupplier(message.from),isMail=doc.label==='E-mail';
  if(isMail&&/@(?:[\w-]+\.)*(?:premierinn|whitbread)\.com\b/i.test(message.from)&&/your booking is confirmed/i.test(message.subject)){
-  const dates=s.match(/(\d{1,2} \w+ 20\d{2})\s+Check-in from.*?(\d{1,2} \w+ 20\d{2})\s+Check out by/i),summary=s.match(/Booking summary\s+(.+?)\s+(\d+) adults?\s+in a\s+(.+?)(?=\s+(?:&pound;|£|\d+[.,]\d{2}))/i),count=Number(s.match(/You have booked\s+(\d+) rooms?/i)?.[1]);
-  if(!dates||!summary||count!==1)return null;
-  return {provider:'Premier Inn',reference:s.match(/Booking reference:\s*([A-Z0-9]+)/i)?.[1],start:dateValue(dates[1]),end:dateValue(dates[2]),name:summary[1],occupants:Number(summary[2]),capacity:roomCapacity(summary[3]),room:summary[3],product:'Premier Inn '+(s.match(/Your stay with us\s+(.+?)\s+\d/i)?.[1]||''),roomCount:1};
+  const dates=s.match(/(\d{1,2} \w+ 20\d{2})\s+Check-in from.*?(\d{1,2} \w+ 20\d{2})\s+Check\s*out by/i),block=s.split(/Booking summary/i)[1]||'',count=Number(s.match(/You have booked\s+(\d+) rooms?/i)?.[1]);
+  const rows=[...block.matchAll(/([\p{L}][\p{L} .'-]+?)\s+(\d+) adults?\s+in a\s+(.+?)(?=\s+(?:&pound;|£|\d+[.,]\d{2}))/giu)];
+  if(!dates||!count||rows.length!==count)return null;
+  const capacities=rows.map(r=>roomCapacity(r[3]));
+  return {provider:'Premier Inn',reference:s.match(/Booking reference:\s*([A-Z0-9]+)/i)?.[1],start:dateValue(dates[1]),end:dateValue(dates[2]),name:rows[0][1].trim(),guestText:rows.map(r=>r[1].trim()).join('; '),occupants:rows.reduce((n,r)=>n+Number(r[2]),0),capacity:capacities.every(n=>n!=null)?capacities.reduce((a,b)=>a+b,0):null,room:rows.map(r=>r[3]).join('; '),product:'Premier Inn '+(s.match(/Your stay with us\s+(.+?)\s+(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun|\d)/i)?.[1]||''),roomCount:count};
  }
  if(provider==='Hotel Post Chur'&&!isMail&&/BUCHUNGSBESTÄTIGUNG/.test(s)){
   const rows=[...s.matchAll(/Gastname:\s*(.*?)\s*Anreise:\s*(\S+)\s*Abreise:\s*(\S+)\s*Zimmerkategorie:\s*(.*?)\s*Personen:\s*(\d+)/gi)];
