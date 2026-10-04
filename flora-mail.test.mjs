@@ -5,6 +5,33 @@ import {extractMessage,safeTicketURL,pdfText} from './flora-mail-source.mjs';
 import {createMailControl,mailPlan,rememberCancellation,latestReservationState} from './flora-mail.mjs';
 import {emptyState} from './flora-store.mjs';
 import {evaluate} from './flora-engine.mjs';
+import {rebuildStoredEvidence} from './flora-reconcile.mjs';
+import {resolveEvidence} from './flora-mail-parser.mjs';
+
+test('a shared hotel chain in another city does not become a wrong-date match',()=>{const booking=b();booking.todos[0].supplierBookingNumber='111111111';booking.todos[0].title='IntercityHotel Berlin Hauptbahnhof';const e={...parseDocument(mail().docs[0],mail()),reference:'222222222',product:'IntercityHotel Duisburg Mercatorstrasse'};assert.equal(matchEvidence(e,booking),null);const linked=resolveEvidence(e,[booking]);assert.equal(linked.trip,'6685');assert.equal(linked.todoKey,'');assert.ok(linked.linkReview);});
+
+test('all Expedia rooms and children count, without borrowing occupancy from the trip',()=>{
+ const m=mail();m.docs[0].text='Je boeking is bevestigd Boekingsdatums 13 jan 2027 - 15 jan 2027 Reisplannummer 123456789 Hoteloverzicht Test Hotel 12 Kamer 1 Gasten Geboekt voor Test Reiziger 1 volwassene, 1 kind Kamer Standaard Twin kamer Inbegrepen voorzieningen Ontbijt Kamervoorkeuren Niet roken Kamer 2 Gasten Geboekt voor Test Reiziger 2 volwassenen Kamer Double room Kamervoorkeuren Niet roken';
+ const e=parseDocument(m.docs[0],m);assert.equal(e.capacity,4);assert.equal(e.occupants,4);assert.equal(e.roomCount,2);assert.equal(e.name,'Test Reiziger');
+});
+test('Expedia explicit changed itinerary supersedes old dates and room layout',()=>{
+ const m=mail();m.docs[0].text='Verblijf bij Test Hotel Naar aanleiding van je verzoek hebben we je boeking gewijzigd. 13 jan. 2027 - 16 jan. 2027 | Reisplannummer 123456789 , 1 kamer | 3 nachten Je reservering is geboekt. Kamer Studio Inclusief: ontbijt 1 kingsize bed, rookvrije kamer Geboekt voor Test Reiziger 2 volwassenen';
+ const e=parseDocument(m.docs[0],m);assert.equal(e.end,'2027-01-16');assert.equal(e.capacity,2);assert.equal(e.name,'Test Reiziger');
+});
+test('Expedia alternative cancellation wording is authoritative, cancellation policy is not',()=>{
+ const m=mail();m.subject='TAAP Annuleringsbevestiging hotel';m.docs[0].text='Je hotelkamer is geannuleerd. TAAP-reisplannummer: 123456789';assert.equal(cancellation(m).reference,'123456789');m.docs[0].text='Je hotelkamer kan worden geannuleerd. TAAP-reisplannummer: 123456789';assert.equal(cancellation(m),null);
+});
+test('empty and placeholder passengers cannot match other bookings; explicit different trip remains blocked',()=>{
+ const e=parseDocument(mail().docs[0],mail());e.reference='different';for(const p of [{firstName:null,lastName:null},{firstName:'a',lastName:'a'},{firstName:'nnb',lastName:'nnb'}]){const booking=b();booking.passengers=[p];assert.equal(matchEvidence({...e,name:'Other nnb'},booking),null);}
+ const booking=b();assert.equal(matchEvidence({...e,tripHint:'6685',name:'Other Person'},booking),null);
+});
+test('NS BEDPLAATS counts actual berths',()=>{
+ const e=parseDocument({label:'ticket.pdf',year:'2027',text:'DNR: ABCDEFG ID:0 VERVOERBEWIJS + RESERVERING NIGHTJET REIZIGER, TEST 02 VOLWASSENEN 13.01 18:00 UTRECHT CENTRAAL -> WIEN HBF 14.01 09:00 RIJTUIG 432 BEDPLAATS 61 62 DO 02 RIT'},mail());assert.equal(e.capacity,2);
+});
+test('cached source rebuild removes stale wrong links, retains cancellations and preserves prior evidence',()=>{
+ const m=mail(),e={...matchEvidence(parseDocument(m.docs[0],m),b()),automaticEmail:true,capacity:1};const s={...emptyState(),bookings:[b()],evidence:[e]};rebuildStoredEvidence(s,[m],'2026-10-04T01:00:00Z');assert.equal(s.evidence[0].capacity,2);assert.equal(s.evidenceRevisions[0].evidence[0].capacity,1);
+ const cancelled={...m,id:'cancel',at:'2026-10-04T00:00:00Z',subject:'TAAP Annuleringsbevestiging',docs:[{label:'E-mail',text:'Je hotelkamer is geannuleerd TAAP-reisplannummer: 123456789'}]};rebuildStoredEvidence(s,[m,cancelled]);assert.equal(s.evidence[0].status,'cancelled');
+});
 const b=()=>({_id:'x',index:6685,status:'te verwerken',dateDeparture:'2027-01-13',dateReturn:'2027-01-15',passengers:[{firstName:'Test',lastName:'Reiziger'}],todos:[{_key:'hotel',tag:'hotel',title:'Thon Hotel Bristol | Double',startDate:'2027-01-13',endDate:'2027-01-15',supplierBookingNumber:'123456789',done:true}]});
 const mail=()=>({id:'abc',at:'2026-10-03T10:00:00Z',subject:'Reisbevestiging',from:'noreply@expediataap.nl',url:'https://mail.google.com/mail/u/0/#all/abc',issues:[],docs:[{label:'E-mail',text:'Itinerary: Thon Hotel Bristol Bedankt! Je boeking is bevestigd. Hoteloverzicht Thon Hotel Bristol Torgalmenningen 11 Boekingsdatums 13 jan 2027 - 15 jan 2027 Reisplannummer 123456789 Geboekt voor Test Reiziger 1 volwassenen Kamer Standaard tweepersoonskamer Kamervoorkeuren Niet roken Gratis annulering tot 13 jan 2027'}]});
 test('beds count people, including alternative single beds',()=>{for(const text of ['Comfort kamer, 1 twee- of 2 eenpersoonsbedden','1 tweepersoonsbed','2 eenpersoonsbedden','Double room'])assert.equal(roomCapacity(text),2,text);assert.equal(roomCapacity('1 eenpersoonsbed'),1);assert.equal(roomCapacity('1 double bed and 1 single bed'),3);assert.equal(roomCapacity('single or double'),1);});
