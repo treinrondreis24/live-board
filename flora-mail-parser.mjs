@@ -110,3 +110,12 @@ export function matchEvidence(e,b){const wrongHint=e.tripHint&&e.tripHint!==Stri
  const guests=e.guestText?(b.passengers||[]).filter(p=>p.firstName&&p.lastName&&(' '+normalize(e.guestText)+' ').includes(' '+normalize(p.firstName+' '+p.lastName)+' ')).map(p=>p.firstName+' '+p.lastName):e.guestNames||[],verified=['Teldar','RateHawk'].includes(e.provider)&&guests.length>0&&guests.every(n=>(b.passengers||[]).some(p=>passengerMatches(n,p)));
  return {...e,...(verified?{capacity:Math.max(e.capacity||0,guests.length),occupants:Math.max(e.occupants||0,guests.length),voucherGuestsVerified:true,guestNames:guests}:{}),trip:String(b.index),todoKey:t._key,productMatch,tripReferenceMismatch:wrongHint?e.tripHint:'',roomMismatch:t.type==='Nachttrein'&&trainRoom(t.title)&&trainRoom(e.room)?trainRoom(t.title)!==trainRoom(e.room):roomCapacity(t.title)!==null&&roomCapacity(e.room)!==null&&roomCapacity(t.title)!==roomCapacity(e.room),id:hash([e.provider,e.reference,String(b.index),t._key])};
 }
+
+export function conversationCancellations(messages,evidence){
+ const result=[];for(const m of messages){const provider=directSupplier(m.from);if(!provider)continue;const head=replyHead((m.docs||[]).filter(d=>d.label==='E-mail').map(d=>d.text).join(' '));
+ if(/not cancelled|not canceled|niet geannuleerd|nicht storniert|cannot cancel|please cancel|kunt u.*annul|could you.*cancel/i.test(head))continue;
+ const explicit=/\b(?:we have cancelled|we have canceled|booking (?:has been |is )cancelled|reservation (?:has been |is )cancelled|cancellation (?:has been )?(?:confirmed|processed|accepted)|annulering (?:is )?(?:verwerkt|bevestigd|akkoord)|reservering (?:is )?geannuleerd|stornierung (?:ist )?(?:bestatigt|bestätigt|bearbeitet)|reservierung (?:wurde |ist )?storniert)\b/i.test(head);if(!explicit)continue;
+ const matches=evidence.filter(e=>e.provider===provider&&e.observedAt<=m.at&&(head.includes(e.reference)||m.threadId&&messages.some(source=>source.id===e.messageId&&source.threadId===m.threadId)));
+ const refs=[...new Set(matches.map(e=>e.reference))];if(refs.length===1)result.push({provider,reference:refs[0],at:m.at,source:m.url});
+ }return result;
+}

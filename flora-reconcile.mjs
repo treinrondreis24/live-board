@@ -1,5 +1,5 @@
 import {currentBookings,evaluate} from './flora-engine.mjs';
-import {parseDocument,resolveEvidence,cancellation,receiptCancellations,latestNSTickets} from './flora-mail-parser.mjs';
+import {parseDocument,resolveEvidence,cancellation,receiptCancellations,latestNSTickets,conversationCancellations} from './flora-mail-parser.mjs';
 
 export const INTERPRETATION_VERSION=10;
 // Reuse the actual saved source documents, never infer corrected fields from a todo.
@@ -11,7 +11,7 @@ export function rebuildStoredEvidence(state,messages,now=new Date().toISOString(
   const c=cancellation(m);if(c){const key=c.provider+'|'+c.reference;if(!map[key]||map[key].at<c.at)map[key]=c;}
   for(const d of m.docs||[]){const e=parseDocument(d,m);if(!e)continue;const key=e.provider+'|'+e.reference,prior=latest.get(key);if(!prior||(!e.partialEvidence||prior.partialEvidence)&&prior.observedAt<=e.observedAt||prior.partialEvidence&&!e.partialEvidence)latest.set(key,e);}
  }
- for(const c of receiptCancellations(messages,[...latest.values()])){const key=c.provider+'|'+c.reference;if(!map[key]||map[key].at<c.at)map[key]=c;}
+ for(const c of [...receiptCancellations(messages,[...latest.values()]),...conversationCancellations(messages,[...latest.values()])]){const key=c.provider+'|'+c.reference;if(!map[key]||map[key].at<c.at)map[key]=c;}
  for(const e of latestNSTickets([...latest.values()],messages))latest.set(e.provider+'|'+e.reference,e);
  const old=state.evidence||[];
  const selected=e=>!options.trips||options.trips.has(e.trip||'onbekend');
