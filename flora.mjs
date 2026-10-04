@@ -39,6 +39,7 @@ export function createFloraHandler({authenticate=adminAuthenticated,read=readFlo
    if(req.headers.origin!==origin||req.headers['x-flora']!=='1'||!String(req.headers['content-type']).startsWith('application/json'))return reply(403,{error:'Open FloRA vanuit Seinhuis.'});
    let text='';for await(const chunk of req){text+=chunk;if(Buffer.byteLength(text)>3*1024*1024)return reply(413,{error:'Bestand is te groot (maximaal 3 MB).'});}
    let input;try{input=JSON.parse(text);}catch{return reply(400,{error:'Ongeldige invoer.'});}
+   if(path==='/api/mail/stop')return reply(200,await mail.stop());
    if(path==='/api/mail/start'){if(input.mode&&!['attention','rules-only','manual','targeted'].includes(input.mode))return reply(400,{error:'Onbekende controle.'});const result=await mail.start({pilot:input.pilot===true,mode:input.mode||'manual',trips:input.trips});void mail.tick();return reply(202,result);}
    if(path==='/api/google/start')return reply(200,{url:await google.start(googleSession(req))});
    if(path==='/api/google/test')return reply(200,await google.test());
