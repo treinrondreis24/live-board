@@ -10,6 +10,7 @@ import {fetchBookings,sanityConfig} from './flora-sanity.mjs';
 import {applyFollowup} from './flora-followup.mjs';
 import {scheduleInfo} from './flora-schedule.mjs';
 import {findingComparison,applyBulkReview} from './flora-review.mjs';
+import {confirmSource} from './flora-source-review.mjs';
 
 const prefix='/seinhuis/flora';
 const googleSession=req=>String(req.headers.cookie||'').split(';').map(c=>c.trim()).find(c=>c.startsWith('tr_admin_session='))||'';
@@ -31,7 +32,7 @@ export function createFloraHandler({authenticate=adminAuthenticated,read=readFlo
     if(path==='/google/callback'){let result='connected';try{await google.callback(url.searchParams,googleSession(req));}catch(e){result=e.message;}res.writeHead(303,{Location:prefix+'/?gmail='+encodeURIComponent(result)});res.end();return true;}
     const files={'':'flora.html','/':'flora.html','/flora.js':'flora.js','/flora.css':'flora.css','/flora-trains.js':'flora-trains.js'};
     if(files[path]){const ext=files[path].split('.').pop();res.writeHead(200,{'Content-Type':({html:'text/html',js:'text/javascript',css:'text/css'})[ext]+'; charset=utf-8'});res.end(await readFile(new URL('./'+files[path],import.meta.url)));return true;}
-    if(path==='/api/trains')return reply(200,{...await trains.data(),job:await trains.status()});
+    if(path==='/api/trains')return reply(200,{...await trains.data(),job:await trains.status(),schedule:trains.importSchedule?await trains.importSchedule():null});
     if(path==='/api/trains/board'){const d=await trains.data();return reply(200,{trains:d.rows.filter(r=>r.status==='Bevestigd'),connections:d.connections.filter(c=>c.status==='Bevestigd'&&[c.fromId,c.toId].every(id=>d.rows.some(r=>r.id===id&&r.status==='Bevestigd')))});}
     if(path==='/api/mail/status')return reply(200,await mail.status());
     if(path==='/api/state'){const data=await read(),gmail=await google.status();data.state.findings=data.state.findings.map(f=>{const next={...f,reviewSignature:reviewSignature(f)};return {...next,viewStatus:alarmView(next),comparison:findingComparison(data.state,f)};});return reply(200,{...data,gmail,schedule:scheduleInfo(data.state),connection:{sanityConfigured:!!configuration().token,lastSync:data.state.lastSync,syncError:data.state.syncError||null,email:gmail.email,payment:'Betaallink aanwezig: hotelbevestiging wordt gecontroleerd'}});}
@@ -42,7 +43,8 @@ export function createFloraHandler({authenticate=adminAuthenticated,read=readFlo
    if(req.headers.origin!==origin||req.headers['x-flora']!=='1'||!String(req.headers['content-type']).startsWith('application/json'))return reply(403,{error:'Open FloRA vanuit Seinhuis.'});
    let text='';for await(const chunk of req){text+=chunk;if(Buffer.byteLength(text)>3*1024*1024)return reply(413,{error:'Bestand is te groot (maximaal 3 MB).'});}
    let input;try{input=JSON.parse(text);}catch{return reply(400,{error:'Ongeldige invoer.'});}
-   if(path==='/api/trains/october'){const result=await trains.startOctober();void trains.tick();return reply(202,result);}
+   if(path==='/api/trains/import'){const result=await trains.startImport();void trains.tick();return reply(202,result);}
+   if(path==='/api/trains/october'){const result=await trains.startOctober(input.retry===true);void trains.tick();return reply(202,result);}
    if(path==='/api/trains/start'){if(['queued','running'].includes((await mail.status()).status))return reply(409,{error:'Stop eerst de algemene e-mailcontrole.'});const result=await trains.start(input.trips);void trains.tick();return reply(202,result);}
    if(path==='/api/trains/review')return reply(200,await trains.review(input));
    if(path==='/api/mail/stop')return reply(200,await mail.stop());
@@ -69,6 +71,7 @@ export function createFloraHandler({authenticate=adminAuthenticated,read=readFlo
     f.viewed={signature:reviewSignature(f),at:now,user,note:String(input.reason||'').trim().slice(0,2000)};
     f.history.push({at:now,user,status:'bekeken',reason:f.viewed.note||'Bekeken; alarm blijft open.'});audit('Alarm bekeken',f.id);
    }
+   else if(path==='/api/source-review')confirmSource(state,input,user,now);
    else if(path==='/api/review'){
     const f=state.findings.find(x=>x.id===input.id);if(!f)return reply(404,{error:'Melding niet gevonden; voer controles opnieuw uit.'});
     if(!['alarm','attention','checked','accepted','automatic'].includes(input.status)||input.reason!=null&&typeof input.reason!=='string'||!['checked','accepted'].includes(input.status)&&(!input.reason||input.reason.trim().length<5))return reply(400,{error:'Kies een status en geef een toelichting (minimaal 5 tekens).'});

@@ -5,17 +5,26 @@ import {readFlora,writeFlora} from './flora-store.mjs';
 import {fetchBookings,sanityConfig} from './flora-sanity.mjs';
 import {applyFollowup} from './flora-followup.mjs';
 
-export const SCHEDULE_LABEL='Dagelijks 05:00 · Europe/Amsterdam';
+export const SCHEDULE_LABEL='Dagelijks 02:00 · Europe/Amsterdam';
 const parts=now=>Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',hourCycle:'h23'}).formatToParts(new Date(now)).map(p=>[p.type,p.value]));
 const dateOf=p=>`${p.year}-${p.month}-${p.day}`;
 function shift(date,days){return new Date(Date.parse(date+'T12:00:00Z')+days*86400000).toISOString().slice(0,10);}
-function atFive(date){let ms=Date.parse(date+'T05:00:00Z');for(let i=0;i<2;i++)ms+=(5-Number(parts(ms).hour))*3600000;return new Date(ms).toISOString();}
-export function latestDailySlot(now=new Date().toISOString()){
- const p=parts(now),date=dateOf(p);return atFive(Number(p.hour)<5?shift(date,-1):date);
+function atTwo(date){
+ // First 02:00 on the autumn overlap; 03:00 when spring skips 02:00.
+ const midnight=Date.parse(date+'T00:00:00Z');
+ for(let hour=-2;hour<=3;hour++){
+  const ms=midnight+hour*3600000,p=parts(ms);
+  if(dateOf(p)===date&&Number(p.hour)>=2)return new Date(ms).toISOString();
+ }
+ throw new Error('Geen dagelijks tijdstip gevonden');
 }
-export function nextDailySlot(now=new Date().toISOString()){return atFive(shift(dateOf(parts(latestDailySlot(now))),1));}
+const completedOn=(state,due)=>!!state.lastDailySlot&&dateOf(parts(state.lastDailySlot))===dateOf(parts(due));
+export function latestDailySlot(now=new Date().toISOString()){
+ const date=dateOf(parts(now)),slot=atTwo(date);return Date.parse(now)<Date.parse(slot)?atTwo(shift(date,-1)):slot;
+}
+export function nextDailySlot(now=new Date().toISOString()){return atTwo(shift(dateOf(parts(latestDailySlot(now))),1));}
 export function scheduleInfo(state,now=new Date().toISOString()){
- const due=latestDailySlot(now),pending=!!state.scheduleStartedAt&&due>=state.scheduleStartedAt&&state.lastDailySlot!==due;
+ const due=latestDailySlot(now),pending=!!state.scheduleStartedAt&&due>=state.scheduleStartedAt&&!completedOn(state,due);
  return {label:SCHEDULE_LABEL,next:pending?due:nextDailySlot(now),overdue:pending,lastRun:state.checkpoint?.at||null,lastDaily:state.lastDailySlot||null};
 }
 export function createFloraCycle({read=readFlora,write=writeFlora,sync=fetchBookings,configured=()=>!!sanityConfig().token,clock=()=>new Date().toISOString(),email=async()=>{if((await floraGoogle.status()).connected){await floraMail.start({mode:'daily'});void floraMail.tick();}}}={}){
@@ -26,7 +35,7 @@ export function createFloraCycle({read=readFlora,write=writeFlora,sync=fetchBook
    const {state,revision}=await read(),now=clock();
    if(!state.scheduleStartedAt){state.scheduleStartedAt=now;await write(state,revision);return;}
    const due=latestDailySlot(now);
-   if(!configured()||due<state.scheduleStartedAt||state.lastDailySlot===due)return;
+   if(!configured()||due<state.scheduleStartedAt||completedOn(state,due))return;
    // A failure or conflicting write never moves the checkpoint.
    if(state.lastDailyAttempt&&Date.parse(now)-Date.parse(state.lastDailyAttempt)<3600000)return;
    state.lastDailyAttempt=now;
