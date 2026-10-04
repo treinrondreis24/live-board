@@ -97,7 +97,7 @@ export function cancellationApplies(c,e){
  if(c.reference===e.reference)return true;
  // A room /1 cancellation also identifies a single-room voucher with its base reference.
  // Never cancel other room suffixes or an aggregate voucher from that room notice.
- return c.provider==='Teldar'&&c.reference===e.reference+'/1'&&Number(e.roomCount||1)===1&&!!c.start&&c.start===e.start&&c.end===e.end&&!!normalize(c.name)&&normalize(c.name)===normalize(e.name);
+ return c.provider==='Teldar'&&c.reference===e.reference+'/1'&&Number(e.roomCount)===1&&!!c.start&&c.start===e.start&&c.end===e.end&&!!normalize(c.name)&&normalize(c.name)===normalize(e.name);
 }
 export function passengerMatches(name,p){const match=matchTravelerName(name,[p]);return match==='exact'||match==='partial'&&normalize(name).split(' ').includes(normalize(p.firstName).split(' ')[0]);}
 // Premier Inn cancellation receipts use a NEW cancellation number, not the booking reference.
