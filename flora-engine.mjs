@@ -1,4 +1,12 @@
 import {createHash} from 'node:crypto';
+import {matchTravelerName} from './flora-names.mjs';
+
+export function findingPriority(code,severity){
+ if(severity==='alarm')return 'hoog';
+ if(code.startsWith('name-')||code.startsWith('room-')||['capacity-unknown','cancelled-todo','trip-reference'].includes(code))return 'laag';
+ if(/^(unlinked-|unmatched-|inactive-)/.test(code)||code==='waiting')return 'redelijk hoog';
+ return 'gemiddeld';
+}
 
 export const DEFAULT_RULES={version:1,exceptionVersion:2,partialNames:'low',waitingDays:7,exceptions:['Hildebrand van Kuijeren','Nicoleta Andrei','Florentina Niculae','Marc van der Lee','Lucas Kielman','Jelle de Boer']};
 export const normalize=s=>String(s??'').normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
@@ -32,7 +40,7 @@ export function evaluate(state,now=new Date().toISOString(),options={}){
  const emit=(b,t,code,severity,title,detail,related=[])=>{
   const id=[tripNumber(b.index),t?._key||'booking',code].join(':'),fingerprint=hash({code,severity,detail,t,related:related.map(({importedAt,...e})=>e),passengers:b.passengers,status:b.status}),old=previous.get(id),override=old?.fingerprint===fingerprint?old.override:null;
   if(options.followup&&old?.fingerprint===fingerprint&&!recurringFinding(old)){findings.push(old);return;}
-  findings.push({id,trip:tripNumber(b.index),name:[b.firstName,b.lastName].filter(Boolean).join(' '),departure:day(b.dateDeparture),todoKey:t?._key||'',stay:t?.title||'Boeking',type:t?.type||'Boeking',provider:t?.provider||related[0]?.provider||'Onbekend',country:related[0]?.country||(/STC/.test(t?.provider)?'CH (vermoedelijk)':'Onbekend'),reference:t?.reference||related[0]?.reference||'',code,category:categoryFor(code),automatic:severity,status:override?.status||severity,priority:severity==='alarm'?'hoog':code.startsWith('name-')&&title==='Naam wijkt licht af'?'laag':'normaal',title,detail,fingerprint,firstSeen:old?.firstSeen||now,lastChecked:now,override,history:old?.history||[],evidence:related.map(e=>({id:e.id,source:e.source,reference:e.reference,start:e.start,end:e.end,name:e.name,capacity:e.capacity,occupants:e.occupants,status:e.status})),nextCheck:code==='waiting'?(old?.nextCheck&&old.nextCheck>day(now)?old.nextCheck:addDays(now,7)):null});
+  findings.push({id,trip:tripNumber(b.index),name:[b.firstName,b.lastName].filter(Boolean).join(' '),departure:day(b.dateDeparture),todoKey:t?._key||'',stay:t?.title||'Boeking',type:t?.type||'Boeking',provider:related[0]?.provider||t?.provider||'Onbekend',country:related[0]?.country||(/STC/.test(t?.provider)?'CH (vermoedelijk)':'Onbekend'),reference:t?.reference||related[0]?.reference||'',code,category:categoryFor(code),automatic:severity,status:override?.status||severity,priority:findingPriority(code,override?.status||severity),title,detail,fingerprint,firstSeen:old?.firstSeen||now,lastChecked:now,override,history:old?.history||[],evidence:related.map(e=>({id:e.id,source:e.source,reference:e.reference,start:e.start,end:e.end,name:e.name,capacity:e.capacity,occupants:e.occupants,status:e.status})),nextCheck:code==='waiting'?(old?.nextCheck&&old.nextCheck>day(now)?old.nextCheck:addDays(now,7)):null});
  };
  for(const b of bookings){
   if(!selected(tripNumber(b.index)))continue;
@@ -67,6 +75,10 @@ export function evaluate(state,now=new Date().toISOString(),options={}){
     const next=(b.todos||[]).find(x=>/zelfde hut|same cabin/i.test(x.title||'')&&day(x.startDate)===t.end);
     const end=t.provider==='Finnlines'&&next?day(next.endDate):t.end;
     if(!start||!end)emit(b,t,'todo-dates','attention','Datums ontbreken in todo','Controleer de verblijfsdatums.',[e]);
+    else if(!e.start||!e.end){
+     emit(b,t,'dates-incomplete-'+e.id,'attention','Verblijfsdatums niet volledig aangetoond','Reservering gevonden, maar de bron vermeldt niet alle verblijfsdatums. Ontbrekende datums worden niet uit de todo overgenomen.',[e]);
+     if(e.start&&e.start!==start)emit(b,t,'dates-'+e.id,'alarm','Verkeerde aankomstdatum',`Todo verwacht ${start}; de bron vermeldt ${e.start}.`,[e]);
+    }
     else if(e.start!==start||e.end!==end){
      const shifted=d=>String(Number(d.slice(0,4))+1)+d.slice(4),oldYear=end<day(now)&&e.start===shifted(start)&&e.end===shifted(end);
      emit(b,t,'dates-'+e.id,oldYear?'attention':'alarm',oldYear?'Vermoedelijk verkeerd jaar in todo':'Verkeerde verblijfsdatums',oldYear?`Todo ${start} t/m ${end} ligt in het verleden; de bevestiging heeft dezelfde dagen een jaar later (${e.start} t/m ${e.end}). Werk het todo-jaar bij.`:`Todo verwacht ${start} t/m ${end}; reservering ${e.start} t/m ${e.end}.`,[e]);
@@ -75,8 +87,9 @@ export function evaluate(state,now=new Date().toISOString(),options={}){
     if(t.type==='Nachttrein'&&e.direction==='outbound'&&e.originCountry!=='NL')emit(b,t,'origin-'+e.id,e.originCountry?'alarm':'attention','Vertrekstation heenreis controleren','De heenreis moet geboekt zijn vanaf een Nederlands station.',[e]);
     if(t.type==='Nachttrein'&&!e.direction)emit(b,t,'direction-'+e.id,'attention','Reisrichting ontbreekt','Stel heen- of terugreis vast; Wien Meidling is toegestaan voor de terugreis.',[e]);
     if(e.roomMismatch)emit(b,t,'room-'+e.id,'attention','Kamertype wijkt af','Voldoende capaciteit, maar ander kamertype dan de todo.',[e]);
-    const nm=matchName(e.name,passengers);
-    if(nm==='missing'||nm==='different'||nm==='partial'&&rules.partialNames==='low')emit(b,t,'name-'+e.id,'attention',nm==='partial'?'Naam wijkt licht af':'Naam controleren','Vergelijk met alle reizigers; een reservering op naam van de tweede reiziger is toegestaan.',[e]);
+    if(e.tripReferenceMismatch)emit(b,t,'trip-reference','attention','Afwijkend Treinrondreis-boekingsnummer',`De bron noemt ${e.tripReferenceMismatch}A; naam, accommodatie en datums koppelen deze reservering eenduidig aan ${b.index}A.`,[e]);
+    const nm=matchTravelerName(e.name,passengers,{truncated:e.provider==='NS International'||e.nameTruncated===true});
+    if(nm!=='exact')emit(b,t,'name-'+e.id,'attention',nm==='partial'?'Mogelijke roepnaam of naamafwijking':'Naam controleren','Vergelijk met de formele naam van alle reizigers. Ontbrekende latere voornamen en boeken op de tweede reiziger zijn toegestaan; een mogelijke roepnaam blijft een laag aandachtspunt.',[e]);
    }
    if(b.floraPaymentLinkCreated&&!t.confirmed&&t.type==='Hotel'&&!(/backup|annul|storn/i.test(t.title+' '+(t.description||''))&&all.some(e=>e.status==='cancelled')&&!live.length))emit(b,t,'payment','alarm','Betaallink aangemaakt, hotel niet bevestigd','Bevestig het hotel voordat betaling wordt gevraagd.',live);
   }
