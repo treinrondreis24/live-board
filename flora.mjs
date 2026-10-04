@@ -42,7 +42,7 @@ export function createFloraHandler({authenticate=adminAuthenticated,read=readFlo
    if(req.headers.origin!==origin||req.headers['x-flora']!=='1'||!String(req.headers['content-type']).startsWith('application/json'))return reply(403,{error:'Open FloRA vanuit Seinhuis.'});
    let text='';for await(const chunk of req){text+=chunk;if(Buffer.byteLength(text)>3*1024*1024)return reply(413,{error:'Bestand is te groot (maximaal 3 MB).'});}
    let input;try{input=JSON.parse(text);}catch{return reply(400,{error:'Ongeldige invoer.'});}
-   if(path==='/api/trains/october'){const result=await trains.startOctober();void trains.tick();return reply(202,result);}
+   if(path==='/api/trains/october'){const result=await trains.startOctober(input.retry===true);void trains.tick();return reply(202,result);}
    if(path==='/api/trains/start'){if(['queued','running'].includes((await mail.status()).status))return reply(409,{error:'Stop eerst de algemene e-mailcontrole.'});const result=await trains.start(input.trips);void trains.tick();return reply(202,result);}
    if(path==='/api/trains/review')return reply(200,await trains.review(input));
    if(path==='/api/mail/stop')return reply(200,await mail.stop());

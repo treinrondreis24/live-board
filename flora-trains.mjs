@@ -15,6 +15,6 @@ export function createTrains({read=readMail,write=writeMail,google=floraGoogle,e
  await write('trains-data',{rows:all,connections,checks:{...(old.checks||{}),[trip]:{at:new Date().toISOString(),messages:raw.length,dossiers:latest.size,issues}}},stored.revision);job.done++;await put();}
  job.status='completed';job.phase='Kleine treincontrole afgerond. Controleer de gevonden treinen en aansluitingen.';await put();}catch(e){const old=await read('trains-job');await write('trains-job',{...old.value,status:'failed',phase:e.message,at:new Date().toISOString()},old.revision);}finally{running=false;}}
  async function review(input){const {value,revision}=await read('trains-data');if(input.revision!==revision)throw Error('Gegevens gewijzigd; vernieuw eerst.');if(input.type==='train'){const row=value.rows?.find(r=>r.id===input.id);if(!row)throw Error('Trein niet gevonden.');if(!row.number)throw Error('Treinnummer ontbreekt; deze bron moet eerst worden aangevuld.');row.status=input.confirmed?'Bevestigd':'Te beoordelen';}else{const row=value.connections?.find(r=>r.id===input.id);if(!row||typeof input.backup!=='boolean')throw Error('Kies een aansluiting en back-up ja of nee.');row.backup=input.backup;row.status='Bevestigd';}await write('trains-data',value,revision);return data();}
- return {data,status,start,tick,review,startOctober:()=>startOctober({read,write,google})};
+ return {data,status,start,tick,review,startOctober:(retry=false)=>startOctober({read,write,google},retry)};
 }
 export const floraTrains=createTrains();
