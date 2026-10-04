@@ -5,6 +5,11 @@ export function directSupplier(from){
 }
 export const replyHead=s=>s.split(/Best regards|Sincerely|Kind regards|Herzliche Grüße|POSTal regards|\bVon:|\bFrom:|\bDa:|\bDe\s*:|\bOn .{0,100}wrote:|\bOp .{0,100}schreef:/i)[0];
 export function supplierDocument(s,message,doc,{dateValue,roomCapacity}){
+ if(doc.label!=='E-mail'&&/@teldartravel\.com\b/i.test(message.from)&&/YOUR VOUCHER/.test(s)&&/confirmed by Teldar Travel/i.test(s)){
+ const row=s.match(/Pax names Adult\(s\) Children Type of room\(s\)\s+(.*?)\s+(\d+)\s+(\d+)\s+(.*?)\s+FOR HOTEL USE ONLY/i);if(!row)return null;
+ return {provider:'Teldar',reference:s.match(/Reference\s+([A-Z0-9]+)/i)?.[1],start:dateValue(s.match(/Arrival\s+(\S+)/i)?.[1]),end:dateValue(s.match(/Departure\s+(\S+)/i)?.[1]),name:row[1].split(/[,;|]/)[0],guestText:row[1],occupants:Number(row[2])+Number(row[3]),capacity:roomCapacity(row[4]),room:row[4],product:s.match(/paid directly at hotel check-out\s+(.*?)\s+Phone number:/i)?.[1]||'',roomCount:1};
+ }
+
  const provider=directSupplier(message.from),isMail=doc.label==='E-mail';
  if(isMail&&/@(?:[\w-]+\.)*(?:premierinn|whitbread)\.com\b/i.test(message.from)&&/your booking is confirmed/i.test(message.subject)){
   const dates=s.match(/(\d{1,2} \w+ 20\d{2})\s+Check-in from.*?(\d{1,2} \w+ 20\d{2})\s+Check out by/i),summary=s.match(/Booking summary\s+(.+?)\s+(\d+) adults?\s+in a\s+(.+?)(?=\s+(?:&pound;|£|\d+[.,]\d{2}))/i),count=Number(s.match(/You have booked\s+(\d+) rooms?/i)?.[1]);
