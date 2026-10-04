@@ -8,6 +8,14 @@ import {evaluate} from './flora-engine.mjs';
 import {rebuildStoredEvidence} from './flora-reconcile.mjs';
 import {resolveEvidence} from './flora-mail-parser.mjs';
 
+test('reference searches report progress and respect the booking time budget',async()=>{
+ let now=0,calls=0;const progress=[];
+ const control=createMailControl({clock:()=>now,read:async()=>({value:{},revision:0})});
+ const booking=b();booking.todos[0].supplierBookingNumber='REF111 REF222 REF333';
+ const result=await control.processBooking(booking,async()=>{calls++;now+=70000;return {messages:[],nextPageToken:'more'};},{},async p=>progress.push(p));
+ assert.ok(calls<6);assert.ok(progress.some(p=>p.phase?.includes('Reserveringsreferentie')));assert.ok(result.errors>0);
+});
+
 test('a shared hotel chain in another city does not become a wrong-date match',()=>{const booking=b();booking.todos[0].supplierBookingNumber='111111111';booking.todos[0].title='IntercityHotel Berlin Hauptbahnhof';const e={...parseDocument(mail().docs[0],mail()),reference:'222222222',product:'IntercityHotel Duisburg Mercatorstrasse'};assert.equal(matchEvidence(e,booking),null);const linked=resolveEvidence(e,[booking]);assert.equal(linked.trip,'6685');assert.equal(linked.todoKey,'');assert.ok(linked.linkReview);});
 
 test('all Expedia rooms and children count, without borrowing occupancy from the trip',()=>{

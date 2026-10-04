@@ -16,5 +16,5 @@ export async function extractMessage(message,get,{readPDF=pdfText,readTicket=tic
  if(parts.filter(p=>/\.pdf$/i.test(p.filename)).length>12)issues.push('Meer dan 12 bijlagen: niet alles verwerkt.');
  links=[...new Set(links)];for(const link of links.slice(0,8)){if(Date.now()>deadline){issues.push('Tijdslimiet voor ticketlinks bereikt; controle onvolledig.');break;}try{const pages=await readTicket(link);if(pages.cancelled){retiredLinks.push(link);continue;}for(let i=0;i<pages.length;i++)docs.push({label:'NS-ticket · pagina '+(i+1),text:pages[i],year:pages.join(' ').match(/\b\d{2}[.]\d{2}[.](20\d{2})\b/)?.[1],link});}catch(e){issues.push('NS-ticket: '+e.message);}}
  if(links.length>8)issues.push('Meer dan 8 ticketlinks: niet alles verwerkt.');
- return {id:message.id,threadId:message.threadId||'',at:new Date(Number(message.internalDate)).toISOString(),subject,from,docs,issues,retiredLinks,hasLinks:links.length>0,url:'https://mail.google.com/mail/u/?authuser=reservations%40treinrondreis.nl#all/'+message.id};
+ return {id:message.id,threadId:message.threadId||'',at:new Date(Number(message.internalDate)).toISOString(),subject,from,docs,issues:[...new Set(issues)],retiredLinks,hasLinks:links.length>0,url:'https://mail.google.com/mail/u/?authuser=reservations%40treinrondreis.nl#all/'+message.id};
 }
