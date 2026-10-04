@@ -1,3 +1,4 @@
+import {floraTrains} from './flora-trains.mjs';
 import {floraMail,startFloraMail} from './flora-mail.mjs';
 import {floraGoogle} from './flora-google.mjs';
 import {readFlora,writeFlora} from './flora-store.mjs';
@@ -37,4 +38,4 @@ export function createFloraCycle({read=readFlora,write=writeFlora,sync=fetchBook
  };
 }
 export const runFloraCycle=createFloraCycle();
-export function startFlora(){startFloraMail();setTimeout(()=>void runFloraCycle(),15000).unref();setInterval(()=>void runFloraCycle(),60000).unref();}
+export function startFlora(){setTimeout(()=>void floraTrains.tick(),25000).unref();setInterval(()=>void floraTrains.tick(),30000).unref();startFloraMail();setTimeout(()=>void runFloraCycle(),15000).unref();setInterval(()=>void runFloraCycle(),60000).unref();}
