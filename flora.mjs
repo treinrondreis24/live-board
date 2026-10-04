@@ -70,8 +70,8 @@ export function createFloraHandler({authenticate=adminAuthenticated,read=readFlo
    }
    else if(path==='/api/review'){
     const f=state.findings.find(x=>x.id===input.id);if(!f)return reply(404,{error:'Melding niet gevonden; voer controles opnieuw uit.'});
-    if(!['alarm','attention','checked','accepted','automatic'].includes(input.status)||typeof input.reason!=='string'||input.reason.trim().length<5)return reply(400,{error:'Kies een status en geef een toelichting (minimaal 5 tekens).'});
-    f.override=input.status==='automatic'?null:{status:input.status,reason:input.reason.trim().slice(0,2000),user,at:now};f.history.push({at:now,user,status:input.status,reason:input.reason.trim().slice(0,2000)});audit('Melding beoordeeld',f.id);
+    if(!['alarm','attention','checked','accepted','automatic'].includes(input.status)||input.reason!=null&&typeof input.reason!=='string'||!['checked','accepted'].includes(input.status)&&(!input.reason||input.reason.trim().length<5))return reply(400,{error:'Kies een status en geef een toelichting (minimaal 5 tekens).'});
+    f.override=input.status==='automatic'?null:{status:input.status,reason:(input.reason||'').trim().slice(0,2000),user,at:now};f.history.push({at:now,user,status:input.status,reason:(input.reason||'').trim().slice(0,2000)});audit('Melding beoordeeld',f.id);
    }
    else if(path==='/api/rules-preview'||path==='/api/rules'){
     if(!['low','accept'].includes(input.partialNames))return reply(400,{error:'Ongeldige naamregel.'});

@@ -10,3 +10,16 @@ test('same chain in different known city stays unmatched',()=>assert.equal(hotel
 test('train codes distinguish private compartment from minicabins',()=>{for(const code of ['PA1AD','PA1AM','RITAD'])assert.equal(roomCapacity(code),2);assert.equal(trainRoom('PA1AD'),'private');assert.equal(trainRoom('RITAD'),'private');assert.equal(trainRoom('PA1AM'),'mini');assert.equal(trainStations('CHAJD / ATALA / ATWIH'),'Zürich / Innsbruck / Wien');});
 
 test('alternative invoice matches the correct todo without matching reference',()=>{const b={index:42,passengers:[{firstName:'Test',lastName:'Reiziger'}],dateDeparture:'2027-01-01',dateReturn:'2027-01-02',lines:[{title:'Madrid: Hotel PAX Atocha',visible:true}],todos:[{_key:'h',tag:'hotel',title:'Agumar Hotel Madrid',startDate:'2027-01-01',endDate:'2027-01-02'}]},e={provider:'Expedia',reference:'123456789',name:'Test Reiziger',product:'Hotel PAX Atocha Calle',sourceText:'Hoteloverzicht Hotel PAX Atocha Madrid Hotel bekijken',start:'2027-01-01',end:'2027-01-02',room:'Double',status:'confirmed'};const result=matchEvidence(e,b);assert.equal(result.todoKey,'h');assert.equal(result.productMatch,true);assert.equal(matchEvidence(e,{...b,lines:[]}),null);});
+
+test('hotel word order and appended address do not hide matching name',()=>{
+ const proof={product:'sander Hotel Casinostraße',provider:'Expedia',sourceText:'Hoteloverzicht sander Hotel Casinostraße Koblenz Hotel bekijken'};
+ assert.equal(hotelIdentity({title:'Hotel Sander Koblenz | Tweepersoonskamer'},proof,{}),true);
+ assert.equal(hotelIdentity({title:'Hotel Anders Koblenz'},proof,{}),false);
+ assert.equal(hotelIdentity({title:'Hotel Sander Hamburg'},proof,{}),false);
+});
+test('explicit alternative accepts either named hotel, not unrelated or generic options',()=>{
+ for(const name of ['Terminus','Opera'])assert.equal(hotelIdentity({title:'Terminus of Opera | Double'},{product:'Thon Hotel '+name},{}),true);
+ assert.equal(hotelIdentity({title:'Terminus of Opera | Double'},{product:'Thon Hotel Spectrum'},{}),false);
+ assert.equal(hotelIdentity({title:'Hotel of Kamer'},{product:'Hotel Kamer'},{}),false);
+ assert.equal(hotelIdentity({title:'Terminus of Opera Oslo'},{product:'Thon Hotel Terminus Stockholm'},{}),false);
+});
