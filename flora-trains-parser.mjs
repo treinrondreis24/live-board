@@ -2,15 +2,24 @@ import {hash,normalize} from './flora-engine.mjs';
 const iso=(d,m,y)=>`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 const months={jan:1,feb:2,mrt:3,mar:3,apr:4,mei:5,jun:6,jul:7,aug:8,sep:9,okt:10,nov:11,dec:12};
 const station=s=>String(s||'').trim().replace(/\s+/g,' ');
-export function parseNSTrains(message,trip){
+export function parseNSTrains(message,trip,{allowUnlinked=false}={}){
  if(!/^no-reply@confirmation\.nsinternational\.nl$/i.test(message.from.trim())&&!/<no-reply@confirmation\.nsinternational\.nl>/i.test(message.from))return [];
- if(!new RegExp('\\b'+trip+'A\\b','i').test(message.subject))return [];
+ if(!allowUnlinked&&!new RegExp('\\b'+trip+'A\\b','i').test(message.subject))return [];
  if(/optie|annul|cancel|refund|storn/i.test(message.subject))return [];
  const reference=message.subject.match(/boekingscode\s*:?\s*([A-Z0-9]+)/i)?.[1]||'',rows=[];
  const add=r=>rows.push({...r,id:hash([trip,reference,r.date,r.number,r.from,r.to,r.departure,r.arrival]),trip,reference,source:message.url,messageId:message.id,observedAt:message.at,status:'Te beoordelen'});
  for(const doc of message.docs||[]){if(doc.label==='E-mail')continue;const s=doc.text.replace(/\s+/g,' '),year=doc.year||s.match(/\b\d{2}\.\d{2}\.(20\d{2})\b/)?.[1];if(!year)continue;
  const route=/(\d{2})\.(\d{2})(?:\.20\d{2})?\s+(\d{2}:\d{2})\s+(.+?)\s*(?:->|→)\s*(.+?)\s+(\d{2})\.(\d{2})(?:\.20\d{2})?\s+(\d{2}:\d{2})([\s\S]*?)(?=\d{2}\.\d{2}\s+\d{2}:\d{2}|$)/g;
  for(const m of s.matchAll(route)){const number=m[9].match(/\b(?:TREIN|TRAIN|ZUG)\s+(\d{1,6})\b/i)?.[1];if(!number)continue;let arrivalYear=Number(year);if(Number(m[7])<Number(m[2]))arrivalYear++;add({date:iso(m[1],m[2],year),arrivalDate:iso(m[6],m[7],arrivalYear),departure:m[3],arrival:m[8],from:station(m[4]),to:station(m[5]),number,document:doc.label,kind:/RESERVERING/i.test(s)?'Reservering / ticket':'Ticket'});}
+ }
+ // NS reservation summaries can state the train number without printed times.
+ const mailBody=message.docs?.find(d=>d.label==='E-mail')?.text.replace(/\s+/g,' ')||'';
+ const summary=/(?:^|[.!?]\s+|klas\s+)([^:!?]{2,90}?)\s+-\s+([^:!?]{2,90}?)\s+Vertrek:\s*\w+\s+(\d{1,2})\s+(\w+)\s+(20\d{2})(.*?)(?=Reizigers:|$)/gi;
+ for(const m of mailBody.matchAll(summary)){
+  const number=m[6].match(/Treinnummer:\s*(\d{1,6})\b/i)?.[1],month=months[m[4].toLowerCase().slice(0,3)];if(!number||!month)continue;
+  const date=iso(m[3],month,m[5]);if(rows.some(r=>r.number===number&&r.date===date))continue;
+  const arr=m[6].match(/Aankomst:\s*\w+\s+(\d{1,2})\s+(\w+)\s+(20\d{2})(?:\s+om\s+(\d{2}:\d{2}))?/i),am=arr&&months[arr[2].toLowerCase().slice(0,3)];
+  add({date,arrivalDate:am?iso(arr[1],am,arr[3]):'',number,from:station(m[1].split(/\.\s+/).at(-1)),to:station(m[2]),departure:m[6].match(/^\s+om\s+(\d{2}:\d{2})/)?.[1]||'',arrival:arr?.[4]||'',document:'E-mail',kind:'Reservering; tijden mogelijk niet vermeld'});
  }
  // Mail route details provide timetable context even when a train number is absent.
  if(!rows.length){const body=message.docs?.find(d=>d.label==='E-mail')?.text.replace(/\s+/g,' ')||'';
