@@ -1,7 +1,8 @@
 import {createHash} from 'node:crypto';
 
-export const DEFAULT_RULES={version:1,partialNames:'low',waitingDays:7,exceptions:['Hildebrand van Kuijeren','Nicoleta Andrei','Florentina Niculae','Marc van der Meer','Lucas Kielman','Jelle de Boer']};
+export const DEFAULT_RULES={version:1,exceptionVersion:2,partialNames:'low',waitingDays:7,exceptions:['Hildebrand van Kuijeren','Nicoleta Andrei','Florentina Niculae','Marc van der Lee','Lucas Kielman','Jelle de Boer']};
 export const normalize=s=>String(s??'').normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+const exceptionName=(name,rules)=>rules.exceptions.some(n=>normalize(n)===normalize(String(name||'').replace(/\s+SH\d+\s*$/i,'')));
 export const activeBooking=status=>['te verwerken','afgerond','boeking afgerond','afgehandeld','wacht op betaling','verwerkt','interrail leveren','tickets versturen'].includes(normalize(status));
 export const waitingBooking=status=>['wacht op reactie klant','wacht klant'].includes(normalize(status));
 export const tripNumber=s=>String(s??'').trim().replace(/a$/i,'');
@@ -21,8 +22,10 @@ function nearToken(a,b){if(a===b)return true;if(Math.min(a.length,b.length)<5||M
 function matchName(name,passengers){const n=normalize(name);if(!n)return 'missing';const names=passengers.map(p=>normalize(p.firstName+' '+p.lastName));if(names.includes(n))return 'exact';const tokens=n.split(' ').filter(x=>x.length>2);return names.some(x=>{const parts=x.split(' ').filter(t=>t.length>2);return tokens.length&&parts.length&&(tokens.every(t=>parts.some(p=>nearToken(t,p)))||parts.every(p=>tokens.some(t=>nearToken(t,p))));})?'partial':'different';}
 export const recurringFinding=f=>f.status==='alarm'||f.status==='attention'&&['missing','waiting','email-incomplete'].includes(f.code);
 export function evaluate(state,now=new Date().toISOString(),options={}){
- const selected=trip=>!options.trips||options.trips.has(trip);
- const rules=state.rules||DEFAULT_RULES,findings=(state.findings||[]).filter(f=>!selected(f.trip)),bookings=currentBookings(state.bookings||[]),evidence=state.evidence||[],previous=new Map((state.findings||[]).map(f=>[f.id,f]));
+ const previousRules=state.rules||DEFAULT_RULES,correctExceptions=previousRules.exceptionVersion!==2;
+ const rules=correctExceptions?{...previousRules,exceptionVersion:2,exceptions:previousRules.exceptions.map(n=>normalize(n)==='marc van der meer'?'Marc van der Lee':n)}:previousRules;
+ const selected=trip=>correctExceptions||!options.trips||options.trips.has(trip);
+ const findings=(state.findings||[]).filter(f=>!selected(f.trip)),bookings=currentBookings(state.bookings||[]),evidence=state.evidence||[],previous=new Map((state.findings||[]).map(f=>[f.id,f]));
  const byNumber=new Map();for(const b of bookings){const key=tripNumber(b.index);if(!byNumber.has(key))byNumber.set(key,[]);byNumber.get(key).push(b);}
  const duplicateNumbers=new Set([...byNumber].filter(([,rows])=>rows.length>1&&rows.filter(b=>reservationScope(b,[],now)).length>1).map(([key])=>key));
  const seenDuplicates=new Set();
@@ -37,7 +40,7 @@ export function evaluate(state,now=new Date().toISOString(),options={}){
   const active=activeBooking(b.status),waiting=waitingBooking(b.status);
   const linked=evidence.filter(e=>e.trip===tripNumber(b.index));
   if(!reservationScope(b,linked,now))continue;
-  if(!active&&!waiting){for(const e of linked.filter(e=>e.status==='confirmed'))emit(b,null,'inactive-'+e.id,rules.exceptions.some(n=>normalize(n)===normalize(e.name))?'attention':'alarm','Reservering bij niet-actieve boeking','Controleer annulering of wijziging van de reisstatus.',[e]);continue;}
+  if(!active&&!waiting){for(const e of linked.filter(e=>e.status==='confirmed'))emit(b,null,'inactive-'+e.id,exceptionName(e.name,rules)?'attention':'alarm','Reservering bij niet-actieve boeking','Controleer annulering of wijziging van de reisstatus.',[e]);continue;}
   for(const t of stays(b)){
    const check=state.emailChecks?.[String(b.index)]?.stays?.find(c=>c.todoKey===t._key);
    if(check&&check.state!=='found'&&linked.some(e=>e.todoKey===t._key&&e.status==='confirmed'))emit(b,t,'email-incomplete','attention','E-mailcontrole nog niet afgerond',check.explanation);
@@ -83,11 +86,11 @@ export function evaluate(state,now=new Date().toISOString(),options={}){
    emit(b,null,'waiting',day(now)>=deadline&&!deferred?'alarm':'attention','Reservering wacht op acceptatie klant',`Eerst gevonden ${day(first)}. Na ${deadline} acceptatie of annulering controleren.${deferred?' Uitgesteld tot '+defer.until+': '+defer.reason:''}`,linked.filter(e=>e.status==='confirmed'));
   }
  }
- for(const e of evidence.filter(e=>selected(e.trip||'onbekend')&&e.status==='confirmed'&&e.end>=day(now)&&!bookings.some(b=>tripNumber(b.index)===e.trip))){const b={index:e.trip||'onbekend',firstName:e.name};emit(b,null,'unmatched-'+e.id,e.linkReview||rules.exceptions.some(n=>normalize(n)===normalize(e.name))?'attention':'alarm',e.linkReview?'Koppeling reservering beoordelen':'Reservering zonder gekoppelde reis',e.linkReview||'Geen overeenkomstige boeking in de ingelezen Sanity-selectie; controleer de koppeling en reisstatus.',[e]);}
+ for(const e of evidence.filter(e=>selected(e.trip||'onbekend')&&e.status==='confirmed'&&e.end>=day(now)&&!bookings.some(b=>tripNumber(b.index)===e.trip))){const b={index:e.trip||'onbekend',firstName:e.name};emit(b,null,'unmatched-'+e.id,e.linkReview||exceptionName(e.name,rules)?'attention':'alarm',e.linkReview?'Koppeling reservering beoordelen':'Reservering zonder gekoppelde reis',e.linkReview||'Geen overeenkomstige boeking in de ingelezen Sanity-selectie; controleer de koppeling en reisstatus.',[e]);}
  for(const e of evidence.filter(e=>selected(e.trip||'onbekend')&&e.status==='confirmed')){const b=bookings.find(b=>tripNumber(b.index)===e.trip);if(b&&!duplicateNumbers.has(tripNumber(b.index))&&reservationScope(b,evidence,now)&&e.end>=day(now)&&!stays(b).some(t=>t._key===e.todoKey))emit(b,null,'unlinked-'+e.id,'attention','Reservering zonder gekoppelde overnachting','Koppel de bevestiging aan de juiste todo voordat deze als gecontroleerd telt.',[e]);}
  const summaries=bookings.map(b=>{const f=findings.filter(x=>x.trip===tripNumber(b.index)),ss=stays(b),covered=ss.length>0&&ss.every(t=>evidence.some(e=>e.trip===tripNumber(b.index)&&e.todoKey===t._key&&e.status==='confirmed'));return {trip:tripNumber(b.index),name:[b.firstName,b.lastName].filter(Boolean).join(' '),departure:day(b.dateDeparture),status:b.status,overnights:ss.length,checked:covered&&!f.some(x=>x.status!=='checked'),alarms:f.filter(x=>x.status==='alarm').length,attention:f.filter(x=>x.status==='attention').length};});
  const archived=[...(state.archived||[])];for(const old of state.findings||[])if(!findings.some(f=>f.id===old.id))archived.push({...old,resolvedAt:now});
- return {findings,summary:summaries,archived};
+ return {findings,summary:summaries,archived,rules};
 }
 
 export function validateEvidence(rows){
