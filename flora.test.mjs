@@ -39,3 +39,10 @@ test('CSV escaped fields and input validation',()=>{assert.equal(parseCSV('provi
 test('persistent SQLite state rejects concurrent edits',async()=>{const sqlite=new DatabaseSync(':memory:');await initFlora({sqlite});const a=await readFlora();assert.equal(a.revision,0);await writeFlora(state(),0);await assert.rejects(writeFlora(state(),0));assert.equal((await readFlora()).state.bookings[0].index,42);sqlite.close();});
 test('Sanity adapter uses GET only and draft-aware raw pagination',async()=>{let n=0;const docs=Array.from({length:100},(_,i)=>({_id:String(i).padStart(3,'0')}));const all=await fetchBookings({config:{project:'test',dataset:'production',token:'test'},fetcher:async(url,options)=>{assert.equal(options.method,'GET');assert.equal(url.searchParams.get('perspective'),'raw');n++;return {ok:true,json:async()=>({result:n===1?docs:[]})};}});assert.equal(n,2);assert.equal(all.length,100);});
 test('handler authenticates before reading data and rejects cross-site writes',async()=>{const res=()=>({headers:{},setHeader(k,v){this.headers[k]=v;},writeHead(s){this.status=s;},end(b){this.body=b;}});const url=new URL('https://example.test/seinhuis/flora/api/state');let read=false;const h=createFloraHandler({authenticate:async()=>false,read:async()=>{read=true;}}),r=res();await h({method:'GET'},r,url);assert.equal(r.status,401);assert.equal(read,false);const r2=res();await createFloraHandler({authenticate:async()=>true})({method:'POST',headers:{origin:'https://evil.test'}},r2,url);assert.equal(r2.status,403);});
+
+test('waiting customer does not require unbooked stays but keeps confirmed reservation controls',()=>{
+ for(const status of ['wacht klant','wacht op reactie klant']){const b={...booking(),status};const s=state(b,[]);const result=evaluate(s);assert.equal(result.findings.length,0);assert.equal(result.summary[0].checked,false);
+ const confirmed=evaluate(state(b,[proof({capacity:1})]));assert.ok(confirmed.findings.some(f=>f.code==='capacity'));assert.ok(confirmed.findings.some(f=>f.code==='waiting'));
+ const active=evaluate(state({...b,status:'te verwerken'},[]));assert.ok(active.findings.some(f=>f.code==='missing'));
+ }
+});
