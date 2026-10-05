@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-import {hotelCityConflict} from './flora-identity.mjs';
+import {hotelCityConflict,hotelIdentity} from './flora-identity.mjs';
 import {matchTravelerName} from './flora-names.mjs';
 
 export function findingPriority(code,severity){
@@ -102,7 +102,7 @@ export function evaluate(state,now=new Date().toISOString(),options={}){
     }
     const cityConflict=t.type==='Hotel'?hotelCityConflict(t,e):null;
     if(cityConflict)emit(b,t,'city-'+e.id,'alarm','Verkeerde stad',`Todo verwacht ${cityConflict.expected}; het boekingsbewijs vermeldt ${cityConflict.actual}.`,[e]);
-    else if(!e.productMatch)emit(b,t,'product-'+e.id,'attention','Accommodatie of traject nog te beoordelen','Bevestig de juiste accommodatie of een passend alternatief. Bij een alternatief hoort doorgaans een todo-notitie.',[e]);
+    else if(!(e.productMatch||t.type==='Hotel'&&hotelIdentity(t,e,b)))emit(b,t,'product-'+e.id,'attention','Accommodatie of traject nog te beoordelen','Bevestig de juiste accommodatie of een passend alternatief. Bij een alternatief hoort doorgaans een todo-notitie.',[e]);
     if(t.type==='Nachttrein'&&e.direction==='outbound'&&e.originCountry!=='NL')emit(b,t,'origin-'+e.id,e.originCountry?'alarm':'attention','Vertrekstation heenreis controleren','De heenreis moet geboekt zijn vanaf een Nederlands station.',[e]);
     if(t.type==='Nachttrein'&&!e.direction)emit(b,t,'direction-'+e.id,'attention','Reisrichting ontbreekt','Stel heen- of terugreis vast; Wien Meidling is toegestaan voor de terugreis.',[e]);
     if(e.roomMismatch)emit(b,t,'room-'+e.id,'attention','Kamertype wijkt af','Voldoende capaciteit, maar ander kamertype dan de todo.',[e]);

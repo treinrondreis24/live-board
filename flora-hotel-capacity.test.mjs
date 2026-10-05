@@ -42,3 +42,10 @@ test('a confirmed different hotel city is one high-priority alarm, including add
  const b={...booking,todos:[{...todo,title:'Leonardo Edinburgh'}]};
  for(const product of ['Leonardo Royal Hotel','Leonardo Hotel Edinburgh'])assert.equal(evaluate({bookings:[b],evidence:[{...proof,product}]},'2026-10-05').findings.some(f=>f.code.startsWith('city-')),false);
 });
+
+test('stored evidence with an older negative identity uses the current hotel-name policy',()=>{
+ const b={...booking,todos:[{...todo,title:'Hotel Bernina (STC) | Standaard kamer'}]};
+ const e={...proof,product:'Hotel Bernina Via Roma',productMatch:false};
+ assert.equal(evaluate({bookings:[b],evidence:[e]},'2026-10-05').findings.some(f=>f.code.startsWith('product-')),false);
+ assert.ok(evaluate({bookings:[b],evidence:[{...e,end:'2027-04-12'}]},'2026-10-05').findings.some(f=>f.code.startsWith('dates-')&&f.status==='alarm'));
+});
