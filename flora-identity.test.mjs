@@ -89,11 +89,11 @@ test('night train can connect to the exact adjacent hotel city, including Salzbu
 test('adjacent hotel city can come from its matching visible customer line',async()=>{
  const {adjacentNightStay}=await import('./flora-identity.mjs');
  const e={product:'WIEN HBF → AMSTERDAM CENTRAAL',direction:'inbound',start:'2026-10-22',end:'2026-10-23'};
- const b={todos:[{tag:'hotel',title:'Josefshof am Rathaus, - CHECK PRICE | Klassieke Tweepersoonskamer',startDate:'2026-10-20',endDate:'2026-10-22'}],lines:[{title:'20 okt. - 22 okt.: Hotel Josefshof am Rathaus, Wenen - Tweepersoonskamer',visible:true}]};
+ const b={todos:[{tag:'hotel',title:'Testhotel am Rathaus, - CHECK PRICE | Klassieke Tweepersoonskamer',startDate:'2026-10-20',endDate:'2026-10-22'}],lines:[{title:'20 okt. - 22 okt.: Hotel Testhotel am Rathaus, Wenen - Tweepersoonskamer',visible:true}]};
  assert.equal(adjacentNightStay(e,b),true);
  assert.equal(adjacentNightStay(e,{...b,lines:[]}),false);
  assert.equal(adjacentNightStay(e,{...b,lines:b.lines.map(l=>({...l,visible:false}))}),false);
  assert.equal(adjacentNightStay(e,{...b,lines:[{title:'Hotel Other Wenen',visible:true}]}),false);
- assert.equal(adjacentNightStay(e,{...b,lines:[...b.lines,{title:'Hotel Josefshof am Rathaus Hamburg',visible:true}]}),false);
+ assert.equal(adjacentNightStay(e,{...b,lines:[...b.lines,{title:'Hotel Testhotel am Rathaus Hamburg',visible:true}]}),false);
  assert.equal(adjacentNightStay({...e,start:'2026-10-23'},b),false);
 });

@@ -1,5 +1,6 @@
+import {knownHotelCity} from './flora-hotel-locations.mjs';
 const normal=s=>String(s||'').normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase().replace(/ł/g,'l').replace(/[^a-z0-9]+/g,' ').trim();
-const cities=['Wenen|Wien|Vienna','Rome|Roma','Praag|Prague|Praha','München|Munich','Luxemburg|Luxembourg','Neurenberg|Nürnberg|Nuremberg','Milaan|Milano|Milan','Venetië|Venezia|Venice','Duisburg','Bratislava','Napels|Napoli|Naples','Edinburgh','Glasgow','Chur','Interlaken','Brig','Lugano','Zürich|Zurich','Basel','Schaffhausen','Montpellier','Warschau|Warsaw|Warszawa','Krakau|Krakow','Wroclaw','Tallinn|Tallin','Bialystok|Białystok','Vejle','Arezzo','Verona','Budapest','Zaragoza','Granada','Cádiz|Cadiz','Madrid','Málaga|Malaga','Córdoba|Cordoba','Ronda','Koblenz','Hamburg','Osnabrück|Osnabruck','Agrigento','Cefalù|Cefalu','Oslo','Trondheim','Bodø|Bodo','Narvik','Stockholm','Shrewsbury','Helsinki','Newcastle','IJmuiden','Kopenhagen|Copenhagen','Parijs|Paris','Berlijn|Berlin','Arnhem','Amsterdam','Utrecht','Rotterdam','Innsbruck','Salzburg','Luzern|Lucerne','Tirano','Zermatt','Chamonix'];
+const cities=['Wenen|Wien|Vienna','Rome|Roma','Praag|Prague|Praha','München|Munich','Luxemburg|Luxembourg','Neurenberg|Nürnberg|Nuremberg','Milaan|Milano|Milan','Venetië|Venezia|Venice','Duisburg','Bratislava','Napels|Napoli|Naples','Edinburgh','Glasgow','Chur','Filisur','Hoge Tatra|High Tatras|Vysoke Tatry|Štrbské Pleso|Strbske Pleso','Interlaken','Brig','Lugano','Zürich|Zurich','Basel','Schaffhausen','Montpellier','Warschau|Warsaw|Warszawa','Krakau|Krakow','Wroclaw','Tallinn|Tallin','Bialystok|Białystok','Vejle','Arezzo','Verona','Budapest|Boedapest','Zaragoza','Granada','Cádiz|Cadiz','Madrid','Málaga|Malaga','Córdoba|Cordoba','Ronda','Koblenz','Hamburg','Osnabrück|Osnabruck','Agrigento','Cefalù|Cefalu','Oslo','Trondheim','Bodø|Bodo','Narvik','Stockholm','Shrewsbury','Helsinki','Newcastle','IJmuiden','Kopenhagen|Copenhagen','Parijs|Paris','Berlijn|Berlin','Arnhem','Amsterdam','Utrecht','Rotterdam','Innsbruck','Salzburg','Luzern|Lucerne','Tirano','Zermatt','Chamonix'];
 export function cityFrom(text){const value=' '+normal(String(text).replace(/\bvia\s+Roma\b/gi,'').replace(/de Francia y Par[ií]s/gi,'').replace(/\bMetropol\s+Hotel\s+Marsza[lł]kowska\b/gi,'Metropol Hotel Warsaw').replace(/CHAJD/gi,'Zurich').replace(/ATALA/gi,'Innsbruck').replace(/ATWIH/gi,'Wien'))+' ',matches=cities.filter(row=>row.split('|').some(alias=>value.includes(' '+normal(alias)+' ')));return matches.length===1?matches[0].split('|')[0]:'';}
 
 const canonical=s=>normal(String(s||'').split('|')[0].replace(/\([^)]*\)/g,''))
@@ -38,15 +39,16 @@ export function trainStations(text){return String(text||'').replace(/\bCHAJD\b/g
 export function adjacentNightStay(proof,booking){
  const route=normal(proof.product),out=proof.direction==='outbound',back=proof.direction==='inbound';
  if(!out&&!back)return false;
- const swiss=/\b(?:zwitserland|switzerland|schweiz|zurich|zuerich|basel|bern|luzern|lucerne|chur|lugano|interlaken|zermatt|brig|schaffhausen|lausanne|geneve|geneva|montreux|st moritz)\b/;
+ const swiss=/\b(?:zwitserland|switzerland|schweiz|zurich|zuerich|basel|bern|luzern|lucerne|chur|filisur|lugano|interlaken|zermatt|brig|schaffhausen|lausanne|geneve|geneva|montreux|st moritz)\b/;
  let area;
- if(/\b(?:wien|vienna|wenen)\b/.test(route))area=/\b(?:wien|vienna|wenen|bratislava|budapest|boedapest|slovakia|slowakije|slovensko|kosice|zilina|poprad|trencin|banska bystrica|tatranska|strbske)\b/;
+ if(/\b(?:wien|vienna|wenen)\b/.test(route))area=/\b(?:wien|vienna|wenen|bratislava|budapest|boedapest|slovakia|slowakije|slovensko|kosice|zilina|poprad|trencin|banska bystrica|tatranska|strbske|hoge tatra|high tatras|vysoke tatry)\b/;
  else if(/\b(?:zurich|zuerich|basel)\b/.test(route))area=out?new RegExp(swiss.source+'|\\b(?:milaan|milano|milan)\\b'):swiss;
  else if(/\binnsbruck\b/.test(route))area=/\b(?:innsbruck|verona|venetie|venice|venezia|rome|roma)\b/;
  const routeParts=String(proof.product||'').split(/→|->/),adjacentCity=routeParts.length===2?cityFrom(routeParts[out?1:0]):'';
  if(!area&&!adjacentCity)return false;
  const hotelLocation=t=>{
   const text=t.title+' '+(t.description||'');if(cityFrom(text))return text;
+  const known=knownHotelCity(t.title);if(known)return text+' '+known;
   const places=[...new Set((booking.lines||[]).filter(l=>l.visible!==false&&/hotel|apartment|hostel/i.test(l.title||'')&&hotelIdentity(t,{product:l.title},{})).map(l=>cityFrom(l.title)).filter(Boolean))];
   return places.length===1?text+' '+places[0]:text;
  };
