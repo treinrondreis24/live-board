@@ -83,7 +83,7 @@ export function evaluate(state,now=new Date().toISOString(),options={}){
    const passengers=b.passengers||[],count=passengers.length;
    if(live.length&&!count)emit(b,t,'passengers','attention','Aantal reizigers ontbreekt','Kamercapaciteit kan niet worden vastgesteld.',live);
    if(live.length&&live.every(e=>Number.isFinite(e.capacity))&&live.reduce((n,e)=>n+e.capacity,0)<count)emit(b,t,'capacity','alarm','Te weinig slaapplaatsen',`${count} reizigers; ${live.reduce((n,e)=>n+e.capacity,0)} bevestigde slaapplaatsen.`,live);
-   if(live.length&&live.some(e=>e.capacity==null))emit(b,t,'capacity-unknown','attention','Kamercapaciteit niet aangetoond','Controleer het kamertype en het aantal slaapplaatsen.',live);
+   // Missing capacity alone is not evidence of a shortage. Known shortages remain alarms above.
    if(live.length&&live.some(e=>e.occupants==null))emit(b,t,'occupancy-unknown','attention','Bezetting niet aangetoond','Het geboekte aantal personen ontbreekt.',live);
    else if(live.length&&live.reduce((n,e)=>n+e.occupants,0)<count)emit(b,t,'occupancy','attention','Te weinig personen aangemeld',`${count} reizigers; ${live.reduce((n,e)=>n+e.occupants,0)} personen op de bevestiging. Neem contact op met de accommodatie.`,live);
    for(const e of live){
