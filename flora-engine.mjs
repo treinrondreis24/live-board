@@ -1,6 +1,6 @@
 import {createHash} from 'node:crypto';
 import {hotelCityConflict,hotelIdentity,nightTrainCodeMatch,adjacentNightStay} from './flora-identity.mjs';
-import {matchTravelerName} from './flora-names.mjs';
+import {matchTravelerName,referenceBackedNSName} from './flora-names.mjs';
 
 export function findingPriority(code,severity){
  if(severity==='alarm')return 'hoog';
@@ -85,8 +85,8 @@ export function evaluate(state,now=new Date().toISOString(),options={}){
    if(live.length&&!count)emit(b,t,'passengers','attention','Aantal reizigers ontbreekt','Kamercapaciteit kan niet worden vastgesteld.',live);
    if(live.length&&live.every(e=>Number.isFinite(e.capacity))&&live.reduce((n,e)=>n+e.capacity,0)<count)emit(b,t,'capacity','alarm','Te weinig slaapplaatsen',`${count} reizigers; ${live.reduce((n,e)=>n+e.capacity,0)} bevestigde slaapplaatsen.`,live);
    // Missing capacity alone is not evidence of a shortage. Known shortages remain alarms above.
-   if(live.length&&live.some(e=>e.occupants==null))emit(b,t,'occupancy-unknown','attention','Bezetting niet aangetoond','Het geboekte aantal personen ontbreekt.',live);
-   else if(live.length&&live.reduce((n,e)=>n+e.occupants,0)<count)emit(b,t,'occupancy','attention','Te weinig personen aangemeld',`${count} reizigers; ${live.reduce((n,e)=>n+e.occupants,0)} personen op de bevestiging. Neem contact op met de accommodatie.`,live);
+   // Missing occupancy alone is not evidence that too few people were booked.
+   if(live.length&&live.every(e=>Number.isFinite(e.occupants))&&live.reduce((n,e)=>n+e.occupants,0)<count)emit(b,t,'occupancy','attention','Te weinig personen aangemeld',`${count} reizigers; ${live.reduce((n,e)=>n+e.occupants,0)} personen op de bevestiging. Neem contact op met de accommodatie.`,live);
    for(const e of live){
     const start=t.provider==='Finnlines'&&t.start?addDays(t.start,1):t.start;
     const next=(b.todos||[]).find(x=>/zelfde hut|same cabin/i.test(x.title||'')&&day(x.startDate)===t.end);
@@ -107,7 +107,7 @@ export function evaluate(state,now=new Date().toISOString(),options={}){
     if(t.type==='Nachttrein'&&!e.direction)emit(b,t,'direction-'+e.id,'attention','Reisrichting ontbreekt','Stel heen- of terugreis vast; Wien Meidling is toegestaan voor de terugreis.',[e]);
     if(e.roomMismatch)emit(b,t,'room-'+e.id,'attention','Kamertype wijkt af','Voldoende capaciteit, maar ander kamertype dan de todo.',[e]);
     if(e.tripReferenceMismatch)emit(b,t,'trip-reference','attention','Afwijkend Treinrondreis-boekingsnummer',`De bron noemt ${e.tripReferenceMismatch}A; naam, accommodatie en datums koppelen deze reservering eenduidig aan ${b.index}A.`,[e]);
-    const nm=matchTravelerName(e.name,passengers,{truncated:e.provider==='NS International'||e.nameTruncated===true});
+    const nm=e.provider==='NS International'&&referenceBackedNSName(e.name,passengers,e.reference,b.notes)?'exact':matchTravelerName(e.name,passengers,{truncated:e.provider==='NS International'||e.nameTruncated===true});
     if(nm!=='exact')emit(b,t,'name-'+e.id,'attention',nm==='partial'?'Mogelijke roepnaam of naamafwijking':'Naam controleren','Vergelijk met de formele naam van alle reizigers. Ontbrekende latere voornamen en boeken op de tweede reiziger zijn toegestaan; een mogelijke roepnaam blijft een laag aandachtspunt.',[e]);
    }
    if(b.floraPaymentLinkCreated&&!t.confirmed&&t.type==='Hotel'&&!(/backup|annul|storn/i.test(t.title+' '+(t.description||''))&&all.some(e=>e.status==='cancelled')&&!live.length)){
