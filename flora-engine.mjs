@@ -19,6 +19,12 @@ export const alarmView=f=>!f.viewed?'new':f.viewed.signature===f.reviewSignature
 export function reviewSignature(f){return hash({code:f.code,automatic:f.automatic,detail:f.detail,stay:f.stay,evidence:(f.evidence||[]).map(({reference,start,end,name,capacity,occupants,status})=>({reference,start,end,name,capacity,occupants,status})).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b)))});}
 export const categoryFor=code=>code==='missing'?'Ontbrekend boekingsbewijs':code==='duplicate'?'Mogelijk dubbel geboekt':code.startsWith('dates-')?'Verkeerde datums':code.startsWith('name-')?'Reizigersnaam':code==='capacity'?'Te weinig slaapplaatsen':code.startsWith('capacity-')?'Slaapplaatsen onbekend':code.startsWith('occupancy')?'Geboekte bezetting':code.startsWith('product-')?'Hotel of traject':code.startsWith('room-')?'Kamertype':code==='waiting'?'Wacht op klant':code==='payment'?'Betaallink zonder bevestiging':code.startsWith('unmatched-')||code.startsWith('inactive-')?'Geen actieve reis':code.startsWith('unlinked-')?'Niet gekoppeld aan todo':'Overige controles';
 const day=s=>String(s||'').slice(0,10);
+function teldarSingleRoomAlias(e,rows){
+ if(e.provider!=='Teldar'||!/\/1$/.test(e.reference))return e.reference;
+ const names=x=>(x.guestNames||[]).map(normalize).sort().join('|');
+ const base=rows.find(x=>x.provider===e.provider&&x.reference===e.reference.slice(0,-2)&&x.roomCount===1&&x.start===e.start&&x.end===e.end&&(normalize(x.name)===normalize(e.name)||names(x)&&names(x)===names(e)));
+ return base?base.reference:e.reference;
+}
 export function reservationScope(b,evidence=[],now=new Date().toISOString()){
  const end=[day(b.dateReturn),day(b.dateDeparture),...(b.todos||[]).map(t=>day(t.endDate))].filter(Boolean).sort().at(-1);
  return !end||end>=day(now)||evidence.some(e=>e.trip===tripNumber(b.index)&&e.status==='confirmed'&&e.end>=day(now));
@@ -59,7 +65,7 @@ export function evaluate(state,now=new Date().toISOString(),options={}){
    if(t.end&&t.end<day(now)&&!linked.some(e=>t.todoKeys.includes(e.todoKey)&&e.status==='confirmed'&&e.end>=day(now)))continue;
    const check=state.emailChecks?.[String(b.index)]?.stays?.find(c=>c.todoKey===t._key);
    if(check&&check.state!=='found'&&linked.some(e=>e.todoKey===t._key&&e.status==='confirmed'))emit(b,t,'email-incomplete','attention','E-mailcontrole nog niet afgerond',check.explanation);
-   const all=[...new Map(linked.filter(e=>t.todoKeys.includes(e.todoKey)).sort((a,b)=>String(a.observedAt||'').localeCompare(String(b.observedAt||''))).map(e=>[e.provider+'|'+(e.provider==='Teldar'&&/\/1$/.test(e.reference)&&linked.some(x=>x.provider===e.provider&&x.reference===e.reference.replace(/\/1$/,'')&&x.start===e.start&&x.end===e.end&&normalize(x.name)===normalize(e.name))?e.reference.replace(/\/1$/,''):e.reference),e])).values()],live=all.filter(e=>e.status==='confirmed');
+   const all=[...new Map(linked.filter(e=>t.todoKeys.includes(e.todoKey)).sort((a,b)=>String(a.observedAt||'').localeCompare(String(b.observedAt||''))).map(e=>[e.provider+'|'+teldarSingleRoomAlias(e,linked),e])).values()],live=all.filter(e=>e.status==='confirmed');
    if(waiting&&!live.length)continue;
    if(!check&&live.some(e=>e.automaticEmail))emit(b,t,'email-incomplete','attention','Boekingsgerichte e-mailcontrole nodig','Een reservering is bij de mailboxcontrole gevonden; de volledige zoekronde voor deze overnachting volgt nog.',live);
    if(!live.length){const backup=/backup|annul|storn/i.test(t.title+' '+(t.description||''))&&all.some(e=>e.status==='cancelled');emit(b,t,backup?'cancelled-todo':'missing','attention',backup?'Geannuleerde backup: todo bijwerken':'Overnachting nog niet gecontroleerd',backup?'Annulering in de e-mail bevestigd. Deze reservering telt niet als actieve boeking; controleer de verouderde todo.':check?check.explanation:t.confirmed?'Afgevinkt in Sanity; nog niet in e-mail gezocht.':'Nog niet bevestigd of bevestiging nog niet verwerkt; nog niet in e-mail gezocht.',all);}
@@ -71,7 +77,8 @@ export function evaluate(state,now=new Date().toISOString(),options={}){
    const listedRoomGroup=t.type==='Hotel'&&live.every(e=>namedRoomRefs.includes(e.reference.toUpperCase())&&e.start===t.start&&e.end===t.end&&e.occupants!=null)&&live.reduce((n,e)=>n+Number(e.occupants),0)===(b.passengers||[]).length;
    const voucherGroup=live.length>1&&live.every(e=>['Teldar','RateHawk'].includes(e.provider)&&e.voucherGuestsVerified&&e.start===t.start&&e.end===t.end)&&new Set(live.flatMap(e=>e.guestNames.map(normalize))).size===live.reduce((n,e)=>n+e.guestNames.length,0)&&live.reduce((n,e)=>n+e.guestNames.length,0)===(b.passengers||[]).length;
    const privateCompartments=t.type==='Nachttrein'&&Number(t.title.match(/(\d+)\s*x\s*lig-?4\s*priv/i)?.[1])===live.length&&live.every(e=>e.capacity===4);
-   const nsGroup=live.length>1&&live.every(e=>e.provider==='NS International'&&e.reference.split('/')[0]===live[0].reference.split('/')[0]&&e.start===live[0].start&&e.end===live[0].end)&&(live.reduce((n,e)=>n+Number(e.occupants||0),0)===(b.passengers||[]).length||privateCompartments);
+   const miniCabinGroup=t.type==='Nachttrein'&&live.length===Number(t.title.match(/(\d+)\s*x\s*RITAM/i)?.[1])&&live.every(e=>e.capacity===1&&/mini cabin/i.test(e.room));
+   const nsGroup=live.length>1&&live.every(e=>e.provider==='NS International'&&e.reference.split('/')[0]===live[0].reference.split('/')[0]&&e.start===live[0].start&&e.end===live[0].end)&&(live.reduce((n,e)=>n+Number(e.occupants||0),0)===(b.passengers||[]).length||privateCompartments||miniCabinGroup);
    if(refs.size>1&&live.some((e,i)=>live.some((x,j)=>i!==j&&e.start<x.end&&x.start<e.end))&&!voucherGroup&&!nsGroup&&!premierRoomGroup&&!listedRoomGroup&&!(live.every(e=>e.group&&e.group===live[0].group)&&(live.reduce((n,e)=>n+Number(e.occupants||0),0)===(b.passengers||[]).length||live.every(e=>e.roomGroupVerified)&&live.length===Number(t.quantity))))emit(b,t,'duplicate','alarm','Mogelijk dubbel geboekt','Meerdere actieve reserveringen. Controleer of dit verschillende kamers zijn of dat annuleringen ontbreken. Een todo-notitie sluit dit alarm niet af.',live);
    const passengers=b.passengers||[],count=passengers.length;
    if(live.length&&!count)emit(b,t,'passengers','attention','Aantal reizigers ontbreekt','Kamercapaciteit kan niet worden vastgesteld.',live);
