@@ -36,3 +36,24 @@ test('approved Warsaw Metropol address matches without accepting other cities or
  assert.equal(hotelIdentity(todo,{product:'Metropol Hotel Glasgow'},{}),false);
  assert.equal(cityFrom('Marszalkowska'),'');
 });
+
+test('partial hotel names are accepted without requiring a known city',()=>{
+ for(const [title,product] of [
+  ['Hotel Bernina (STC) | Standaard kamer','Hotel Bernina Via Roma'],
+  ['Go Hotel Shnelli Tallinn | Tweepersoonskamer','Go Hotel Shnelli Toompuiestee'],
+  ['Hotel Opera Bialystok','Hotel Opera Kijowska'],
+  ['Hotel Piast Wrocław','Hotel Piast ul. Pilsudskiego'],
+  ['Leonardo Edinburgh | Double/Twin','Leonardo Royal Hotel']
+ ])assert.equal(hotelIdentity({title},{product},{}),true,title);
+ assert.equal(cityFrom('Hotel Bernina Via Roma'),'');
+ assert.equal(cityFrom('Wrocław'),'Wroclaw');
+ assert.equal(hotelIdentity({title:'Grand Hotel Tallinn'},{product:'Grand Hotel Royal'},{}),false);
+});
+test('partial names never override Edinburgh Glasgow conflicts in names or hotel addresses',()=>{
+ for(const [wanted,other] of [['Edinburgh','Glasgow'],['Glasgow','Edinburgh']]){
+  const b={index:42,passengers:[{firstName:'Test',lastName:'Reiziger'}],todos:[{_key:'h',tag:'hotel',title:'Leonardo Royal Hotel '+wanted,startDate:'2026-12-10',endDate:'2026-12-12',supplierBookingNumber:'123456789'}]};
+  const e={provider:'Expedia',reference:'123456789',name:'Test Reiziger',product:'Leonardo Royal Hotel',sourceText:'Hoteloverzicht Leonardo Royal Hotel '+other+' Hotel bekijken',start:'2026-12-10',end:'2026-12-12',status:'confirmed'};
+  assert.equal(matchEvidence(e,b).productMatch,false);
+  assert.equal(matchEvidence({...e,product:'Leonardo Royal Hotel '+other,sourceText:''},b).productMatch,false);
+ }
+});
