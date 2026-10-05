@@ -23,3 +23,16 @@ test('explicit alternative accepts either named hotel, not unrelated or generic 
  assert.equal(hotelIdentity({title:'Hotel of Kamer'},{product:'Hotel Kamer'},{}),false);
  assert.equal(hotelIdentity({title:'Terminus of Opera Oslo'},{product:'Thon Hotel Terminus Stockholm'},{}),false);
 });
+
+test('approved Warsaw Metropol address matches without accepting other cities or hotels',()=>{
+ const todo={title:'Metropol Hotel, Warsaw (Teldar/Exp) | Double'};
+ for(const street of ['Marszalkowska','Marszałkowska']){
+  const proof={product:'Metropol Hotel '+street};
+  assert.equal(cityFrom(proof.product),'Warschau');
+  assert.equal(hotelIdentity(todo,proof,{}),true);
+  assert.equal(hotelIdentity({title:'Metropol Hotel Oslo'},proof,{}),false);
+ }
+ assert.equal(hotelIdentity(todo,{product:'Other Hotel Warsaw'},{}),false);
+ assert.equal(hotelIdentity(todo,{product:'Metropol Hotel Glasgow'},{}),false);
+ assert.equal(cityFrom('Marszalkowska'),'');
+});
