@@ -1,4 +1,9 @@
 export const dfdsSender=from=>/@(?:[\w-]+\.)?dfds\.(?:info|com)(?=>|\s|$)/i.test(from||'');
+export function dfdsCabinMismatch(title,room){
+ const type=s=>/outside|buitenhut|zeezicht/i.test(s)?'outside':/inside|binnenhut/i.test(s)?'inside':'';
+ const wanted=type(title),booked=type(room);
+ return wanted==='outside'&&booked==='inside';
+}
 export function safeDFDSURL(value){
  try{const u=new URL(value);if(u.protocol!=='https:'||u.username||u.password||u.port)return null;
   return u.hostname==='links.dfds.info'&&/^\/s\/c\/[\w/-]+$/.test(u.pathname)||['dfds.com','www.dfds.com'].includes(u.hostname)&&(/^\/api\/booking-confirmation\/\d{6,10}\/[A-Fa-f0-9]+$/.test(u.pathname)||u.pathname==='/sbwapi/booking/reservation/itinerarypdf')?u:null;

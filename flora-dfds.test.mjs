@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {dfdsLegDocuments,dfdsLinks,safeDFDSURL,dfdsPDF,latestDFDS} from './flora-dfds.mjs';
+import {dfdsLegDocuments,dfdsLinks,safeDFDSURL,dfdsPDF,latestDFDS,dfdsCabinMismatch} from './flora-dfds.mjs';
 import {parseDocument,matchEvidence,cancellation,cancellationApplies,bookingQuery} from './flora-mail-parser.mjs';
 import {extractMessage} from './flora-mail-source.mjs';
 import {evaluate} from './flora-engine.mjs';
@@ -54,4 +54,9 @@ test('DFDS-only control preserves hotel checks and never performs a broad mailbo
 test('destination-only todo names still check the booked direction',()=>{
  const [e]=evidence();assert.equal(matchEvidence(e,{...b,todos:[{...b.todos[0],title:'DFDS IT NAAR -> Newcastle 2026'}]}).productMatch,true);
  assert.equal(matchEvidence(e,{...b,todos:[{...b.todos[0],title:'DFDS IT NAAR -> IJmuiden 2026'}]}).productMatch,false);
+});
+test('cabin downgrade is visible; extra capacity and a sea-view upgrade are not problems',()=>{
+ assert.equal(dfdsCabinMismatch('Double OUTSIDE or 4-pers','1 x 4-persoons binnenhut'),true);
+ assert.equal(dfdsCabinMismatch('Double Inside or 4-pers','1 x 4-persoons zeezichthut'),false);
+ assert.equal(dfdsCabinMismatch('Double Inside or 4-pers','1 x 4-persoons binnenhut'),false);
 });
