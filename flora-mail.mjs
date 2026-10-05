@@ -6,7 +6,7 @@ import {readMail,writeMail,readFlora,writeFlora} from './flora-store.mjs';
 import {activeBooking,waitingBooking,reservationScope,currentBookings,normalize,stays,hash,evaluate,controlOrder} from './flora-engine.mjs';
 import {planFollowup} from './flora-followup.mjs';
 import {extractMessage} from './flora-mail-source.mjs';
-import {amendedHotelEvidence,bookingQuery,cancellationApplies,parseDocument,matchEvidence,cancellation,hotelReplyReview,resolveEvidence,receiptCancellations,latestNSTickets,conversationCancellations} from './flora-mail-parser.mjs';
+import {supplierReferences,amendedHotelEvidence,bookingQuery,cancellationApplies,parseDocument,matchEvidence,cancellation,hotelReplyReview,resolveEvidence,receiptCancellations,latestNSTickets,conversationCancellations} from './flora-mail-parser.mjs';
 
 const stamp=()=>new Date().toISOString();
 const needsRead=m=>m.version!==6||m.hasLinks||m.issues?.length;
@@ -34,7 +34,7 @@ export function createMailControl({read=readMail,write=writeMail,readState=readF
   await write('job',{id:randomUUID(),parserVersion:INTERPRETATION_VERSION,status:'queued',mode,pilot,requestedTrips:mode==='targeted'?queue:undefined,queue,baseline,done:0,startedAt:stamp(),updatedAt:stamp(),phase:mode==='rules-only'?'Wacht op herbeoordeling opgeslagen bewijs':'Wacht op e-mailcontrole',messages:0,documents:0,errors:0,outcome:{selected:baseline.filter(f=>f.status==='attention').length,reviewed:0,resolved:0,remaining:baseline.filter(f=>f.status==='attention').length,reclassified:0}},revision);return status();
  }
  async function processBooking(b,get,job,onProgress=async()=>{},knownEvidence=[],allBookings=[b]){const query=bookingQuery(b),ids=[],deadline=clock()+120000;let processed=0;
-  const refs=[...new Set([...knownEvidence.filter(e=>e.trip===String(b.index)).map(e=>e.reference),...stays(b).map(t=>t.reference)].flatMap(r=>String(r||'').split(/[^A-Za-z0-9-]+/)).filter(r=>/^[A-Za-z0-9-]{5,40}$/.test(r)))],searchedRefs=new Set(),referenceQueries=[];
+  const refs=[...new Set([...knownEvidence.filter(e=>e.trip===String(b.index)).map(e=>e.reference),...stays(b).map(t=>t.reference)].flatMap(supplierReferences))],searchedRefs=new Set(),referenceQueries=[];
   let cancellationLimited=false;
   async function searchRefs(references){for(const ref of references){if(searchedRefs.has(ref))continue;if(clock()>deadline||searchedRefs.size>=50){cancellationLimited=true;return;}searchedRefs.add(ref);let token='',found=0;const q='"'+ref+'" -in:spam -in:trash';referenceQueries.push(q);do{if(clock()>deadline){cancellationLimited=true;return;}await onProgress({processed,total:new Set(ids).size,phase:'Reserveringsreferentie '+ref+' op bevestigingen en annuleringen doorzoeken'});const result=await get('messages',{q,maxResults:'100',...(token?{pageToken:token}:{})});ids.push(...(result.messages||[]).map(m=>m.id));found+=(result.messages||[]).length;token=result.nextPageToken||'';if(found>=200&&token){cancellationLimited=true;break;}}while(token);}}
   await searchRefs(refs);

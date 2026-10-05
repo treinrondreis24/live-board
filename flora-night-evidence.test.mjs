@@ -1,10 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {evaluate} from './flora-engine.mjs';
-import {matchEvidence,amendedHotelEvidence,parseDocument} from './flora-mail-parser.mjs';
+import {matchEvidence,amendedHotelEvidence,parseDocument,supplierReferences,bookingQuery} from './flora-mail-parser.mjs';
 const b={_id:'b',index:6000,status:'verwerkt',dateDeparture:'2026-10-19',dateReturn:'2026-10-25',passengers:[{firstName:'Test',lastName:'Reiziger'},{firstName:'Other',lastName:'Reiziger'}],todos:[{_key:'t',tag:'hotel',title:'40421 (EUN)(RIT) | 2x RITAM (minicabine)',startDate:'2026-10-19',endDate:'2026-10-20'}]};
 const e={id:'e',trip:'6000',todoKey:'t',provider:'NS International',reference:'ABCDEF/0',start:'2026-10-19',end:'2026-10-20',name:'Test Reiziger',capacity:1,occupants:null,room:'Mini Cabin',status:'confirmed',observedAt:'2026-09-01'};
 const findings=(booking,rows)=>evaluate({bookings:[booking],evidence:rows},'2026-10-05').findings;
+test('free text in a supplier-reference field cannot fan out into unrelated mail searches',()=>{
+ assert.deepEqual(supplierReferences('Booked from Wien Meidling!'),[]);
+ assert.deepEqual(supplierReferences('73542386374041/ Executive twin room'),['73542386374041']);
+ assert.deepEqual(supplierReferences('ÖBB booking – 0395 4667 5730 2162/ original date'),['0395466757302162']);
+ assert.deepEqual(supplierReferences('CBKFWPK/0 CF-55X8XN/1'),['CBKFWPK','CF-55X8XN']);
+ assert.ok(!bookingQuery({...b,todos:[{...b.todos[0],supplierBookingNumber:'Booked from Wien Meidling!'}]}).includes('Meidling'));
+});
 test('direction cannot attach unrelated train evidence to another traveler',()=>{
  const unrelated={...e,provider:'ÖBB',reference:'1234567890123456',name:'Arnold Example',direction:'outbound',start:'2026-12-17',end:''};
  assert.equal(matchEvidence(unrelated,b),null);
