@@ -127,7 +127,7 @@ export function supplierReferences(value){
  const text=String(value||'').replace(/\b(\d{4}) (\d{4}) (\d{4}) (\d{4})\b/g,'$1$2$3$4');
  return [...new Set((text.match(/\b[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*\b/g)||[]).filter(r=>r.length>=5&&r.length<=40&&(/\d/.test(r)||/^[A-Z]{6,7}$/.test(r))))];
 }
-export function bookingQuery(b){const ss=stays(b),dfdsRefs=ss.some(t=>t.provider==='DFDS')?[...(String(b.notes||'').matchAll(/DFDS[^\n]*?(\d{8})/gi))].map(m=>quoted(m[1])):[],terms=[...dfdsRefs,quoted(String(b.index)+'A'),...ss.flatMap(t=>supplierReferences(t.reference)).map(quoted),...(b.passengers||[]).filter(p=>passengerMatches(p.firstName+' '+p.lastName,p)).map(p=>'('+quoted(p.firstName.trim().split(/\s+/)[0])+' '+quoted(p.lastName)+')')];return '('+[...new Set(terms)].join(' OR ')+') -in:spam -in:trash';}
+export function bookingQuery(b){const ss=stays(b),dfdsRefs=ss.some(t=>t.provider==='DFDS')?String(b.notes||'').split(/\n/).filter(line=>/DFDS/i.test(line)).flatMap(line=>line.match(/\b\d{8}\b/g)||[]).map(quoted):[],terms=[...dfdsRefs,quoted(String(b.index)+'A'),...ss.flatMap(t=>supplierReferences(t.reference)).map(quoted),...(b.passengers||[]).filter(p=>passengerMatches(p.firstName+' '+p.lastName,p)).map(p=>'('+quoted(p.firstName.trim().split(/\s+/)[0])+' '+quoted(p.lastName)+')')];return '('+[...new Set(terms)].join(' OR ')+') -in:spam -in:trash';}
 export function referenceMatches(reference,note){const ref=String(reference).toUpperCase();return String(note||'').toUpperCase().split(/[^A-Z0-9/]+/).some(r=>r.length>=5&&(ref===r||ref.startsWith(r+'/')||!ref.includes('/')&&r.startsWith(ref+'/')));}
 export function resolveEvidence(e,bookings){
  const matches=bookings.map(b=>matchEvidence(e,b)).filter(Boolean);if(matches.length===1)return matches[0];
@@ -139,7 +139,7 @@ export function matchEvidence(e,b){const wrongHint=e.tripHint&&e.tripHint!==Stri
  if(e.provider==='DFDS'){
   const refMatch=referenceMatches(e.reference,b.notes)||exact.length>0;
   if(!refMatch&&!nameMatch&&!e.tripHint)return null;
-  const ferry=ss.filter(t=>t.provider==='DFDS');
+  const ferry=ss.filter(t=>t.provider==='DFDS'&&/newcastle|ijmuiden/i.test(t.title));
   const dated=ferry.filter(t=>t.start===e.start&&t.end===e.end);
   const route=ferry.filter(t=>normalize(t.title).includes(normalize(e.product)));
   candidates=dated.length?dated:route.length?route:ferry;
