@@ -17,10 +17,10 @@ test('direction cannot attach unrelated train evidence to another traveler',()=>
  assert.equal(matchEvidence(unrelated,b),null);
  assert.equal(matchEvidence({...unrelated,name:'Test Reiziger'},b).todoKey,'t');
 });
-test('two requested single minicabins are not duplicate bookings, unknown occupants remain visible',()=>{
+test('two requested single minicabins are not duplicate bookings, unknown occupants alone do not warn',()=>{
  const rows=[e,{...e,id:'e2',reference:'ABCDEF/1'}];
  assert.ok(!findings(b,rows).some(f=>f.code==='duplicate'));
- assert.ok(findings(b,rows).some(f=>f.code==='occupancy-unknown'));
+ assert.ok(!findings(b,rows).some(f=>f.code==='occupancy-unknown'));
  assert.ok(findings(b,[...rows,{...e,id:'e3',reference:'ABCDEF/2'}]).some(f=>f.code==='duplicate'));
  assert.ok(findings(b,[e,{...e,id:'e2',reference:'OTHER/1'}]).some(f=>f.code==='duplicate'));
 });
