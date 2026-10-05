@@ -1,3 +1,4 @@
+import {dfdsSender,parseDFDS} from './flora-dfds.mjs';
 import {hotelIdentity,trainRoom,trainStations,cityFrom,adjacentNightStay} from './flora-identity.mjs';
 import {normalize,hash,validateEvidence,stays} from './flora-engine.mjs';
 import {matchTravelerName} from './flora-names.mjs';
@@ -74,7 +75,7 @@ export function parseDocument(doc,message){
   e={provider:'RateHawk',reference:s.match(/Reservering\s+(\d+)/i)?.[1],start:afterDate(s,'Inchecken'),end:afterDate(s,'Uitchecken:'),name:s.match(/Gasten:\s*(.*?)(?:,|Belangrijk)/i)?.[1]||'',occupants:num(s,/voor\s+(\d+)\s+volwassenen/i),capacity:roomCapacity(s.match(/Klassiek(.*?)Gasten:/i)?.[0]||''),product:s.match(/door onze partner\s+(.*?)\s+\d{4,}/i)?.[1]||'',room:s.match(/Klassiek(.*?)Gasten:/i)?.[0]||''};
  }else if(doc.label!=='E-mail'&&/Voucher\s*\/\s*Confirmation/i.test(s)&&/Switzerland Travel Centre/i.test(s)){
   e={provider:'STC',reference:s.match(/Booking\s+(TRR\d+)/i)?.[1],start:afterDate(s,'Check in day'),end:afterDate(s,'Check out day'),name:s.match(/Booking name\s+(?:Ms\.|Mr\.)?\s*(.*?),/i)?.[1]||'',occupants:num(s,/Occupancy\s+(\d+)\s+adults/i),capacity:roomCapacity(s.match(/Room description\s+(.*?)Room type/i)?.[1]||''),product:s.match(/Hotel\/Service\s+(.*?)\s+(?:Bleicheplatz|Via|[A-Z][a-z]+strasse)/i)?.[1]||'',room:s.match(/Room description\s+(.*?)Room type/i)?.[1]||''};
- }else e=supplierDocument(s,message,doc,{dateValue,roomCapacity})||(doc.label==='E-mail'?directHotel(s,message):null);
+ }else e=parseDFDS(doc,message,dateValue)||supplierDocument(s,message,doc,{dateValue,roomCapacity})||(doc.label==='E-mail'?directHotel(s,message):null);
  if(e?.reference?.startsWith('EMAIL-')&&(message.docs||[]).some(d=>d!==doc&&supplierDocument(d.text.replace(/\s+/g,' '),message,d,{dateValue,roomCapacity})?.provider===e.provider))return null;
  if(e?.partialEvidence&&e.reference&&e.start)return {...e,id:hash([e.provider,e.reference]),source:message.url,status:'confirmed',messageId:message.id,document:doc.label,observedAt:message.at,tripHint:'',sourceText:s.slice(0,7000)};
  if(e?.provider==='NS International'&&e.start&&e.end&&e.end<e.start&&e.start.slice(5,7)==='12'&&e.end.slice(5,7)==='01')e.end=String(Number(e.start.slice(0,4))+1)+e.end.slice(4);
@@ -87,6 +88,7 @@ export function cancellation(message){
   const reference=text.match(/Booking\s+([A-Z0-9/]+)/i)?.[1];
   if(reference)return {provider:'Teldar',reference,at:message.at,source:message.url,start:dateValue(text.match(/Checkin:\s*(\S+)/i)?.[1]),end:dateValue(text.match(/Checkout:\s*(\S+)/i)?.[1]),name:message.subject.match(/CANCELLATION:\s*[A-Z0-9/]+\s*-\s*(.*)/i)?.[1]||''};
  }
+ if(dfdsSender(message.from)&&/Je boeking is geannuleerd/i.test(message.subject)&&/De boeking van jouw klant is geannuleerd/i.test(text)){provider='DFDS';reference=text.match(/Boekingsnummer:\s*(\d{6,10})/i)?.[1];}
  if(/@oebb\.at\b/i.test(message.from)&&/refund/i.test(message.subject)&&/refund.*processed successfully/i.test(text)&&/refunded tickets become invalid/i.test(text)){provider='ÖBB';reference=text.match(/Booking code:\s*([\d ]{16,25})/i)?.[1]?.replace(/\s/g,'');}
  if(/@expediataap\.nl\b/i.test(message.from)&&/Annuleringsbevestiging/i.test(message.subject)&&/Je hebt geannuleerd|Je hotelkamer is geannuleerd/i.test(text)){provider='Expedia';reference=text.match(/TAAP-reisplannummer:\s*(\d+)/i)?.[1];}
  if(/@(?:[\w-]+\.)*premierinn\.com\b/i.test(message.from)&&/Stornierung|Cancellation/i.test(message.subject)&&/Buchung storniert|booking (?:has been |is )?cancelled/i.test(text)){provider='Premier Inn';reference=text.match(/(?:Buchungsnummer|Booking reference)\s*:?\s*([A-Z0-9]+)/i)?.[1];}
@@ -95,6 +97,7 @@ export function cancellation(message){
 export function cancellationApplies(c,e){
  if(c.provider!==e.provider)return false;
  if(c.reference===e.reference)return true;
+ if(c.provider==='DFDS'&&e.reference.split('/')[0]===c.reference)return true;
  // A room /1 cancellation also identifies a single-room voucher with its base reference.
  // Never cancel other room suffixes or an aggregate voucher from that room notice.
  return c.provider==='Teldar'&&c.reference===e.reference+'/1'&&Number(e.roomCount)===1&&!!c.start&&c.start===e.start&&c.end===e.end&&!!normalize(c.name)&&normalize(c.name)===normalize(e.name);
@@ -124,7 +127,7 @@ export function supplierReferences(value){
  const text=String(value||'').replace(/\b(\d{4}) (\d{4}) (\d{4}) (\d{4})\b/g,'$1$2$3$4');
  return [...new Set((text.match(/\b[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*\b/g)||[]).filter(r=>r.length>=5&&r.length<=40&&(/\d/.test(r)||/^[A-Z]{6,7}$/.test(r))))];
 }
-export function bookingQuery(b){const ss=stays(b),terms=[quoted(String(b.index)+'A'),...ss.flatMap(t=>supplierReferences(t.reference)).map(quoted),...(b.passengers||[]).filter(p=>passengerMatches(p.firstName+' '+p.lastName,p)).map(p=>'('+quoted(p.firstName.trim().split(/\s+/)[0])+' '+quoted(p.lastName)+')')];return '('+[...new Set(terms)].join(' OR ')+') -in:spam -in:trash';}
+export function bookingQuery(b){const ss=stays(b),dfdsRefs=ss.some(t=>t.provider==='DFDS')?[...(String(b.notes||'').matchAll(/DFDS[^\n]*?(\d{8})/gi))].map(m=>quoted(m[1])):[],terms=[...dfdsRefs,quoted(String(b.index)+'A'),...ss.flatMap(t=>supplierReferences(t.reference)).map(quoted),...(b.passengers||[]).filter(p=>passengerMatches(p.firstName+' '+p.lastName,p)).map(p=>'('+quoted(p.firstName.trim().split(/\s+/)[0])+' '+quoted(p.lastName)+')')];return '('+[...new Set(terms)].join(' OR ')+') -in:spam -in:trash';}
 export function referenceMatches(reference,note){const ref=String(reference).toUpperCase();return String(note||'').toUpperCase().split(/[^A-Z0-9/]+/).some(r=>r.length>=5&&(ref===r||ref.startsWith(r+'/')||!ref.includes('/')&&r.startsWith(ref+'/')));}
 export function resolveEvidence(e,bookings){
  const matches=bookings.map(b=>matchEvidence(e,b)).filter(Boolean);if(matches.length===1)return matches[0];
@@ -133,6 +136,14 @@ export function resolveEvidence(e,bookings){
  return {...e,trip,todoKey:'',id:hash([e.provider,e.reference,trip,'']),linkReview:matches.length>1?'Meerdere mogelijke reizen; de koppeling is niet eenduidig.':trip?'Reiziger en reisperiode gevonden, maar geen eenduidige todo. Controleer accommodatie en de reisreferentie op de bevestiging.':e.tripHint?'De reisreferentie of reizigersnaam sluit niet eenduidig aan bij Sanity.':''};
 }
 export function matchEvidence(e,b){const wrongHint=e.tripHint&&e.tripHint!==String(b.index),nameMatch=(b.passengers||[]).some(p=>passengerMatches(e.name,p)||e.provider==='NS International'&&matchTravelerName(e.name,[p],{truncated:true})==='exact');if(wrongHint&&!nameMatch)return null;const known=(b.passengers||[]).map(p=>normalize(p.lastName)).filter(n=>n.length>=2&&!['nnb','onbekend','unknown','tbd'].includes(n));if(e.tripHint&&!wrongHint&&known.length&&normalize(e.name)&&!nameMatch&&!known.some(n=>(' '+normalize(e.name)+' ').includes(' '+n+' ')))return null;const ss=stays(b),exact=ss.filter(t=>[e.reference,...(e.alternateReferences||[])].some(r=>referenceMatches(r,t.reference)));let candidates=exact;
+ if(e.provider==='DFDS'){
+  const refMatch=referenceMatches(e.reference,b.notes)||exact.length>0;
+  if(!refMatch&&!nameMatch&&!e.tripHint)return null;
+  const ferry=ss.filter(t=>t.provider==='DFDS');
+  const dated=ferry.filter(t=>t.start===e.start&&t.end===e.end);
+  const route=ferry.filter(t=>normalize(t.title).includes(normalize(e.product)));
+  candidates=dated.length?dated:route.length?route:ferry;
+ }
  // Direction alone never identifies a traveler: an unrelated outbound confirmation
  // must not attach to every booking with an outbound night train.
  if(['NS International','ÖBB'].includes(e.provider)&&!exact.length&&!nameMatch&&!e.tripHint)return null;
@@ -144,7 +155,7 @@ export function matchEvidence(e,b){const wrongHint=e.tripHint&&e.tripHint!==Stri
  if(candidates.length>1&&candidates.every(t=>t.type==='Hotel'&&t.start===candidates[0].start&&t.end===candidates[0].end&&normalize(t.title.split('|')[0])===normalize(candidates[0].title.split('|')[0])))candidates=[candidates[0]];
  if(candidates.length!==1)return null;const t=candidates[0];if(wrongHint&&(t.start!==e.start||t.end!==e.end))return null;const words=normalize(e.product).split(' ').filter(w=>w.length>3&&!['hotel','international'].includes(w)),same=words.length>0&&words.every(w=>normalize(t.title).includes(w))||normalize(t.title.split('|')[0]).replace(/roma/g,'rome').split(' ').filter(w=>w.length>3&&!['hotel','teldar','mecure','stc'].includes(w)).filter(w=>normalize(e.product).includes(w)).length>=2||normalize(b.notes).includes(normalize(e.product))&&normalize(e.product).length>10;
  const supplierIdentity=e.provider==='Hotel ABC Chur'&&/hotelabc|abc.*chur/i.test(t.title)||e.provider==='Hotel Post Chur'&&/post\s*chur/i.test(t.title)||e.provider==='Best Western Montpellier'&&/western.*(?:montpellier|saint.?roch)|comedie.*roch/i.test(t.title);
- const productMatch=(t.type==='Hotel'?hotelIdentity(t,e,b):false)||supplierIdentity||(t.type==='Nachttrein'&&!!e.direction&&(!!cityFrom(t.title)||adjacentNightStay(e,b)||!!t.reference))||(e.provider==='Finnlines'&&/helsinki/i.test(e.product)&&(/helsinki/i.test(t.title)||stays(b).some(x=>x.start===e.end&&/helsinki/i.test(x.title))))||(same&&!(cityFrom(t.title)&&cityFrom(e.product)&&cityFrom(t.title)!==cityFrom(e.product)));
+ const productMatch=e.provider==='DFDS'?(t.provider==='DFDS'&&(normalize(t.title).includes(normalize(e.product))||/naar\s*(?:->|→)?\s*(Newcastle|IJmuiden)/i.test(t.title)&&normalize(t.title.match(/naar\s*(?:->|→)?\s*(Newcastle|IJmuiden)/i)[1])===(e.direction==='outbound'?'newcastle':'ijmuiden'))):(t.type==='Hotel'?hotelIdentity(t,e,b):false)||supplierIdentity||(t.type==='Nachttrein'&&!!e.direction&&(!!cityFrom(t.title)||adjacentNightStay(e,b)||!!t.reference))||(e.provider==='Finnlines'&&/helsinki/i.test(e.product)&&(/helsinki/i.test(t.title)||stays(b).some(x=>x.start===e.end&&/helsinki/i.test(x.title))))||(same&&!(cityFrom(t.title)&&cityFrom(e.product)&&cityFrom(t.title)!==cityFrom(e.product)));
  if(wrongHint&&!productMatch)return null;
  const guests=e.guestText?(b.passengers||[]).filter(p=>p.firstName&&p.lastName&&(' '+normalize(e.guestText)+' ').includes(' '+normalize(p.firstName+' '+p.lastName)+' ')).map(p=>p.firstName+' '+p.lastName):e.guestNames||[],verified=['Teldar','RateHawk'].includes(e.provider)&&guests.length>0&&guests.every(n=>(b.passengers||[]).some(p=>passengerMatches(n,p)));
  return {...e,...(verified?{capacity:Math.max(e.capacity||0,guests.length),occupants:Math.max(e.occupants||0,guests.length),voucherGuestsVerified:true,guestNames:guests}:{}),trip:String(b.index),todoKey:t._key,productMatch,tripReferenceMismatch:wrongHint?e.tripHint:'',roomMismatch:t.type==='Nachttrein'&&trainRoom(t.title)&&trainRoom(e.room)?trainRoom(t.title)!==trainRoom(e.room)&&!(trainRoom(t.title)==='couchette4'&&trainRoom(e.room)==='mini'&&e.capacity>=(b.passengers||[]).length&&!/priv/i.test(t.title)):roomCapacity(t.title)!==null&&roomCapacity(e.room)!==null&&roomCapacity(t.title)!==roomCapacity(e.room),id:hash([e.provider,e.reference,String(b.index),t._key])};
