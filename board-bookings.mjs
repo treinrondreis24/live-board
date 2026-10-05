@@ -1,3 +1,4 @@
+import {nightRule,nightBookingMatches} from './night-routes.mjs';
 import {readMail} from './flora-store.mjs';
 
 const datePattern=/^\d{4}-\d{2}-\d{2}$/;
@@ -8,7 +9,7 @@ const reference=value=>/^\d{1,8}A?$/i.test(String(value||''))?String(value).repl
 
 // FloRA's date is the booked boarding date. Prefer the observed stop's calendar
 // date rather than assuming the passenger boarded at the train's origin.
-export function bookingNumbersForTrain(train,rows,{confirmedOnly=false}={}){
+export function bookingNumbersForTrain(train,rows,{confirmedOnly=false,settings=null}={}){
  const members=train.mergedServices?.length?train.mergedServices:[train];
  const matches=new Set();
  for(const member of members){
@@ -20,7 +21,8 @@ export function bookingNumbersForTrain(train,rows,{confirmedOnly=false}={}){
    if(!ref||!numbers.has(number(row.number))||!date(row.date)||row.cancelled||row.deleted||!['Bevestigd','Te beoordelen'].includes(row.status)||confirmedOnly&&row.status!=='Bevestigd')continue;
    // An explicit service date can establish an overnight run. Without it,
    // never guess between consecutive daily trains using a +/- one-day window.
-   const sameDay=row.serviceDate?date(row.serviceDate)===date(member.serviceDate):row.date===day;
+   const rule=nightRule(settings,member,row.number);
+   const sameDay=rule?nightBookingMatches(rule,member,row):row.serviceDate?date(row.serviceDate)===date(member.serviceDate):row.date===day;
    if(sameDay)matches.add(ref);
   }
  }
@@ -34,8 +36,8 @@ export function createBoardBookings({read=readMail,now=Date.now,confirmedOnly=fa
   if(!pending)pending=read('trains-data').then(({value})=>{cached=value.rows||[];until=now()+30000;return cached;}).finally(()=>pending=null);
   return pending;
  }
- return async trains=>{
-  try{const data=await rows();return {trains:trains.map(t=>({...t,bookingNumbers:bookingNumbersForTrain(t,data,{confirmedOnly})})),bookingsStatus:'ready'};}
+ return async (trains,settings=null)=>{
+  try{const data=await rows();return {trains:trains.map(t=>({...t,bookingNumbers:bookingNumbersForTrain(t,data,{confirmedOnly,settings})})),bookingsStatus:'ready'};}
   catch{return {trains:trains.map(t=>({...t,bookingNumbers:[]})),bookingsStatus:'unavailable'};}
  };
 }

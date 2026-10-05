@@ -1,13 +1,16 @@
+import {validateNightRoute,nightWarnings} from './night-routes.mjs';
+import {readMail} from './flora-store.mjs';
 import {readFile} from 'node:fs/promises';
 import {adminAuthenticated} from './admin-security.mjs';
 import {readBoardSettings,writeBoardSettings,insertBoardSettings} from './board-cache.mjs';
 import {readConnectionSettings} from './connections-store.mjs';
 const prefix='screen:', saved=new Map();
 export const screenSources={DB:'DB Timetables',NDOV:'Nederland · NDOV',OJP:'Zwitserland · OJP',NMBS:'België · NMBS'};
-let defaults,stations=[],stationsBySource={};
+let defaults,stations=[],stationsBySource={},getObservations=()=>[];
 export const screenSource=row=>row.source==='DB_PLAN'?'DB':row.source||'DB';
 export const screenTrainKey=row=>screenSource(row)+'|'+String(row.number);
-export async function initScreenSettings(config,sourceStations={}){
+export async function initScreenSettings(config,sourceStations={},provider=()=>[]){
+ getObservations=provider;
  stations=[...new Set([...(config.stations||[]),...(config.collectors||[])].map(s=>s.name))].sort();
  stationsBySource={DB:stations,NDOV:(config.ndov?.stations||[]).map(s=>s.name),OJP:[],NMBS:[],...sourceStations};
  defaults={name:'Hoofdscherm',italy:true,connections:true,connectionIds:null,pinCancelled:true,maxPinned:4,minDelay:20,rows:8,seconds:10,trains:[...new Set((config.stations||[]).flatMap(s=>s.trainNumbers||[]).map(String))].map(number=>({number,source:'DB',stations:[]}))};
@@ -23,7 +26,7 @@ export function validateScreenSettings(input){
  for(const k of ['italy','connections','pinCancelled']){if(typeof input[k]!=='boolean')fail('Ongeldige schermkeuze.');result[k]=input[k];}
  for(const [k,min,max] of [['maxPinned',0,20],['minDelay',1,240],['rows',1,30],['seconds',5,120]]){if(!Number.isInteger(input[k])||input[k]<min||input[k]>max)fail('Ongeldige waarde voor '+k+'.');result[k]=input[k];}
  if(!Array.isArray(input.trains)||input.trains.length>200)fail('Gebruik maximaal 200 treinen.');
- result.trains=input.trains.map(t=>{if(!t||!/^\d{1,6}$/.test(t.number)||!Object.hasOwn(screenSources,t.source)||!Array.isArray(t.stations)||t.stations.some(s=>!stationsBySource[t.source].includes(s)))fail('Controleer het treinnummer, de bron en de stations die bij deze bron horen.');return {number:String(t.number),source:t.source,stations:[...new Set(t.stations)]};});
+ result.trains=input.trains.map(t=>{if(!t||!/^\d{1,6}$/.test(t.number)||!Object.hasOwn(screenSources,t.source)||!Array.isArray(t.stations)||t.stations.some(s=>!stationsBySource[t.source].includes(s)))fail('Controleer het treinnummer, de bron en de stations die bij deze bron horen.');return {number:String(t.number),source:t.source,stations:[...new Set(t.stations)],...(t.nightRoute?{nightRoute:validateNightRoute(t.nightRoute)}:{})};});
  if(new Set(result.trains.map(screenTrainKey)).size!==result.trains.length)fail('Voeg ieder treinnummer per bron één keer toe.');
  if(input.connectionIds!==null&&(!Array.isArray(input.connectionIds)||input.connectionIds.length>100||input.connectionIds.some(id=>typeof id!=='string'||!/^[a-z0-9-]{1,90}$/.test(id))))fail('Ongeldige aansluitingen.');
  result.connectionIds=input.connectionIds===null?null:[...new Set(input.connectionIds)];return result;
@@ -37,7 +40,7 @@ export async function handleScreenSettings(req,res,url){
  if(!await adminAuthenticated(req)){if(url.pathname===api)json(401,{error:'Log eerst in bij Stationschef.'});else{res.writeHead(303,{Location:'/stationschef'});res.end();}return true;}
  try{
  if(url.pathname!==api){if(req.method!=='GET'){json(405,{error:'Niet toegestaan.'});return true;}const js=url.pathname.endsWith('.js');res.writeHead(200,{'Content-Type':js?'text/javascript':'text/html; charset=utf-8'});res.end(await readFile(new URL(js?'./screen-settings.js':'./screen-settings.html',import.meta.url)));return true;}
- if(req.method==='GET'){json(200,{screens:[...new Set(['0',...saved.keys()])].map(info),stations,stationsBySource,sources:screenSources,connections:(await readConnectionSettings()).rules});return true;}
+ if(req.method==='GET'){let bookings=[];try{bookings=(await readMail('trains-data')).value.rows||[];}catch{}json(200,{screens:[...new Set(['0',...saved.keys()])].map(id=>({...info(id),nightWarnings:nightWarnings(screenSettings(id),bookings,getObservations(screenSettings(id)))})),stations,stationsBySource,sources:screenSources,connections:(await readConnectionSettings()).rules});return true;}
  if(req.method!=='POST'){json(405,{error:'Niet toegestaan.'});return true;}
  const origin=(req.headers['x-forwarded-proto']==='https'||req.socket.encrypted?'https':'http')+'://'+req.headers.host;
  if(req.headers.origin!==origin){json(403,{error:'Open het beheer op de eigen website.'});return true;}

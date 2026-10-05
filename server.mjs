@@ -6,6 +6,7 @@ import {startFlora} from './flora-schedule.mjs';
 import {handleBooklets} from './booklets-gateway.mjs';
 import {handlePlatformAdmin} from './platform-admin.mjs';
 import {handleTreinhuisAccess} from './treinhuis-access.mjs';
+import {nightRule,runDay,observedDay} from './night-routes.mjs';
 import {attachBoardBookings} from './board-bookings.mjs';
 import {initScreenSettings,handleScreenSettings,screenSettings,screenTrainNumbers,screenTrainMatches,screenTrainKey} from './screen-settings.mjs';
 import {handleConnectionAdmin} from './connections-admin.mjs';
@@ -459,7 +460,8 @@ function screenBoardTrains(now=Date.now(),settings=null){
   const rows=dedupeRows([...extra,...dbState.trains.flatMap(r=>r.mergedServices||[r]),...Object.values(collectorState.byStation).flat(),...liveNl.map(r=>({...r,hasChangedTime:r.currentTime!==r.plannedTime}))],true);
   const groups=new Map();
   for(const r of rows){if((settings?!screenTrainMatches(r,settings):(!numbers.has(String(r.number))||(categories.size&&!categories.has(String(r.category).toUpperCase()))))||!visibleOnBoard(r,now)||r.departed)continue;
-    const key=settings?screenTrainKey(r):String(r.number);
+    const night=nightRule(settings,r);
+    const key=(settings?screenTrainKey(r):String(r.number))+(night?'|'+(runDay(night,r)||'unknown-'+observedDay(r)):'');
     if(!groups.has(key))groups.set(key,[]);groups.get(key).push(r);
   }
   const selected=[...groups.values()].map(items=>{const realtime=items.filter(r=>r.hasRealtime);return chooseBest(realtime.length?realtime:items);});
@@ -1212,7 +1214,7 @@ const server=http.createServer(async(req,res)=>{
       const screenId=url.searchParams.get("screen"),settings=screenId===null?null:screenSettings(screenId);
       if(screenId!==null&&!settings)return sendJson(res,404,{error:"Onbekend scherm"});
       if(!dbState.lastScanAt&&!dbState.scanning)await performScan();if(!dbState.lastScanAt&&dbState.warnings.length&&(!settings||settings.trains.every(t=>t.source==='DB')))return sendJson(res,503,{error:dbState.warnings.join(" | ")});
-      return sendJson(res,200,{source:"DB Timetables",updatedAt:dbState.lastScanAt,lastScanAt:dbState.lastScanAt,nextScanAt:dbState.nextScanAt,currentIntervalMinutes:dbState.currentIntervalMinutes,warnings:dbState.warnings,stations:dbState.stations,settings,...await attachBoardBookings(screenBoardTrains(Date.now(),settings))});
+      return sendJson(res,200,{source:"DB Timetables",updatedAt:dbState.lastScanAt,lastScanAt:dbState.lastScanAt,nextScanAt:dbState.nextScanAt,currentIntervalMinutes:dbState.currentIntervalMinutes,warnings:dbState.warnings,stations:dbState.stations,settings,...await attachBoardBookings(screenBoardTrains(Date.now(),settings),settings)});
     }
     const embedPage=url.pathname.match(/^\/embed\/([a-z0-9-]+)\/?$/)?.[1];
     if(embedPage&&boardSource(embedPage))return sendFile(res,path.join(publicDir,'koeln-embed.html'));
@@ -1222,7 +1224,7 @@ const server=http.createServer(async(req,res)=>{
 });
 
 await initStorage();
-await initScreenSettings(config,{OJP:Object.values(swissStations).map(s=>s.name),NMBS:Object.values(belgianStations).map(s=>s.name)});
+await initScreenSettings(config,{OJP:Object.values(swissStations).map(s=>s.name),NMBS:Object.values(belgianStations).map(s=>s.name)},settings=>screenBoardTrains(Date.now(),settings));
 startConnectionMonitor(getStationPlatformLayout);
 startAnalyticsBackfill();
 startDayReports(()=>{

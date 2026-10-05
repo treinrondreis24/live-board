@@ -2,6 +2,7 @@ import test,{mock} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
+import {nightRule,runDay,observedDay} from './night-routes.mjs';
 const records=new Map();
 mock.module('./admin-security.mjs',{namedExports:{adminAuthenticated:async req=>req.auth}});
 mock.module('./connections-store.mjs',{namedExports:{readConnectionSettings:async()=>({rules:[]})}});
@@ -27,9 +28,16 @@ test('same train can use four sources with separate station scopes and collector
 test('display keeps identical numbers and event IDs from different sources separate',()=>{
  const src=readFileSync(new URL('./server.mjs',import.meta.url),'utf8');
  const rows=['DB','NDOV','OJP','NMBS'].map((source,i)=>({source,id:'same',number:'225',observedAt:'Station',plannedTimestamp:Date.now(),delay:i,hasRealtime:true}));
- const ctx=vm.createContext({config:{stations:[]},ndovStatus:()=>({fresh:true}),ndovRows:new Map([['x',rows[1]]]),dbState:{trains:[rows[0]]},collectorState:{byStation:{}},swissStations:{z:{}},swissPayload:()=>[rows[2]],belgianScreenRows:()=>[rows[3]],screenTrainMatches,screenTrainKey,visibleOnBoard:()=>true,chooseBest:r=>r[0],mergeEquivalentBoardTrains:r=>r});
+ const ctx=vm.createContext({config:{stations:[]},ndovStatus:()=>({fresh:true}),ndovRows:new Map([['x',rows[1]]]),dbState:{trains:[rows[0]]},collectorState:{byStation:{}},swissStations:{z:{}},swissPayload:()=>[rows[2]],belgianScreenRows:()=>[rows[3]],nightRule,runDay,observedDay,screenTrainMatches,screenTrainKey,visibleOnBoard:()=>true,chooseBest:r=>r[0],mergeEquivalentBoardTrains:r=>r});
  vm.runInContext(src.slice(src.indexOf('function dedupeRows('),src.indexOf('// Passenger displays')),ctx);
  vm.runInContext(src.slice(src.indexOf('function screenBoardTrains('),src.indexOf('async function performScan()')),ctx);
  ctx.settings={trains:rows.map(r=>({number:r.number,source:r.source,stations:[]}))};assert.equal(vm.runInContext('screenBoardTrains(Date.now(),settings).length',ctx),4);
  ctx.settings.trains=ctx.settings.trains.slice(0,1);assert.equal(vm.runInContext('screenBoardTrains(Date.now(),settings)[0].source',ctx),'DB');
+});
+
+test('night rules persist independently on copied screens',async()=>{
+ const original=structuredClone(screenSettings());original.trains[0].nightRoute={stations:[{name:'Wien Hbf',day:0,aliases:[]},{name:'Hamburg Hbf',day:1,aliases:[]}]};
+ const copy=await request({id:'0',action:'copy',settings:original});assert.equal(copy.status,200);
+ const id=copy.value.id;await initScreenSettings({stations:[{name:'Köln Hbf',trainNumbers:['225']}]});
+ assert.equal(screenSettings(id).trains[0].nightRoute.stations[1].day,1);assert.equal(screenSettings('0').trains[0].nightRoute,undefined);
 });
