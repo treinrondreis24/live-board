@@ -1,5 +1,5 @@
 const normal=s=>String(s||'').normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-const cities=['Wenen|Wien|Vienna','Rome|Roma','Praag|Prague|Praha','München|Munich','Luxemburg|Luxembourg','Neurenberg|Nürnberg|Nuremberg','Milaan|Milano|Milan','Venetië|Venezia|Venice','Duisburg','Bratislava','Napels|Napoli|Naples','Edinburgh','Chur','Interlaken','Brig','Lugano','Zürich|Zurich','Basel','Schaffhausen','Montpellier','Krakau|Krakow','Wroclaw','Vejle','Arezzo','Verona','Budapest','Zaragoza','Granada','Cádiz|Cadiz','Madrid','Málaga|Malaga','Córdoba|Cordoba','Ronda','Koblenz','Hamburg','Osnabrück|Osnabruck','Agrigento','Cefalù|Cefalu','Oslo','Trondheim','Bodø|Bodo','Narvik','Stockholm','Shrewsbury','Helsinki','Newcastle','IJmuiden','Kopenhagen|Copenhagen','Parijs|Paris','Berlijn|Berlin','Arnhem','Amsterdam','Utrecht','Rotterdam','Innsbruck','Salzburg','Luzern|Lucerne','Tirano','Zermatt','Chamonix'];
+const cities=['Wenen|Wien|Vienna','Rome|Roma','Praag|Prague|Praha','München|Munich','Luxemburg|Luxembourg','Neurenberg|Nürnberg|Nuremberg','Milaan|Milano|Milan','Venetië|Venezia|Venice','Duisburg','Bratislava','Napels|Napoli|Naples','Edinburgh','Glasgow','Chur','Interlaken','Brig','Lugano','Zürich|Zurich','Basel','Schaffhausen','Montpellier','Krakau|Krakow','Wroclaw','Vejle','Arezzo','Verona','Budapest','Zaragoza','Granada','Cádiz|Cadiz','Madrid','Málaga|Malaga','Córdoba|Cordoba','Ronda','Koblenz','Hamburg','Osnabrück|Osnabruck','Agrigento','Cefalù|Cefalu','Oslo','Trondheim','Bodø|Bodo','Narvik','Stockholm','Shrewsbury','Helsinki','Newcastle','IJmuiden','Kopenhagen|Copenhagen','Parijs|Paris','Berlijn|Berlin','Arnhem','Amsterdam','Utrecht','Rotterdam','Innsbruck','Salzburg','Luzern|Lucerne','Tirano','Zermatt','Chamonix'];
 export function cityFrom(text){const value=' '+normal(String(text).replace(/de Francia y Par[ií]s/gi,'').replace(/CHAJD/gi,'Zurich').replace(/ATALA/gi,'Innsbruck').replace(/ATWIH/gi,'Wien'))+' ',matches=cities.filter(row=>row.split('|').some(alias=>value.includes(' '+normal(alias)+' ')));return matches.length===1?matches[0].split('|')[0]:'';}
 
 const canonical=s=>normal(String(s||'').split('|')[0].replace(/\([^)]*\)/g,''))
@@ -19,10 +19,10 @@ export function hotelIdentity(todo,proof,booking){
  if(sameCity&&shorter.length&&shorter.every(w=>longer.includes(w)||cityTokens.includes(w))&&distinct.some(w=>b.includes(w)))return true;
  // A specifically approved alternative, not a general hotel alias.
  if(city==='Cádiz'&&bookedCity==='Cádiz'&&/francia.*paris/.test(normal(title))&&/cadiz bahia/.test(normal(product))&&todo.start==='2026-10-03'&&todo.end==='2026-10-04')return true;
- if(!sameCity)return canonical(title)===canonical(product)&&canonical(product).length>4;
  const supporting=[todo.description,booking.notes,...(booking.lines||[]).filter(l=>l.visible!==false).map(l=>l.title)].filter(Boolean);
- const key=b.filter(w=>!tokens(bookedCity).includes(w)&&!['centralstation','glorieta','strasse'].includes(w));
- return supporting.some(text=>{const words=tokens(text);return key.length&&key.slice(0,2).every(w=>words.includes(w))&&(!cityFrom(text)||cityFrom(text)===city);});
+ const key=tokens(product.split(/\b(?:calle|straat|piazza|strasse)\b/i)[0]).filter(w=>!tokens(bookedCity).includes(w)&&!['centralstation','glorieta'].includes(w));
+ const supported=supporting.some(text=>{const words=tokens(text);return key.some(w=>w.length>=5)&&key.slice(0,2).every(w=>words.includes(w))&&(sameCity?(!cityFrom(text)||cityFrom(text)===city):city&&cityFrom(text)===city&&todo.start===proof.start&&todo.end===proof.end&&!!todo.start&&!!todo.end);});
+ return supported||(!sameCity&&canonical(title)===canonical(product)&&canonical(product).length>4);
 }
 export function trainRoom(text){const s=normal(text);return /\b(?:pa1am|ritam)\b|mini.?cabin|mini.?coupe/.test(s)?'mini':/\b(pa1ad|ritad)\b|priv.*coupe|private.*compartment/.test(s)?'private':/\brica4\b|couchette 4|vier ligpl/.test(s)?'couchette4':'';}
 export function trainStations(text){return String(text||'').replace(/\bCHAJD\b/gi,'Zürich').replace(/\bATALA\b/gi,'Innsbruck').replace(/\bATWIH\b/gi,'Wien');}
