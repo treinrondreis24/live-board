@@ -43,6 +43,14 @@ export function adjacentNightStay(proof,booking){
  if(/\b(?:wien|vienna|wenen)\b/.test(route))area=/\b(?:wien|vienna|wenen|bratislava|budapest|boedapest|slovakia|slowakije|slovensko|kosice|zilina|poprad|trencin|banska bystrica|tatranska|strbske)\b/;
  else if(/\b(?:zurich|zuerich|basel)\b/.test(route))area=out?new RegExp(swiss.source+'|\\b(?:milaan|milano|milan)\\b'):swiss;
  else if(/\binnsbruck\b/.test(route))area=/\b(?:innsbruck|verona|venetie|venice|venezia|rome|roma)\b/;
- if(!area)return false;
- return (booking.todos||[]).some(t=>t.tag==='hotel'&&!/nightjet|nachttrein|\b(?:eun|rit|nj)\b/i.test(t.title||'')&&String(out?t.startDate:t.endDate).slice(0,10)===(out?proof.end:proof.start)&&area.test(normal(t.title+' '+(t.description||''))));
+ const routeParts=String(proof.product||'').split(/→|->/),adjacentCity=routeParts.length===2?cityFrom(routeParts[out?1:0]):'';
+ if(!area&&!adjacentCity)return false;
+ return (booking.todos||[]).some(t=>t.tag==='hotel'&&!/nightjet|nachttrein|\b(?:eun|rit|nj)\b/i.test(t.title||'')&&String(out?t.startDate:t.endDate).slice(0,10)===(out?proof.end:proof.start)&&(area?.test(normal(t.title+' '+(t.description||'')))||adjacentCity&&cityFrom(t.title)===adjacentCity));
+}
+
+// These combined TODO codes list acceptable Nightjet destinations, not one city.
+export function nightTrainCodeMatch(todo,proof){
+ const codes=String(todo.title||'').toUpperCase().match(/\b(?:ATALA|CHAJD|ATWIH)\b/g)||[];
+ const route=' '+normal(proof.product)+' ';
+ return codes.some(code=>({ATALA:/\binnsbruck\b/,CHAJD:/\b(?:zurich|zuerich)\b/,ATWIH:/\b(?:wien|vienna|wenen)\b/})[code].test(route));
 }

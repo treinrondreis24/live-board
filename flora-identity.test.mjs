@@ -57,3 +57,31 @@ test('partial names never override Edinburgh Glasgow conflicts in names or hotel
   assert.equal(matchEvidence({...e,product:'Leonardo Royal Hotel '+other,sourceText:''},b).productMatch,false);
  }
 });
+
+test('combined ATALA CHAJD TODO accepts its booked Nightjet route and preserves date and berth checks',async()=>{
+ const {nightTrainCodeMatch}=await import('./flora-identity.mjs');
+ const {evaluate}=await import('./flora-engine.mjs');
+ const title='420/421 ATALA /403/402 CHAJD | 2x PA1AM (minicabine)';
+ const b={_id:'test5682',index:5682,status:'verwerkt',passengers:[{firstName:'Duncan',lastName:'van Sliedregt'}],todos:[{_key:'n',tag:'hotel',title,startDate:'2026-10-15',endDate:'2026-10-16'}]};
+ const e={id:'n',trip:'5682',todoKey:'n',provider:'NS International',reference:'TEST',name:'Duncan van Sliedregt',product:'INNSBRUCK HBF → AMSTERDAM CENTRAAL',direction:'inbound',status:'confirmed',start:'2026-10-15',end:'2026-10-16',capacity:2,occupants:1,room:'Minicabine',productMatch:false};
+ assert.equal(nightTrainCodeMatch({title},e),true);
+ assert.equal(nightTrainCodeMatch({title},{product:'ZÜRICH HB → AMSTERDAM CENTRAAL'}),true);
+ assert.equal(nightTrainCodeMatch({title},{product:'WIEN HBF → AMSTERDAM CENTRAAL'}),false);
+ assert.equal(matchEvidence(e,b).productMatch,true);
+ assert.equal(evaluate({bookings:[b],evidence:[e]},'2026-10-05').findings.some(f=>f.code.startsWith('product-')),false);
+ const findings=evaluate({bookings:[b],evidence:[{...e,end:'2026-10-17',roomMismatch:true}]},'2026-10-05').findings;
+ assert.ok(findings.some(f=>f.code.startsWith('dates-')&&f.status==='alarm'));
+ assert.ok(findings.some(f=>f.code.startsWith('room-')));
+});
+
+test('night train can connect to the exact adjacent hotel city, including Salzburg',async()=>{
+ const {adjacentNightStay}=await import('./flora-identity.mjs');
+ const {evaluate}=await import('./flora-engine.mjs');
+ const b={_id:'test6603',index:6603,status:'verwerkt',passengers:[{firstName:'Test',lastName:'Reiziger'}],todos:[{_key:'h',tag:'hotel',title:'Cocoon Salzburg | Double',startDate:'2026-10-12',endDate:'2026-10-15'},{_key:'n',tag:'hotel',title:'NJ (EUN)(RIT)(40490) | RITAD',startDate:'2026-10-15',endDate:'2026-10-16'}]};
+ const e={id:'n',trip:'6603',todoKey:'n',provider:'NS International',name:'Test Reiziger',product:'SALZBURG HBF → AMSTERDAM CENTRAAL',direction:'inbound',start:'2026-10-15',end:'2026-10-16',status:'confirmed',productMatch:false};
+ assert.equal(adjacentNightStay(e,b),true);
+ assert.equal(adjacentNightStay({...e,start:'2026-10-14'},b),false);
+ assert.equal(adjacentNightStay(e,{...b,todos:[{...b.todos[0],title:'Hotel Hamburg'}]}),false);
+ assert.equal(evaluate({bookings:[b],evidence:[e]},'2026-10-05').findings.some(f=>f.code==='product-n'),false);
+ assert.equal(adjacentNightStay({...e,product:'AMSTERDAM CENTRAAL → SALZBURG HBF',direction:'outbound',end:'2026-10-12'},b),true);
+});
