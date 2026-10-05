@@ -5,9 +5,14 @@ export function cityFrom(text){const value=' '+normal(String(text).replace(/\bvi
 const canonical=s=>normal(String(s||'').split('|')[0].replace(/\([^)]*\)/g,''))
  .replace(/\b(warsaw|warszawa)\b/g,'warschau').replace(/\bic hotel\b/g,'intercityhotel').replace(/\b(wien|vienna)\b/g,'wenen').replace(/\b(hbf|hauptbahnhof)\b/g,'centralstation').replace(/\b(nurnberg|nuremberg)\b/g,'neurenberg');
 const tokens=s=>canonical(s).split(' ').filter(w=>w.length>1&&!['hotel','hotels','the','by','straat','calle','piazza'].includes(w));
+export function hotelCityConflict(todo,proof){
+ const expected=cityFrom(todo.title||''),address=proof.provider==='Expedia'?(proof.sourceText||'').match(/Hoteloverzicht\s+(.{1,600}?)\s+Hotel bekijken/i)?.[1]||'':'';
+ const actual=[cityFrom(proof.product||''),cityFrom(address)].find(c=>expected&&c&&c!==expected);
+ return actual?{expected,actual}:null;
+}
 export function hotelIdentity(todo,proof,booking){
  const title=todo.title||'',product=proof.product||'',address=proof.provider==='Expedia'?(proof.sourceText||'').match(/Hoteloverzicht\s+(.{1,600}?)\s+Hotel bekijken/i)?.[1]||'':'';
- const city=cityFrom(title),bookedCity=cityFrom(address||product);if(city&&[cityFrom(product),cityFrom(address)].some(c=>c&&c!==city))return false;
+ const city=cityFrom(title),bookedCity=cityFrom(address||product);if(hotelCityConflict(todo,proof))return false;
  const sameCity=city&&city===bookedCity,a=tokens(title),b=tokens(product),cityTokens=tokens(city),distinct=a.filter(w=>!cityTokens.includes(w)&&w!=='centralstation');
  // Compare the hotel name independently of the city and address suffix.
  const nameWords=a.filter(w=>!cityTokens.includes(w));

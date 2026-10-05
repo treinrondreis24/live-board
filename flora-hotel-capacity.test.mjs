@@ -28,3 +28,24 @@ test('Expedia keeps Glasgow in the hotel name and never accepts Edinburgh from t
  const b={...booking,lines:[{title:'Leonardo Royal Hotel Edinburgh',visible:true}],todos:[{...todo,title:'Leonardo Edinburgh | Double/Twin',supplierBookingNumber:parsed.reference,startDate:parsed.start,endDate:parsed.end}]};
  assert.equal(matchEvidence(parsed,b).productMatch,false);
 });
+
+test('a confirmed different hotel city is one high-priority alarm, including address-only evidence',()=>{
+ for(const [expected,actual] of [['Edinburgh','Glasgow'],['Glasgow','Edinburgh']]){
+  const b={...booking,todos:[{...todo,title:'Leonardo '+expected}]};
+  for(const e of [{...proof,product:'Leonardo Royal Hotel '+actual,productMatch:false},{...proof,product:'Leonardo Royal Hotel',sourceText:'Hoteloverzicht Leonardo Royal Hotel '+actual+' Hotel bekijken',productMatch:true}]){
+   const findings=evaluate({bookings:[b],evidence:[e]},'2026-10-05').findings;
+   const city=findings.find(f=>f.code==='city-e');
+   assert.equal(city.status,'alarm');assert.equal(city.priority,'hoog');assert.match(city.detail,new RegExp(expected));assert.match(city.detail,new RegExp(actual));
+   assert.equal(findings.some(f=>f.code==='product-e'),false);
+  }
+ }
+ const b={...booking,todos:[{...todo,title:'Leonardo Edinburgh'}]};
+ for(const product of ['Leonardo Royal Hotel','Leonardo Hotel Edinburgh'])assert.equal(evaluate({bookings:[b],evidence:[{...proof,product}]},'2026-10-05').findings.some(f=>f.code.startsWith('city-')),false);
+});
+
+test('stored evidence with an older negative identity uses the current hotel-name policy',()=>{
+ const b={...booking,todos:[{...todo,title:'Hotel Bernina (STC) | Standaard kamer'}]};
+ const e={...proof,product:'Hotel Bernina Via Roma',productMatch:false};
+ assert.equal(evaluate({bookings:[b],evidence:[e]},'2026-10-05').findings.some(f=>f.code.startsWith('product-')),false);
+ assert.ok(evaluate({bookings:[b],evidence:[{...e,end:'2027-04-12'}]},'2026-10-05').findings.some(f=>f.code.startsWith('dates-')&&f.status==='alarm'));
+});
