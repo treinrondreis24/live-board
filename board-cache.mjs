@@ -2,10 +2,12 @@ import {initKKStore} from './kk-store.mjs';
 import {initConnections} from './connections-store.mjs';
 import {initDayReports} from './day-reports.mjs';
 import {initFlora} from './flora-store.mjs';
+import {initExpedia} from './expedia-store.mjs';
 let db;
 export async function initBoardCache({backend,pool,sqlite}){
  db={backend,pool,sqlite};
  await initFlora(db);
+ await initExpedia(db);
  await initKKStore(db);
  await initConnections(db);
  await initDayReports(db);
