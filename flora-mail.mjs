@@ -6,7 +6,7 @@ import {readMail,writeMail,readFlora,writeFlora} from './flora-store.mjs';
 import {activeBooking,waitingBooking,reservationScope,currentBookings,normalize,stays,hash,evaluate,controlOrder} from './flora-engine.mjs';
 import {planFollowup} from './flora-followup.mjs';
 import {extractMessage} from './flora-mail-source.mjs';
-import {bookingQuery,cancellationApplies,parseDocument,matchEvidence,cancellation,hotelReplyReview,resolveEvidence,receiptCancellations,latestNSTickets,conversationCancellations} from './flora-mail-parser.mjs';
+import {amendedHotelEvidence,bookingQuery,cancellationApplies,parseDocument,matchEvidence,cancellation,hotelReplyReview,resolveEvidence,receiptCancellations,latestNSTickets,conversationCancellations} from './flora-mail-parser.mjs';
 
 const stamp=()=>new Date().toISOString();
 const needsRead=m=>m.version!==6||m.hasLinks||m.issues?.length;
@@ -44,7 +44,7 @@ export function createMailControl({read=readMail,write=writeMail,readState=readF
    try{if(needsRead(m)){m=await extract(await get('messages/'+id,{format:'full'}),get);m.version=6;await write('message:'+id,m,cached.revision);}messages.push(m);if(m.threadId&&!threads.has(m.threadId)){threads.add(m.threadId);const thread=await get('threads/'+m.threadId,{format:'minimal'});ids.push(...(thread.messages||[]).map(x=>x.id));}if(/cancel|annul|refund|storn|wijzig|amend|changed|änder/i.test(m.subject)&&!cancellation(m)&&!(/@teldartravel\.com\b/i.test(m.from)&&/days to cancel|without charge/i.test(m.subject)&&m.docs.some(d=>parseDocument(d,m)))&&!m.docs.some(d=>parseDocument(d,m))&&m.docs.some(d=>d.text.includes(String(b.index)+'A')||stays(b).some(t=>t.reference&&d.text.includes(t.reference))))errors.push({message:id,detail:'Mogelijke annulering of wijziging: handmatige beoordeling nodig.'});for(const doc of m.docs){const e=parseDocument(doc,m);if(e){events.push(e);await searchRefs([String(e.reference||'').split('/')[0]].filter(r=>/^[A-Za-z0-9-]{5,40}$/.test(r)));}}errors.push(...m.issues.map(s=>({message:id,detail:s})));}catch(e){errors.push({message:id,detail:e.message});}
   }
    limited ||= cancellationLimited;
-   const byRef=new Map();for(const e of latestNSTickets(events,messages).sort((a,b)=>a.observedAt.localeCompare(b.observedAt))){const key=e.provider+'|'+e.reference,old=byRef.get(key);if(!old||!e.partialEvidence||old.partialEvidence||e.start!==old.start)byRef.set(key,e);}
+   const byRef=new Map();for(const e of amendedHotelEvidence(latestNSTickets(events,messages),messages).sort((a,b)=>a.observedAt.localeCompare(b.observedAt))){const key=e.provider+'|'+e.reference,old=byRef.get(key);if(!old||!e.partialEvidence||old.partialEvidence||e.start!==old.start)byRef.set(key,e);}
    for(const m of messages){const provider=hotelReplyReview(m);if(provider&&!events.some(e=>e.messageId===m.id)&&!events.some(e=>e.provider===provider&&e.observedAt>=m.at))errors.push({message:m.id,detail:'Nieuw hotelantwoord over de reservering: bevestiging, wijziging of afwijzing handmatig beoordelen.'});}
   const retired=new Set(messages.flatMap(m=>m.retiredLinks||[]));for(const [key,e] of byRef)if(e.ticketLink&&retired.has(e.ticketLink))byRef.set(key,{...e,status:'cancelled'});
   const cancellations=[...messages.map(cancellation).filter(Boolean),...receiptCancellations(messages,events),...conversationCancellations(messages,events)];for(const c of cancellations){for(const [key,old] of byRef)if(cancellationApplies(c,old)&&old.observedAt<=c.at)byRef.set(key,{...old,status:'cancelled',source:c.source,observedAt:c.at});}
@@ -64,7 +64,7 @@ export function createMailControl({read=readMail,write=writeMail,readState=readF
   const events=messages.flatMap(m=>m.docs.map(d=>parseDocument(d,m)).filter(Boolean));
   const cancellations=[...messages.map(cancellation).filter(Boolean),...receiptCancellations(messages,events),...conversationCancellations(messages,events)];
   for(const m of messages)if(/annuleringsbevestiging|cancellation|stornierung|wijzig|amend|changed|änder/i.test(m.subject)&&!cancellations.some(c=>c.source===m.url)&&!m.docs.some(d=>parseDocument(d,m)))throw Error('Mogelijke annulering of wijziging nog niet eenduidig leesbaar.');
-  const latest=new Map();for(const e of latestNSTickets([...proofs,...events],messages).sort((a,b)=>a.observedAt.localeCompare(b.observedAt))){if(!refs.includes(String(e.reference).split('/')[0]))continue;const key=e.provider+'|'+e.reference,old=latest.get(key);if(!old||!e.partialEvidence||old.partialEvidence||e.start!==old.start)latest.set(key,e);}
+  const latest=new Map();for(const e of amendedHotelEvidence(latestNSTickets([...proofs,...events],messages),messages).sort((a,b)=>a.observedAt.localeCompare(b.observedAt))){if(!refs.includes(String(e.reference).split('/')[0]))continue;const key=e.provider+'|'+e.reference,old=latest.get(key);if(!old||!e.partialEvidence||old.partialEvidence||e.start!==old.start)latest.set(key,e);}
   return {proofs:[...latest.values()],cancellations};
  }
  async function discover(get,job,progress){

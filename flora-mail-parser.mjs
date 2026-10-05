@@ -100,6 +100,21 @@ export function cancellationApplies(c,e){
  return c.provider==='Teldar'&&c.reference===e.reference+'/1'&&Number(e.roomCount)===1&&!!c.start&&c.start===e.start&&c.end===e.end&&!!normalize(c.name)&&normalize(c.name)===normalize(e.name);
 }
 export function passengerMatches(name,p){const match=matchTravelerName(name,[p]);return match==='exact'||match==='partial'&&normalize(name).split(' ').includes(normalize(p.firstName).split(' ')[0]);}
+// A supplier's explicit amendment in the same conversation can replace a booking
+// number. Require one old and one new room for the same guest, hotel and arrival.
+export function amendedHotelEvidence(events,messages){
+ const replacements=new Map(),single=e=>e.roomCount===1||e.roomCount==null&&e.capacity===2&&e.occupants===2;
+ for(const m of messages){
+  if(directSupplier(m.from)!=='Premier Inn'||!m.threadId||m.issues?.length)continue;
+  const head=replyHead((m.docs||[]).filter(d=>d.label==='E-mail').map(d=>d.text).join(' '));
+  if(!/we have (?:updated|amended) the reservation as requested/i.test(head))continue;
+  const fresh=events.filter(e=>e.messageId===m.id&&e.provider==='Premier Inn'&&e.status==='confirmed'&&single(e));
+  if(fresh.length!==1)continue;const next=fresh[0];
+  const prior=events.filter(e=>e.provider===next.provider&&e.reference!==next.reference&&e.status==='confirmed'&&e.observedAt<m.at&&single(e)&&e.start===next.start&&normalize(e.name)===normalize(next.name)&&normalize(e.product)===normalize(next.product)&&messages.some(source=>source.id===e.messageId&&source.threadId===m.threadId));
+  if(new Set(prior.map(e=>e.reference)).size===1)for(const e of prior)replacements.set(e.provider+'|'+e.reference,next.reference);
+ }
+ return events.map(e=>replacements.has(e.provider+'|'+e.reference)?{...e,status:'superseded',supersededBy:replacements.get(e.provider+'|'+e.reference)}:e);
+}
 // Premier Inn cancellation receipts use a NEW cancellation number, not the booking reference.
 // Only associate them when guest, stay dates and hotel identify exactly one earlier booking.
 export function receiptCancellations(messages,evidence){const result=[];for(const m of messages){if(!/@(?:[\w-]+\.)*(?:whitbread|premierinn)\.com\b/i.test(m.from))continue;for(const d of m.docs||[]){const s=d.text.replace(/\s+/g,' ');if(!/Booking cancelled.*Cancellation reference/i.test(s))continue;const name=s.match(/Hello\s+(.*?)\s+We're/i)?.[1],dates=s.match(/\((\d{2}\.\d{2}\.20\d{2})\s*[–-]\s*(\d{2}\.\d{2}\.20\d{2})\)/),hotel=s.match(/(Premier Inn.*?)\s+Cancelled room details/i)?.[1];if(!name||!dates||!hotel)continue;const matched=evidence.filter(e=>e.provider==='Premier Inn'&&e.observedAt<=m.at&&normalize(e.name)===normalize(name)&&e.start===dateValue(dates[1])&&e.end===dateValue(dates[2])&&normalize(e.product).includes(normalize(hotel)));const refs=[...new Set(matched.map(e=>e.reference))];if(refs.length===1)result.push({provider:'Premier Inn',reference:refs[0],at:m.at,source:m.url});}}return result;}
@@ -114,6 +129,9 @@ export function resolveEvidence(e,bookings){
  return {...e,trip,todoKey:'',id:hash([e.provider,e.reference,trip,'']),linkReview:matches.length>1?'Meerdere mogelijke reizen; de koppeling is niet eenduidig.':trip?'Reiziger en reisperiode gevonden, maar geen eenduidige todo. Controleer accommodatie en de reisreferentie op de bevestiging.':e.tripHint?'De reisreferentie of reizigersnaam sluit niet eenduidig aan bij Sanity.':''};
 }
 export function matchEvidence(e,b){const wrongHint=e.tripHint&&e.tripHint!==String(b.index),nameMatch=(b.passengers||[]).some(p=>passengerMatches(e.name,p)||e.provider==='NS International'&&matchTravelerName(e.name,[p],{truncated:true})==='exact');if(wrongHint&&!nameMatch)return null;const known=(b.passengers||[]).map(p=>normalize(p.lastName)).filter(n=>n.length>=2&&!['nnb','onbekend','unknown','tbd'].includes(n));if(e.tripHint&&!wrongHint&&known.length&&normalize(e.name)&&!nameMatch&&!known.some(n=>(' '+normalize(e.name)+' ').includes(' '+n+' ')))return null;const ss=stays(b),exact=ss.filter(t=>[e.reference,...(e.alternateReferences||[])].some(r=>referenceMatches(r,t.reference)));let candidates=exact;
+ // Direction alone never identifies a traveler: an unrelated outbound confirmation
+ // must not attach to every booking with an outbound night train.
+ if(['NS International','ÖBB'].includes(e.provider)&&!exact.length&&!nameMatch&&!e.tripHint)return null;
  // A dossier reference can cover both directions: route and dates select the leg.
  if(['NS International','ÖBB'].includes(e.provider)&&e.direction){const train=ss.filter(t=>t.type==='Nachttrein'),dated=train.filter(t=>t.start===e.start);const directional=train.filter(t=>e.direction==='outbound'?t.start===b.dateDeparture:t.end===b.dateReturn);if(directional.length===1)candidates=directional;else if(dated.length===1)candidates=dated;}
  if(!candidates.length){if(b.dateDeparture&&b.dateReturn&&(Date.parse(e.end)<Date.parse(b.dateDeparture)-60*86400000||Date.parse(e.start)>Date.parse(b.dateReturn)+60*86400000))return null;const name=normalize(e.name);if(!e.tripHint&&!(b.passengers||[]).some(p=>passengerMatches(name,p)))return null;const productWords=normalize(e.product).split(' ').filter(w=>w.length>3&&!['hotel','premier','international','centraal','intercityhotel','leonardo','mercure','holidayinn','hilton','hampton','western'].includes(w));candidates=ss.filter(t=>e.provider==='NS International'||e.provider==='ÖBB'?t.type==='Nachttrein'&&((e.direction==='outbound'&&t.start===b.dateDeparture)||(e.direction==='inbound'&&t.end===b.dateReturn)||t.start===e.start):e.provider==='Finnlines'?t.provider==='Finnlines':productWords.some(w=>normalize(t.title).includes(w))||(t.type==='Hotel'&&t.start===e.start&&t.end===e.end&&hotelIdentity(t,e,b)));}

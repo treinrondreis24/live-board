@@ -64,7 +64,8 @@ export function supplierDocument(s,message,doc,{dateValue,roomCapacity}){
   return {provider,reference:block.match(/Booking confirmation\s+(\d+)/i)?.[1],start,end,name:(block.match(/Guest name:\s*(.*?)\s*Arrival date:/i)?.[1]||'').split('|')[0].replace(/^([^,]+),\s*(.+)$/,'$2 $1'),occupants:Number(block.match(/Number of person\(s\):\s*(\d+)/i)?.[1])||null,capacity:roomCapacity(room),room,product:provider};
  }
  if(isMail&&/@(?:[\w-]+\.)?oebb\.at\b/i.test(message.from)&&/nightjet\.com (?:Buchung|booking)/i.test(message.subject)){
-  const route=s.match(/Ihre Buchungen\s+(.+?)\s*(?:&rsaquo;|›|→)\s*(.+?)\s+gilt am\s+(\d{2}\.\d{2}\.20\d{2})\s+um\s+\d{2}:\d{2}\s+(.+?)\s+Wagennummer/i);
+  const clean=s.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ');
+  const route=clean.match(/Ihre Buchungen\s+(.+?)\s*(?:&rsaquo;|›|→)\s*(.+?)\s+gilt am\s+(\d{2}\.\d{2}\.20\d{2})\s+um\s+\d{2}:\d{2}\s+(.+?)\s+Wagennummer/i);
   if(!route||[...s.matchAll(/gilt am\s+\d/g)].length!==1)return null;
   const nl=/amsterdam|utrecht|arnhem|rotterdam|deventer|amersfoort/i;
   return {provider:'ÖBB',reference:s.match(/Buchungscode:\s*([\d ]{16,24})/i)?.[1]?.replace(/\s/g,''),start:dateValue(route[3]),end:'',partialEvidence:true,name:route[4].split(',')[0].trim(),product:route[1]+' → '+route[2],direction:nl.test(route[1])?'outbound':nl.test(route[2])?'inbound':'',originCountry:nl.test(route[1])?'NL':'',occupants:route[4].split(',').length,capacity:null,room:''};
