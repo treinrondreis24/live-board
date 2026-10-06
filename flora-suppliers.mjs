@@ -5,6 +5,14 @@ export function directSupplier(from){
  return ({'bernerhof-interlaken.ch':'Hotel Bernerhof','hotel-federale.ch':'Hotel Federale','hotelabc.ch':'Hotel ABC Chur','postchur.ch':'Hotel Post Chur','hotelpostchur.ch':'Hotel Post Chur','lhotel-montpellier.com':'Best Western Montpellier','finnlines.com':'Finnlines'})[domain]||'';
 }
 export const replyHead=s=>s.split(/Best regards|Sincerely|Kind regards|Herzliche Grüße|POSTal regards|\bVon:|\bFrom:|\bDa:|\bDe\s*:|\bOn .{0,100}wrote:|\bOp .{0,100}schreef:/i)[0];
+export function messageKind(message){
+ if(message.sourceKind==='sanity')return 'sanity-document';
+ const from=String(message.from||'').match(/@([a-z0-9.-]+)/i)?.[1]?.toLowerCase();
+ if(from!=='treinrondreis.nl')return 'supplier-message';
+ const head=replyHead((message.docs||[]).filter(d=>d.label==='E-mail').map(d=>d.text).join(' '));
+ if(/\b(?:cancel|annul|storn)/i.test(head))return 'own-cancellation-request';
+ return /reservation request|booking request/i.test(message.subject||'')||/\bis (?:this|it) booked\b|\bi would like to (?:make|book)\b/i.test(head)?'own-request':'own-message';
+}
 export function supplierDocument(s,message,doc,{dateValue,roomCapacity}){
 
  if(/@(?:[\w-]+\.)*(?:premierinn|whitbread)\.com\b/i.test(message.from)){

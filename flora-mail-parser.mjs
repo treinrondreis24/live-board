@@ -41,6 +41,7 @@ function directHotel(s,message){
 // Supported supplier layouts and explicit hotel replies produce evidence; requests alone never do.
 export function parseDocument(doc,message){
  if(nsOption(message))return null;
+ if(message.sourceKind==='sanity'&&/\b(?:cancelled|canceled|geannuleerd|storniert)\b/i.test(doc.text.slice(0,300)))return null;
  if(doc.label==='E-mail'&&/cancel|annul|refund|storn/i.test(message.subject)&&!(/@teldartravel\.com\b/i.test(message.from)&&/days to cancel|without charge/i.test(message.subject))){
   const c=cancellation(message);if(c?.provider!=='Premier Inn')return null;
   const text=doc.text.replace(/\s+/g,' '),germanDate=s=>dateValue(String(s||'').replace(/(\d)\.\s+/g,'$1 ').replace(/Dezember/gi,'December').replace(/Oktober/gi,'October').replace(/März/gi,'March'));
@@ -48,10 +49,17 @@ export function parseDocument(doc,message){
  }
  // Join only pages from the same Teldar attachment; train pages remain separate legs.
  const group=doc.label.match(/^(.*?) · pagina \d+$/)?.[1];
- const siblings=group&&/@teldartravel\.com\b/i.test(message.from)?(message.docs||[]).filter(d=>d.label.startsWith(group+' · pagina ')):[];
+ const siblings=group&&(/@teldartravel\.com\b/i.test(message.from)||(message.docs||[]).some(d=>d.label.startsWith(group+' · pagina ')&&/Dit is uw hotelvoucher!/i.test(d.text)))?(message.docs||[]).filter(d=>d.label.startsWith(group+' · pagina ')):[];
  if(siblings.length>1&&siblings[0]!==doc)return null;
  const s=(siblings.length>1?siblings.map(d=>d.text).join(' '):doc.text).replace(/\s+/g,' ').trim(),n=normalize(s);let e=null;
- if(doc.label==='E-mail'&&/@balehotels\.ch\b/i.test(message.from)&&/Reservation confirmed.*Hotel Victoria/i.test(message.subject)&&/pleased to confirm the following booking/i.test(s)){
+ if(doc.label!=='E-mail'&&/Dit is uw hotelvoucher!/i.test(s)&&/Reisplannummer\s+\d+/i.test(s)){
+  // PDF rows are read in visual column order. Do not guess or swap reversed date labels.
+  const dates=s.match(/(\d{1,2}\s+\w+\s+20\d{2})\s+(\d{1,2}\s+\w+\s+20\d{2})\s+Check-in\s+Check-out/i);
+  const rows=[...s.matchAll(/Kamer\s+(\d+):\s*Bevestigingsnummer:\s*(\S+)\s+(.*?)\s+Beschikbare voorzieningen:.*?Gereserveerd voor:\s*(.*?)\s+(\d+)\s+volwassen(?:en|e)\b/gi)];
+  if(!dates||!rows.length||rows.some((r,i)=>Number(r[1])!==i+1)||rows.length!==[...s.matchAll(/Kamer\s+\d+:\s*Bevestigingsnummer:/gi)].length)return null;
+  const capacities=rows.map(r=>roomCapacity(r[3]));
+  e={provider:'Expedia',reference:s.match(/Reisplannummer\s+(\d+)/i)[1],start:dateValue(dates[1]),end:dateValue(dates[2]),name:rows[0][4],occupants:rows.reduce((n,r)=>n+Number(r[5]),0),capacity:capacities.every(c=>c!=null)?capacities.reduce((a,b)=>a+b,0):null,roomCount:rows.length,product:s.match(/Verblijf bij\s+(.*?)\s+-\s*\|\s*Reisplannummer/i)?.[1]||'',room:rows.map(r=>r[3]).join('; ')};
+ }else if(doc.label==='E-mail'&&/@balehotels\.ch\b/i.test(message.from)&&/Reservation confirmed.*Hotel Victoria/i.test(message.subject)&&/pleased to confirm the following booking/i.test(s)){
   const englishDate=label=>{const m=s.match(new RegExp(label+'\\s+(?:[A-Za-z]+,\\s*)?([A-Za-z]+)\\s+(\\d{1,2}),\\s*(20\\d{2})','i'));return m?dateValue(`${m[2]} ${m[1]} ${m[3]}`):'';};
   const room=s.match(/ROOM TYPE\s+(.*?)\s+NIGHTLY RATE/i)?.[1]||'';
   e={provider:'Hotel Victoria',reference:s.match(/RESERVATION NUMBER\s+(\d+)/i)?.[1],name:s.match(/GUEST NAME\s+(.*?)\s+RESERVATION NUMBER/i)?.[1]||'',start:englishDate('ARRIVAL DATE'),end:englishDate('DEPARTURE DATE'),room,capacity:roomCapacity(room),product:'Hotel Victoria Basel'};
@@ -86,7 +94,7 @@ export function parseDocument(doc,message){
  if(e?.partialEvidence&&e.reference&&e.start)return {...e,id:hash([e.provider,e.reference]),source:message.url,status:'confirmed',messageId:message.id,document:doc.label,observedAt:message.at,tripHint:'',sourceText:s.slice(0,7000)};
  if(e?.provider==='NS International'&&e.start&&e.end&&e.end<e.start&&e.start.slice(5,7)==='12'&&e.end.slice(5,7)==='01')e.end=String(Number(e.start.slice(0,4))+1)+e.end.slice(4);
  if(!e?.reference||!e.start||!e.end)return null;
- try{return {...validateEvidence([{...e,source:message.url,status:'confirmed'}])[0],product:e.product,room:e.room,alternateReferences:e.alternateReferences||[],guestText:e.guestText||'',guestNames:['Teldar','RateHawk'].includes(e.provider)?voucherNames(s,e.provider):[],roomCount:e.roomCount||null,messageId:message.id,document:doc.label,observedAt:message.at,ticketLink:doc.link||'',tripHint:message.subject.match(/\b(\d{4,6})A\b/i)?.[1]||s.match(/(?:\bRef:|Our reference:)\s*(\d{4,6})A\b/i)?.[1]||'',sourceText:s.slice(0,7000)};}catch{return null;}
+ try{return {...validateEvidence([{...e,source:message.url,status:'confirmed'}])[0],product:e.product,room:e.room,documentPages:siblings.length>1?siblings.map(d=>d.label):[doc.label],...(message.sourceKind==='sanity'?{automaticSanity:true,assetId:message.assetId,sourceTrip:message.sourceTrip,group:'sanity-'+message.assetId}:{}),alternateReferences:e.alternateReferences||[],guestText:e.guestText||'',guestNames:['Teldar','RateHawk'].includes(e.provider)?voucherNames(s,e.provider):[],roomCount:e.roomCount||null,messageId:message.id,document:doc.label,observedAt:message.at,ticketLink:doc.link||'',tripHint:message.sourceTrip||message.subject.match(/\b(\d{4,6})A\b/i)?.[1]||s.match(/(?:\bRef:|Our reference:)\s*(\d{4,6})A\b/i)?.[1]||'',sourceText:s.slice(0,7000)};}catch{return null;}
 }
 export function cancellation(message){
  const text=message.docs.filter(d=>d.label==='E-mail').map(d=>d.text).join(' ');let provider='',reference='';
