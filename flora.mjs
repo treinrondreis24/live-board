@@ -30,6 +30,8 @@ export function createFloraHandler({authenticate=adminAuthenticated,read=readFlo
   try{
    if(req.method==='GET'){
     if(path==='/google/callback'){let result='connected';try{await google.callback(url.searchParams,googleSession(req));}catch(e){result=e.message;}res.writeHead(303,{Location:prefix+'/?gmail='+encodeURIComponent(result)});res.end();return true;}
+    const brandAssets=['logo.svg', 'bernina.webp', 'font-0.woff2', 'font-1.woff2', 'font-2.woff2', 'font-3.woff2'];
+    if(path.startsWith('/brand/')&&brandAssets.includes(path.slice(7))){const file=path.slice(7),ext=file.split('.').pop();res.writeHead(200,{'Content-Type':({svg:'image/svg+xml',webp:'image/webp',woff2:'font/woff2'})[ext],'Cache-Control':'private, max-age=86400'});res.end(await readFile(new URL('./flora-brand/'+file,import.meta.url)));return true;}
     const files={'':'flora.html','/':'flora.html','/flora.js':'flora.js','/flora.css':'flora.css','/flora-trains.js':'flora-trains.js'};
     if(files[path]){const ext=files[path].split('.').pop();res.writeHead(200,{'Content-Type':({html:'text/html',js:'text/javascript',css:'text/css'})[ext]+'; charset=utf-8'});res.end(await readFile(new URL('./'+files[path],import.meta.url)));return true;}
     if(path==='/api/trains')return reply(200,{...await trains.data(),job:await trains.status(),schedule:trains.importSchedule?await trains.importSchedule():null});
