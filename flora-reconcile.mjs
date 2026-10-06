@@ -3,7 +3,7 @@ import {nsOption} from './flora-options.mjs';
 import {currentBookings,evaluate} from './flora-engine.mjs';
 import {amendedHotelEvidence,cancellationApplies,parseDocument,resolveEvidence,cancellation,receiptCancellations,latestNSTickets,conversationCancellations} from './flora-mail-parser.mjs';
 
-export const INTERPRETATION_VERSION=21;
+export const INTERPRETATION_VERSION=22;
 // Reuse the actual saved source documents, never infer corrected fields from a todo.
 // Preserve the prior evidence in an audit snapshot before replacing automatic interpretations.
 export function rebuildStoredEvidence(state,messages,now=new Date().toISOString(),options={}){
