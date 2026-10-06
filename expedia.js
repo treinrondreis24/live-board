@@ -1,0 +1,17 @@
+const prefix='/seinhuis/flora/expedia',status=document.querySelector('#status'),activate=document.querySelector('#activate');
+async function load(){try{const query=new URLSearchParams({itinerary:document.querySelector('#itinerary').value.trim()}),response=await fetch(prefix+'/status?'+query);const value=await response.json();if(!response.ok)throw Error(value.error);status.textContent=value.active?'Actief sinds '+new Date(value.activatedAt).toLocaleString('nl-NL')+'. Expedia kan nieuwe berichten afleveren.':value.state==='creating'?'Activering is gestart; controleer het abonnement voordat je opnieuw activeert.':value.credentialsConfigured?'API-gegevens aanwezig. Koppeling kan worden geactiveerd.':'API-gegevens ontbreken in Railway.';activate.disabled=value.active||value.state==='creating'||!value.credentialsConfigured;document.querySelector('#count').textContent=value.events.length+' ontvangen berichten (maximaal 100 meest recente).';const container=document.querySelector('#events');container.replaceChildren();for(const event of value.events){const details=document.createElement('details'),summary=document.createElement('summary'),pre=document.createElement('pre');summary.textContent=event.itineraryId+' · '+(event.payload.data.status||'Status nog niet bekend')+' · bijgewerkt '+new Date(event.updatedAt).toLocaleString('nl-NL')+' · ontvangen '+new Date(event.receivedAt).toLocaleString('nl-NL');pre.textContent=JSON.stringify(event.payload,null,2);details.append(summary,pre);container.append(details);}await loadChecks(query);}catch(e){status.textContent=e.message;}}
+activate.addEventListener('click',async()=>{activate.disabled=true;status.textContent='Expedia-koppeling activeren…';try{const response=await fetch(prefix+'/activate',{method:'POST'}),value=await response.json();if(!response.ok)throw Error(value.error);await load();}catch(e){status.textContent=e.message;}});
+document.querySelector('#refresh').addEventListener('click',load);document.querySelector('#search').addEventListener('click',load);void load();
+
+async function loadChecks(query){
+ const response=await fetch(prefix+'/checks?'+query),value=await response.json();if(!response.ok)throw Error(value.error);
+ const container=document.querySelector('#checks');container.replaceChildren();
+ const labels={'no-api':'Nog geen API-bericht; e-mail leidend','awaiting-email':'Nog geen e-mail gekoppeld','matched':'Geen tegenstrijdigheid gevonden','attention':'Verschil beoordelen','cancelled':'Annulering: voucher niet gebruiken'};
+ for(const c of value.controls){const article=document.createElement('article'),h=document.createElement('h3');h.textContent=c.reference+' · '+labels[c.status];article.append(h);
+  if(c.checked.length){const p=document.createElement('p');p.textContent='Vergeleken: '+c.checked.map(k=>({arrival:'aankomst',departure:'vertrek',occupants:'personen',hotel:'hotel',room:'kamertype',breakfast:'ontbijt','agency-reference':'referentie'})[k]).join(', ')+'.';article.append(p);}
+  for(const d of c.differences){const p=document.createElement('p');p.textContent=d.detail;article.append(p);}
+  if(c.missing.length){const p=document.createElement('p');p.textContent='API bevat geen vergelijkbaar '+c.missing.map(k=>k==='room'?'kamertype':'ontbijt').join(' of ')+'. E-mail blijft leidend.';article.append(p);}
+  container.append(article);
+ }
+ if(!value.controls.length)container.textContent='Nog geen gegevens om te vergelijken.';
+}

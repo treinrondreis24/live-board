@@ -8,7 +8,7 @@ import {stays,stayGroups} from './flora-engine.mjs';
 import {adjacentNightStay} from './flora-identity.mjs';
 
 const request='Arrival date: 02 Oct 2026 Departure date: 05 Oct 2026 Customer name: Test Reiziger Rooms: 1 x Twin room Persons: Test Reiziger (adult) Other Reiziger (adult) Our reference: 6534A';
-const reply={id:'reply',threadId:'thread',from:'Wien.CityHauptbahnhof@premierinn.com',subject:'AW: New reservation request nr 6534A Wien',at:'2026-09-01T12:00:00Z',url:'https://mail.google.com/mail/u/0/#all/reply',issues:[],version:6,docs:[{label:'E-mail',text:'Good afternoon, The reservation has been made. Thank you! From: reservations '+request}]};
+const reply={id:'reply',threadId:'thread',from:'Wien.CityHauptbahnhof@premierinn.com',subject:'AW: New reservation request nr 6534A Wien',at:'2026-09-01T12:00:00Z',url:'https://mail.google.com/mail/u/0/#all/reply',issues:[],version:7,docs:[{label:'E-mail',text:'Good afternoon, The reservation has been made. Thank you! From: reservations '+request}]};
 const booking={_id:'b',index:6534,status:'afgehandeld',dateDeparture:'2026-10-01',dateReturn:'2026-10-06',passengers:[{firstName:'Test',lastName:'Reiziger'},{firstName:'Other',lastName:'Reiziger'}],todos:[{_key:'h',title:'Premier inn Wien | Twin',tag:'hotel',startDate:'2026-10-02',endDate:'2026-10-05'}]};
 
 test('short Premier reply links its quoted request; sent request and quoted confirmations do not',()=>{

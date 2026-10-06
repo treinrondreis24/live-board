@@ -23,3 +23,77 @@ test('explicit alternative accepts either named hotel, not unrelated or generic 
  assert.equal(hotelIdentity({title:'Hotel of Kamer'},{product:'Hotel Kamer'},{}),false);
  assert.equal(hotelIdentity({title:'Terminus of Opera Oslo'},{product:'Thon Hotel Terminus Stockholm'},{}),false);
 });
+
+test('approved Warsaw Metropol address matches without accepting other cities or hotels',()=>{
+ const todo={title:'Metropol Hotel, Warsaw (Teldar/Exp) | Double'};
+ for(const street of ['Marszalkowska','Marszałkowska']){
+  const proof={product:'Metropol Hotel '+street};
+  assert.equal(cityFrom(proof.product),'Warschau');
+  assert.equal(hotelIdentity(todo,proof,{}),true);
+  assert.equal(hotelIdentity({title:'Metropol Hotel Oslo'},proof,{}),false);
+ }
+ assert.equal(hotelIdentity(todo,{product:'Other Hotel Warsaw'},{}),false);
+ assert.equal(hotelIdentity(todo,{product:'Metropol Hotel Glasgow'},{}),false);
+ assert.equal(cityFrom('Marszalkowska'),'');
+});
+
+test('partial hotel names are accepted without requiring a known city',()=>{
+ for(const [title,product] of [
+  ['Hotel Bernina (STC) | Standaard kamer','Hotel Bernina Via Roma'],
+  ['Go Hotel Shnelli Tallinn | Tweepersoonskamer','Go Hotel Shnelli Toompuiestee'],
+  ['Hotel Opera Bialystok','Hotel Opera Kijowska'],
+  ['Hotel Piast Wrocław','Hotel Piast ul. Pilsudskiego'],
+  ['Leonardo Edinburgh | Double/Twin','Leonardo Royal Hotel']
+ ])assert.equal(hotelIdentity({title},{product},{}),true,title);
+ assert.equal(cityFrom('Hotel Bernina Via Roma'),'');
+ assert.equal(cityFrom('Wrocław'),'Wroclaw');
+ assert.equal(hotelIdentity({title:'Grand Hotel Tallinn'},{product:'Grand Hotel Royal'},{}),false);
+});
+test('partial names never override Edinburgh Glasgow conflicts in names or hotel addresses',()=>{
+ for(const [wanted,other] of [['Edinburgh','Glasgow'],['Glasgow','Edinburgh']]){
+  const b={index:42,passengers:[{firstName:'Test',lastName:'Reiziger'}],todos:[{_key:'h',tag:'hotel',title:'Leonardo Royal Hotel '+wanted,startDate:'2026-12-10',endDate:'2026-12-12',supplierBookingNumber:'123456789'}]};
+  const e={provider:'Expedia',reference:'123456789',name:'Test Reiziger',product:'Leonardo Royal Hotel',sourceText:'Hoteloverzicht Leonardo Royal Hotel '+other+' Hotel bekijken',start:'2026-12-10',end:'2026-12-12',status:'confirmed'};
+  assert.equal(matchEvidence(e,b).productMatch,false);
+  assert.equal(matchEvidence({...e,product:'Leonardo Royal Hotel '+other,sourceText:''},b).productMatch,false);
+ }
+});
+
+test('combined ATALA CHAJD TODO accepts its booked Nightjet route and preserves date and berth checks',async()=>{
+ const {nightTrainCodeMatch}=await import('./flora-identity.mjs');
+ const {evaluate}=await import('./flora-engine.mjs');
+ const title='420/421 ATALA /403/402 CHAJD | 2x PA1AM (minicabine)';
+ const b={_id:'test5682',index:5682,status:'verwerkt',passengers:[{firstName:'Duncan',lastName:'van Sliedregt'}],todos:[{_key:'n',tag:'hotel',title,startDate:'2026-10-15',endDate:'2026-10-16'}]};
+ const e={id:'n',trip:'5682',todoKey:'n',provider:'NS International',reference:'TEST',name:'Duncan van Sliedregt',product:'INNSBRUCK HBF → AMSTERDAM CENTRAAL',direction:'inbound',status:'confirmed',start:'2026-10-15',end:'2026-10-16',capacity:2,occupants:1,room:'Minicabine',productMatch:false};
+ assert.equal(nightTrainCodeMatch({title},e),true);
+ assert.equal(nightTrainCodeMatch({title},{product:'ZÜRICH HB → AMSTERDAM CENTRAAL'}),true);
+ assert.equal(nightTrainCodeMatch({title},{product:'WIEN HBF → AMSTERDAM CENTRAAL'}),false);
+ assert.equal(matchEvidence(e,b).productMatch,true);
+ assert.equal(evaluate({bookings:[b],evidence:[e]},'2026-10-05').findings.some(f=>f.code.startsWith('product-')),false);
+ const findings=evaluate({bookings:[b],evidence:[{...e,end:'2026-10-17',roomMismatch:true}]},'2026-10-05').findings;
+ assert.ok(findings.some(f=>f.code.startsWith('dates-')&&f.status==='alarm'));
+ assert.ok(findings.some(f=>f.code.startsWith('room-')));
+});
+
+test('night train can connect to the exact adjacent hotel city, including Salzburg',async()=>{
+ const {adjacentNightStay}=await import('./flora-identity.mjs');
+ const {evaluate}=await import('./flora-engine.mjs');
+ const b={_id:'test6603',index:6603,status:'verwerkt',passengers:[{firstName:'Test',lastName:'Reiziger'}],todos:[{_key:'h',tag:'hotel',title:'Cocoon Salzburg | Double',startDate:'2026-10-12',endDate:'2026-10-15'},{_key:'n',tag:'hotel',title:'NJ (EUN)(RIT)(40490) | RITAD',startDate:'2026-10-15',endDate:'2026-10-16'}]};
+ const e={id:'n',trip:'6603',todoKey:'n',provider:'NS International',name:'Test Reiziger',product:'SALZBURG HBF → AMSTERDAM CENTRAAL',direction:'inbound',start:'2026-10-15',end:'2026-10-16',status:'confirmed',productMatch:false};
+ assert.equal(adjacentNightStay(e,b),true);
+ assert.equal(adjacentNightStay({...e,start:'2026-10-14'},b),false);
+ assert.equal(adjacentNightStay(e,{...b,todos:[{...b.todos[0],title:'Hotel Hamburg'}]}),false);
+ assert.equal(evaluate({bookings:[b],evidence:[e]},'2026-10-05').findings.some(f=>f.code==='product-n'),false);
+ assert.equal(adjacentNightStay({...e,product:'AMSTERDAM CENTRAAL → SALZBURG HBF',direction:'outbound',end:'2026-10-12'},b),true);
+});
+
+test('adjacent hotel city can come from its matching visible customer line',async()=>{
+ const {adjacentNightStay}=await import('./flora-identity.mjs');
+ const e={product:'WIEN HBF → AMSTERDAM CENTRAAL',direction:'inbound',start:'2026-10-22',end:'2026-10-23'};
+ const b={todos:[{tag:'hotel',title:'Testhotel am Rathaus, - CHECK PRICE | Klassieke Tweepersoonskamer',startDate:'2026-10-20',endDate:'2026-10-22'}],lines:[{title:'20 okt. - 22 okt.: Hotel Testhotel am Rathaus, Wenen - Tweepersoonskamer',visible:true}]};
+ assert.equal(adjacentNightStay(e,b),true);
+ assert.equal(adjacentNightStay(e,{...b,lines:[]}),false);
+ assert.equal(adjacentNightStay(e,{...b,lines:b.lines.map(l=>({...l,visible:false}))}),false);
+ assert.equal(adjacentNightStay(e,{...b,lines:[{title:'Hotel Other Wenen',visible:true}]}),false);
+ assert.equal(adjacentNightStay(e,{...b,lines:[...b.lines,{title:'Hotel Testhotel am Rathaus Hamburg',visible:true}]}),false);
+ assert.equal(adjacentNightStay({...e,start:'2026-10-23'},b),false);
+});

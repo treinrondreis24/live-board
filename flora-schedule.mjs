@@ -4,6 +4,7 @@ import {floraGoogle} from './flora-google.mjs';
 import {readFlora,writeFlora} from './flora-store.mjs';
 import {fetchBookings,sanityConfig} from './flora-sanity.mjs';
 import {applyFollowup} from './flora-followup.mjs';
+import {runExpediaCycle} from './flora-expedia-cycle.mjs';
 
 export const SCHEDULE_LABEL='Dagelijks 02:00 · Europe/Amsterdam';
 const parts=now=>Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',hourCycle:'h23'}).formatToParts(new Date(now)).map(p=>[p.type,p.value]));
@@ -47,4 +48,4 @@ export function createFloraCycle({read=readFlora,write=writeFlora,sync=fetchBook
  };
 }
 export const runFloraCycle=createFloraCycle();
-export function startFlora(){setTimeout(()=>void floraTrains.tick(),25000).unref();setInterval(()=>void floraTrains.tick(),30000).unref();startFloraMail();setTimeout(()=>void runFloraCycle(),15000).unref();setInterval(()=>void runFloraCycle(),60000).unref();}
+export function startFlora(){setTimeout(()=>void runExpediaCycle(),5000).unref();setInterval(()=>void runExpediaCycle(),30000).unref();setTimeout(()=>void floraTrains.tick(),25000).unref();setInterval(()=>void floraTrains.tick(),30000).unref();startFloraMail();setTimeout(()=>void runFloraCycle(),15000).unref();setInterval(()=>void runFloraCycle(),60000).unref();}

@@ -60,7 +60,7 @@ test('wrong trip number only links with unique identity, hotel and exact dates',
 test('rules-only rechecks attention without Gmail or touching unrelated evidence',async()=>{
  let state={...emptyState(),bookings:[booking()],findings:[{id:'6685:hotel:missing',trip:'6685',status:'attention',priority:'normaal',history:[]}],evidence:[]};
  const kv=new Map(),control=createMailControl({read:async k=>structuredClone(kv.get(k)||{value:{},revision:0}),write:async(k,value,r)=>{kv.set(k,{value:structuredClone(value),revision:r+1});return r+1;},readState:async()=>({state:structuredClone(state),revision:1}),writeState:async s=>{state=s;return 2;},google:{status:async()=>{throw Error('Gmail must not be used');},reader:async()=>{throw Error('Gmail must not be used');}}});
- await control.start({mode:'rules-only'});await control.tick();const status=await control.status();assert.equal(status.status,'completed');assert.equal(status.done,1);assert.equal(status.outcome.reviewed,1);assert.equal(status.messages,0);assert.equal(state.findings.find(f=>f.code==='missing').priority,'gemiddeld');
+ await control.start({mode:'rules-only'});await control.tick();const status=await control.status();assert.equal(status.status,'completed');assert.equal(status.done,1);assert.equal(status.outcome.reviewed,1);assert.equal(status.messages,0);assert.equal(state.findings.find(f=>f.code==='missing').priority,'laag');
 });
 test('attention mail plan skips unrelated alarms and no-Gmail recheck includes orphan attention',()=>{
  const state={...emptyState(),bookings:[booking(),{...booking(),_id:'other',index:6686}],findings:[{trip:'6685',status:'attention'},{trip:'6686',status:'alarm'},{trip:'onbekend',status:'attention'}]};

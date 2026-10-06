@@ -18,3 +18,16 @@ export function matchTravelerName(name,passengers,options={}){
  const matches=(passengers||[]).map(p=>travelerNameMatch(name,p,options));
  return matches.includes('accepted')?'exact':matches.includes('partial')?'partial':'different';
 }
+
+// A joined surname and abbreviated given name need the same explicit NS dossier reference.
+export function referenceBackedNSName(name,passengers,reference,notes){
+ const base=String(reference||'').toUpperCase().split('/')[0];
+ if(!/^[A-Z0-9]{5,10}$/.test(base)||!String(notes||'').toUpperCase().split(/[^A-Z0-9/]+/).some(r=>r.split('/')[0]===base))return false;
+ const n=clean(name).replace(/ /g,'');
+ return (passengers||[]).some(p=>{
+  const last=clean(p.lastName).replace(/ /g,''),first=clean(p.firstName).split(' ')[0];
+  if(last.length<4||!first||!n.endsWith(last))return false;
+  const given=n.slice(0,-last.length);
+  return given.length>=1&&first.startsWith(given);
+ });
+}
