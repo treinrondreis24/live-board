@@ -11,9 +11,10 @@ test('all eight staff names are retained for inspection without attention; simil
  for(const name of DEFAULT_RULES.exceptions){const s={bookings:[],evidence:[proof({trip:'',name:name+' SH123456'})]};const f=evaluate(s,now).findings;assert.equal(f.length,1);assert.equal(f[0].status,'accepted');assert.equal(f[0].evidence.length,1);}
  assert.equal(evaluate({bookings:[],evidence:[proof({trip:'',name:'Marc van der Leeuwen'})]},now).findings[0].status,'alarm');
 });
-test('missing evidence always remains visible; completed search plus confirmed todo raises alarm',()=>{
+test('missing evidence always remains visible; confirmed hotel with only an unanswered request raises alarm',()=>{
  const b=booking(),s={bookings:[b],evidence:[]};let f=evaluate(s,now).findings.find(f=>f.code==='missing');assert.equal(f.status,'attention');assert.equal(f.priority,'redelijk hoog');
- s.emailChecks={'42':{stays:[{todoKey:'a',state:'candidates',explanation:'Only a request found'}]}};assert.equal(evaluate(s,now).findings.find(f=>f.code==='missing').status,'alarm');
+ s.emailChecks={'42':{stays:[{todoKey:'a',state:'candidates',sources:[{subject:'New reservation request nr 42A Montpellier'}],explanation:'Only a request found'}]}};assert.equal(evaluate(s,now).findings.find(f=>f.code==='missing').status,'alarm');
+ s.emailChecks['42'].stays[0].sources.push({subject:'Re: New reservation request nr 42A Montpellier'});assert.equal(evaluate(s,now).findings.find(f=>f.code==='missing').status,'attention');
  b.todos[0].done=false;b.dateDeparture='2027-04-01';assert.equal(evaluate(s,now).findings.find(f=>f.code==='missing').priority,'laag');
  b.dateDeparture='2026-10-08';assert.equal(evaluate(s,now).findings.find(f=>f.code==='missing').priority,'hoog');
 });
