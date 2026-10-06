@@ -1,4 +1,5 @@
 import {createHash} from 'node:crypto';
+import {knownHotelCity} from './flora-hotel-locations.mjs';
 import {hotelCityConflict,hotelIdentity,nightTrainCodeMatch,adjacentNightStay} from './flora-identity.mjs';
 import {matchTravelerName,referenceBackedNSName} from './flora-names.mjs';
 
@@ -37,7 +38,7 @@ export const completedBooking=(b,evidence=[],now=new Date().toISOString())=>Bool
 export function controlOrder(state,trips){const rank=id=>state.findings.some(f=>f.trip===id&&f.status==='alarm')?0:state.findings.some(f=>f.trip===id&&f.status==='attention'&&f.priority==='redelijk hoog')?1:2;return [...new Set(trips)].sort((a,b)=>rank(a)-rank(b)||Number(b)-Number(a));}
 export function currentBookings(docs){const byId=new Map();for(const d of docs){const id=d._id.replace(/^drafts\./,'');if(!byId.has(id)||d._id.startsWith('drafts.'))byId.set(id,d);}return [...byId.values()];}
 export const informationalStay=t=>/^(booked from)/i.test(String(t.title).trim())||/\b(?:zelfde hut|same cabin)\b/i.test(t.title||'');
-export function stays(booking){return (booking.todos||[]).filter(t=>(t.tag==='hotel'||t.startDate&&t.endDate&&t.supplierBookingNumber&&/hotel|premier inn|nachttrein|nightjet/i.test(t.title||''))&&!informationalStay(t)).map(t=>{const text=normalize(t.title+' '+(t.description||''));const type=/nightjet|nachttrein|nacht trein|minicabine|mini cabin|pa1am|pa1ad|ritam|ritad|chajd|atala|atwih|ligcoup|slaapcoup|\beun\b|\brit\b|\brica[0-9]\b|\bnj\b/.test(text)?'Nachttrein':/finnlines|dfds|gonordic|fjordline|stena|buitenhut|binnenhut/.test(text)?'Boot':'Hotel';const provider=/finnlines/.test(text)?'Finnlines':/dfds/.test(text)?'DFDS':/gonordic|oslo.*kopenhagen/.test(text)?'GoNordic':/stc|brig|schaffhausen|interlaken|chur|zurich|luzern|bern\b|zermatt/.test(text)?'STC (vermoedelijk)':type==='Nachttrein'?'NS Int/ÖBB':/premier/.test(text)?'Premier Inn':'Onbekend';return {...t,type,provider,start:day(t.startDate),end:day(t.endDate),confirmed:t.done===true||t.status==='done',reference:String(t.supplierBookingNumber||(/^\s*[A-Z0-9][A-Z0-9 /-]{4,}\s*$/.test(t.description||'')?t.description:(String(t.description||'').match(/\b(?:[A-Z]{3}\d{7}|\d{11,16})\b/g)||[]).join(' '))).trim()};});}
+export function stays(booking){return (booking.todos||[]).filter(t=>(t.tag==='hotel'||t.startDate&&t.endDate&&t.supplierBookingNumber&&(/hotel|premier inn|nachttrein|nightjet/i.test(t.title||'')||knownHotelCity(t.title)))&&!informationalStay(t)).map(t=>{const text=normalize(t.title+' '+(t.description||''));const type=/nightjet|nachttrein|nacht trein|minicabine|mini cabin|pa1am|pa1ad|ritam|ritad|chajd|atala|atwih|ligcoup|slaapcoup|\beun\b|\brit\b|\brica[0-9]\b|\bnj\b/.test(text)?'Nachttrein':/finnlines|dfds|gonordic|fjordline|stena|buitenhut|binnenhut/.test(text)?'Boot':'Hotel';const provider=/finnlines/.test(text)?'Finnlines':/dfds/.test(text)?'DFDS':/gonordic|oslo.*kopenhagen/.test(text)?'GoNordic':/stc|brig|schaffhausen|interlaken|chur|zurich|luzern|bern\b|zermatt/.test(text)?'STC (vermoedelijk)':type==='Nachttrein'?'NS Int/ÖBB':/premier/.test(text)?'Premier Inn':'Onbekend';return {...t,type,provider,start:day(t.startDate),end:day(t.endDate),confirmed:t.done===true||t.status==='done',reference:String(t.supplierBookingNumber||(/^\s*[A-Z0-9][A-Z0-9 /-]{4,}\s*$/.test(t.description||'')?t.description:(String(t.description||'').match(/\b(?:[A-Z]{3}\d{7}|\d{11,16})\b/g)||[]).join(' '))).trim()};});}
 function nearToken(a,b){if(a===b)return true;if(Math.min(a.length,b.length)<5||Math.abs(a.length-b.length)>1)return false;let i=0,j=0,edits=0;while(i<a.length&&j<b.length){if(a[i]===b[j]){i++;j++;continue;}if(++edits>1)return false;if(a.length>=b.length)i++;if(b.length>=a.length)j++;}return edits+(a.length-i)+(b.length-j)<=1;}
 function matchName(name,passengers){const n=normalize(name);if(!n)return 'missing';const names=passengers.map(p=>normalize(p.firstName+' '+p.lastName));if(names.includes(n))return 'exact';const tokens=n.split(' ').filter(x=>x.length>2);return names.some(x=>{const parts=x.split(' ').filter(t=>t.length>2);return tokens.length&&parts.length&&(tokens.every(t=>parts.some(p=>nearToken(t,p)))||parts.every(p=>tokens.some(t=>nearToken(t,p))));})?'partial':'different';}
 export const recurringFinding=f=>f.status==='alarm'||f.status==='attention'&&['missing','waiting','email-incomplete'].includes(f.code);
@@ -68,7 +69,10 @@ export function evaluate(state,now=new Date().toISOString(),options={}){
    // Completed stays do not remain operational alarms, even while the rest of the trip continues.
    if(t.end&&t.end<day(now)&&!linked.some(e=>t.todoKeys.includes(e.todoKey)&&e.status==='confirmed'&&e.end>=day(now)))continue;
    const check=state.emailChecks?.[String(b.index)]?.stays?.find(c=>c.todoKey===t._key);
-   if(check&&check.state!=='found'&&linked.some(e=>e.todoKey===t._key&&e.status==='confirmed'))emit(b,t,'email-incomplete','attention','E-mailcontrole nog niet afgerond',check.explanation);
+   const linkedProof=linked.filter(e=>t.todoKeys.includes(e.todoKey)&&e.status==='confirmed');
+   // A completed search without mail is not a problem when another source proves the stay.
+   // Unread sources/search limits still matter: they may contain a later cancellation.
+   if(check&&check.state==='incomplete'&&linkedProof.length)emit(b,t,'email-incomplete','attention','E-mailcontrole nog niet afgerond',check.explanation+' Het gekoppelde bewijs blijft beschikbaar. Controleer de ongelezen bronnen op wijzigingen of annuleringen.',linkedProof);
    const all=[...new Map(linked.filter(e=>t.todoKeys.includes(e.todoKey)).sort((a,b)=>String(a.observedAt||'').localeCompare(String(b.observedAt||''))).map(e=>[e.provider+'|'+teldarSingleRoomAlias(e,linked),e])).values()],live=all.filter(e=>e.status==='confirmed');
    if(waiting&&!live.length)continue;
    if(!check&&live.some(e=>e.automaticEmail))emit(b,t,'email-incomplete','attention','Boekingsgerichte e-mailcontrole nodig','Een reservering is bij de mailboxcontrole gevonden; de volledige zoekronde voor deze overnachting volgt nog.',live);
@@ -96,8 +100,9 @@ export function evaluate(state,now=new Date().toISOString(),options={}){
     const end=t.provider==='Finnlines'&&next?day(next.endDate):t.end;
     if(!start||!end)emit(b,t,'todo-dates','attention','Datums ontbreken in todo','Controleer de verblijfsdatums.',[e]);
     else if(!e.start||!e.end){
-     emit(b,t,'dates-incomplete-'+e.id,'attention','Verblijfsdatums niet volledig aangetoond','Reservering gevonden, maar de bron vermeldt niet alle verblijfsdatums. Ontbrekende datums worden niet uit de todo overgenomen.',[e]);
-     if(e.start&&e.start!==start)emit(b,t,'dates-'+e.id,'alarm','Verkeerde aankomstdatum',`Todo verwacht ${start}; de bron vermeldt ${e.start}.`,[e]);
+     if(e.start&&e.start!==start)emit(b,t,'dates-'+e.id,'alarm','Verkeerde aankomstdatum',`Todo verwacht ${start}; de bron vermeldt ${e.start}. De vertrekdatum ontbreekt in het bewijs en moet ook worden gecontroleerd.`,[e]);
+     else if(e.end&&e.end!==end)emit(b,t,'dates-'+e.id,'alarm','Verkeerde vertrekdatum',`Todo verwacht ${end}; de bron vermeldt ${e.end}. De aankomstdatum ontbreekt in het bewijs en moet ook worden gecontroleerd.`,[e]);
+     else emit(b,t,'dates-incomplete-'+e.id,'attention','Verblijfsdatums niet volledig aangetoond','Reservering gevonden, maar de bron vermeldt niet alle verblijfsdatums. Ontbrekende datums worden niet uit de todo overgenomen.',[e]);
     }
     else if(e.start!==start||e.end!==end){
      const shifted=d=>String(Number(d.slice(0,4))+1)+d.slice(4),oldYear=end<day(now)&&e.start===shifted(start)&&e.end===shifted(end);
