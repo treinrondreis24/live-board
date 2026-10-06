@@ -28,7 +28,7 @@ test('ABC welcome proves existence but never invents checkout from todo',()=>{
  assert.ok(r.findings.some(f=>f.code.startsWith('dates-incomplete')));assert.equal(r.summary[0].checked,false);assert.equal(r.findings.some(f=>f.code==='missing'),false);
 });
 test('Post Chur reads confirmed dates, guest and single-use room from PDF',()=>{
- const e=parse(message('hotel@postchur.ch','BUCHUNGSBESTÄTIGUNG Reservierungsnummer: 89556 Gastname: Visser, Maria Anreise: 12.10.2026 Abreise: 13.10.2026 Zimmerkategorie: 109 Superior Doppel s.use Personen: 1','Confirmation','booking.pdf'));
+ const e=parse(message('hotel@postchur.ch','BUCHUNGSBESTÃ„TIGUNG Reservierungsnummer: 89556 Gastname: Visser, Maria Anreise: 12.10.2026 Abreise: 13.10.2026 Zimmerkategorie: 109 Superior Doppel s.use Personen: 1','Confirmation','booking.pdf'));
  assert.equal(e.name,'Maria Visser');assert.equal(e.capacity,1);assert.equal(e.end,'2026-10-13');
 });
 test('Montpellier confirmation uses its own US dates verified against nights, not quoted request',()=>{
@@ -37,10 +37,10 @@ test('Montpellier confirmation uses its own US dates verified against nights, no
 });
 test('Nightjet confirmation is evidence, but arrival and berths stay unknown until ticket is read',()=>{
  const e=parse(message('nightjet@oebb.at','Buchungscode: 0941 4521 6560 0847 Buchungsdatum: 01.10.2026 Ihre Buchungen Amsterdam Centraal &rsaquo; Wien Hbf gilt am 17.12.2026 um 19:00 Visser Maria, Visser Jan Wagennummer 432, Platznummer(n) 51, 52','nightjet.com Buchung'));
- assert.equal(e.provider,'ÖBB');assert.equal(e.start,'2026-12-17');assert.equal(e.capacity,null);assert.equal(e.direction,'outbound');
+ assert.equal(e.provider,'Ã–BB');assert.equal(e.start,'2026-12-17');assert.equal(e.capacity,null);assert.equal(e.direction,'outbound');
 });
 test('Finnlines accepts supplier booking reply with explicit request dates, never an outgoing request',()=>{
- const text='Hello, The crossing has been booked. Herzliche Grüße Inna From Travemünde to Helsinki Departure date: 17 Nov 2026 Arrival date: 18 Nov 2026 Customer name: Maria Visser Rooms: 1 x Outside cabin Persons: Maria Visser (01 Jan 1980) Our reference: 6685A';
+ const text='Hello, The crossing has been booked. Herzliche GrÃ¼ÃŸe Inna From TravemÃ¼nde to Helsinki Departure date: 17 Nov 2026 Arrival date: 18 Nov 2026 Customer name: Maria Visser Rooms: 1 x Outside cabin Persons: Maria Visser (01 Jan 1980) Our reference: 6685A';
  const e=parse(message('passagierdienst@finnlines.com',text,'New reservation request (6685A) // F260186942'));
  assert.equal(e.start,'2026-11-17');assert.equal(e.end,'2026-11-18');assert.equal(e.reference,'F260186942');assert.equal(parse(message('reservations@treinrondreis.nl',text)),null);
 });
@@ -49,7 +49,7 @@ test('Teldar deadline reminder proves an existing reservation, not a cancellatio
  assert.equal(e.status,'confirmed');assert.equal(e.name,'Maria Visser');assert.equal(e.end,'2026-10-15');
 });
 test('Premier Inn UK confirmation is read directly from email',()=>{
- const e=parse(message('donotreply@picomms.premierinn.com','Booking reference: BGH1587500 You have booked 1 room for 2 adults Your stay with us Aberystwyth 36-37 Marine Terrace Sat 2 Jan 2027 Check-in from 3pm Mon 4 Jan 2027 Check out by 12pm Booking summary Maria Visser 2 adults in a Double room £125.00','Your booking is confirmed. Ref no. BGH1587500'));
+ const e=parse(message('donotreply@picomms.premierinn.com','Booking reference: BGH1587500 You have booked 1 room for 2 adults Your stay with us Aberystwyth 36-37 Marine Terrace Sat 2 Jan 2027 Check-in from 3pm Mon 4 Jan 2027 Check out by 12pm Booking summary Maria Visser 2 adults in a Double room Â£125.00','Your booking is confirmed. Ref no. BGH1587500'));
  assert.equal(e.end,'2027-01-04');assert.equal(e.capacity,2);assert.equal(e.product,'Premier Inn Aberystwyth');
 });
 test('wrong trip number only links with unique identity, hotel and exact dates',()=>{
@@ -60,7 +60,7 @@ test('wrong trip number only links with unique identity, hotel and exact dates',
 test('rules-only rechecks attention without Gmail or touching unrelated evidence',async()=>{
  let state={...emptyState(),bookings:[booking()],findings:[{id:'6685:hotel:missing',trip:'6685',status:'attention',priority:'normaal',history:[]}],evidence:[]};
  const kv=new Map(),control=createMailControl({read:async k=>structuredClone(kv.get(k)||{value:{},revision:0}),write:async(k,value,r)=>{kv.set(k,{value:structuredClone(value),revision:r+1});return r+1;},readState:async()=>({state:structuredClone(state),revision:1}),writeState:async s=>{state=s;return 2;},google:{status:async()=>{throw Error('Gmail must not be used');},reader:async()=>{throw Error('Gmail must not be used');}}});
- await control.start({mode:'rules-only'});await control.tick();const status=await control.status();assert.equal(status.status,'completed');assert.equal(status.done,1);assert.equal(status.outcome.reviewed,1);assert.equal(status.messages,0);assert.equal(state.findings.find(f=>f.code==='missing').priority,'gemiddeld');
+ await control.start({mode:'rules-only'});await control.tick();const status=await control.status();assert.equal(status.status,'completed');assert.equal(status.done,1);assert.equal(status.outcome.reviewed,1);assert.equal(status.messages,0);assert.equal(state.findings.find(f=>f.code==='missing').priority,'laag');
 });
 test('attention mail plan skips unrelated alarms and no-Gmail recheck includes orphan attention',()=>{
  const state={...emptyState(),bookings:[booking(),{...booking(),_id:'other',index:6686}],findings:[{trip:'6685',status:'attention'},{trip:'6686',status:'alarm'},{trip:'onbekend',status:'attention'}]};

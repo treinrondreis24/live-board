@@ -1,8 +1,9 @@
 import {latestDFDS} from './flora-dfds.mjs';
+import {nsOption} from './flora-options.mjs';
 import {currentBookings,evaluate} from './flora-engine.mjs';
 import {amendedHotelEvidence,cancellationApplies,parseDocument,resolveEvidence,cancellation,receiptCancellations,latestNSTickets,conversationCancellations} from './flora-mail-parser.mjs';
 
-export const INTERPRETATION_VERSION=20;
+export const INTERPRETATION_VERSION=21;
 // Reuse the actual saved source documents, never infer corrected fields from a todo.
 // Preserve the prior evidence in an audit snapshot before replacing automatic interpretations.
 export function rebuildStoredEvidence(state,messages,now=new Date().toISOString(),options={}){
@@ -30,7 +31,10 @@ export function rebuildStoredEvidence(state,messages,now=new Date().toISOString(
   replacements.push({...assigned,automaticEmail:true,interpretationVersion:INTERPRETATION_VERSION,importedAt:now});
  }
  const replaced=new Set(replacements.map(e=>e.provider+'|'+e.reference));
- state.evidence=old.filter(e=>!selected(e)||!e.automaticEmail||!(replaced.has(e.provider+'|'+e.reference)||String(e.reference).startsWith('EMAIL-')&&replacements.some(n=>n.provider===e.provider&&n.messageId===e.messageId&&n.document===e.document&&n.start===e.start&&n.end===e.end))).map(e=>({...e})).concat(replacements);
+ const optionMessages=new Set(messages.filter(nsOption).map(m=>m.id));
+ // Keep option sources inspectable without treating them as confirmed or cancelled tickets.
+
+ state.evidence=old.filter(e=>!selected(e)||!e.automaticEmail||!(replaced.has(e.provider+'|'+e.reference)||String(e.reference).startsWith('EMAIL-')&&replacements.some(n=>n.provider===e.provider&&n.messageId===e.messageId&&n.document===e.document&&n.start===e.start&&n.end===e.end))).map(e=>({...e,...(selected(e)&&e.automaticEmail&&optionMessages.has(e.messageId)?{status:'option'}:{})})).concat(replacements);
  for(const e of state.evidence){if(!selected(e))continue;const c=Object.values(map).filter(c=>cancellationApplies(c,e)).sort((a,b)=>b.at.localeCompare(a.at))[0];if(c&&(!e.observedAt||e.observedAt<=c.at)){e.status='cancelled';e.source=c.source;e.observedAt=c.at;}}
  state.evidence=[...new Map(state.evidence.map(e=>[e.id,e])).values()];
  for(const [trip,check] of Object.entries(state.emailChecks||{}))for(const stay of check.stays||[]){if(options.trips&&!options.trips.has(trip))continue;const rows=state.evidence.filter(e=>e.trip===trip&&e.todoKey===stay.todoKey);stay.references=rows.map(e=>e.reference);stay.fields=rows.map(e=>({reference:e.reference,provider:e.provider,start:e.start,end:e.end,name:e.name,capacity:e.capacity,occupants:e.occupants,product:e.product,document:e.document,source:e.source}));if(rows.length&&stay.state!=='incomplete'&&!stay.errors?.length){stay.state='found';stay.explanation='Opgeslagen bron opnieuw gelezen met de huidige regels; zie Meldingen voor resterende onzekerheden.';}if(!rows.length&&stay.state==='found'){stay.state='candidates';stay.explanation='Eerdere koppeling niet bevestigd door de bijgewerkte regels; opnieuw beoordelen.';}}
