@@ -2,8 +2,10 @@ import {readFile} from 'node:fs/promises';
 import {adminAuthenticated} from './admin-security.mjs';
 import {readSubscription,saveSubscription,reserveSubscription,storeEvent,listEvents} from './expedia-store.mjs';
 import {WEBHOOK,endpoint,verify,decrypt,eventRecord,subscribe} from './expedia-core.mjs';
+import {readFlora} from './flora-store.mjs';
+import {expediaControls} from './flora-expedia.mjs';
 const prefix='/seinhuis/flora/expedia';
-export function createExpediaHandler({authenticate=adminAuthenticated,read=readSubscription,save=saveSubscription,reserve=reserveSubscription,store=storeEvent,list=listEvents,env=process.env,fetcher=fetch}={}){
+export function createExpediaHandler({authenticate=adminAuthenticated,read=readSubscription,save=saveSubscription,reserve=reserveSubscription,store=storeEvent,list=listEvents,readState=readFlora,env=process.env,fetcher=fetch}={}){
  return async(req,res,url)=>{
   if(url.pathname!==WEBHOOK&&url.pathname!==prefix&&!url.pathname.startsWith(prefix+'/'))return false;
   res.setHeader('Cache-Control','no-store');res.setHeader('X-Robots-Tag','noindex, nofollow');res.setHeader('X-Content-Type-Options','nosniff');
@@ -21,6 +23,7 @@ export function createExpediaHandler({authenticate=adminAuthenticated,read=readS
    res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
    if(req.method==='GET'&&[prefix,prefix+'/'].includes(url.pathname)){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});res.end(await readFile(new URL('./expedia.html',import.meta.url)));return true;}
    if(req.method==='GET'&&url.pathname===prefix+'/expedia.js'){res.writeHead(200,{'Content-Type':'text/javascript; charset=utf-8'});res.end(await readFile(new URL('./expedia.js',import.meta.url)));return true;}
+   if(req.method==='GET'&&url.pathname===prefix+'/checks'){const {state}=await readState(),itinerary=url.searchParams.get('itinerary')||'';return reply(200,{policy:'email-primary',checkedAt:state.expediaCheckedAt||null,controls:expediaControls(state).filter(c=>!itinerary||c.reference===itinerary)});}
    if(req.method==='GET'&&url.pathname===prefix+'/status'){const config=await read();return reply(200,{credentialsConfigured:!!(env.EXPEDIA_CLIENT_ID&&env.EXPEDIA_CLIENT_SECRET),active:config.state==='active'&&!!config.secret,subscriptionId:config.subscriptionId||null,state:config.state||'inactive',activatedAt:config.activatedAt||null,endpoint:endpoint(env).href,events:await list(url.searchParams.get('itinerary')||'')});}
    if(req.method==='POST'&&url.pathname===prefix+'/activate'){
     if(req.headers.origin!==endpoint(env).origin)return reply(403,{error:'Open het beheer op de eigen website.'});

@@ -13,3 +13,12 @@ Bij een onzekere abonnementsaanmaak blijft `creating` opgeslagen. Maak dan niet 
 Bronnen: https://developers.expediagroup.com/analytics/resources/api-setup en https://developers.expediagroup.com/analytics/itineraries/api-delivery, inclusief gekoppelde TAAP OpenAPI-specificaties.
 
 Controle: `node --test expedia.test.mjs`; volledige repositorycontrole: `npm run check`.
+
+## E-mail als bron, API als controle
+Vanaf 6 oktober 2026 blijft de e-mail bron van voucherinhoud. FloRA vergelijkt de nieuwste API-snapshot op exact Expedia-nummer met opgeslagen e-mailbewijzen. Er wordt geen reis afgeleid uit een vrije agency reference zoals `1982A HJ`. Alleen een strikte viercijferige referentie met A wordt vergeleken met de al gekoppelde reis.
+
+De controles vergelijken expliciete datums, totale bezetting, hotelnaam, aantoonbaar verschillende kamerklassen en expliciet inbegrepen/uitgesloten ontbijt in rate_plan_name. Ontbrekend kamertype, ontbijt of andere gegevens veroorzaakt geen alarm. Purchaser wordt niet als bewijs van alle gastnamen gebruikt. E-mailbewijs wordt nooit overschreven met API-gegevens. Status annulering (ook één geannuleerde kamer) blokkeert het gebruik van de reservering als voucher; historische vouchers worden niet automatisch verwijderd.
+
+`GET /seinhuis/flora/expedia/checks?itinerary=...` vereist dezelfde eigenaarssessie als de pagina. Het geeft controles inclusief `voucherBlocked`, vergeleken velden en verschillen. De pagina toont deze controles naast de ongewijzigde berichtgeschiedenis. FloRA neemt verschillen als bevindingen op; iedere 30 seconden worden nieuwe snapshots verwerkt, ook na een herstart. Conflicterende wijzigingen worden de volgende cyclus opnieuw geprobeerd. De actuele selectie gebruikt alle opgeslagen reserveringen, ongeacht de limiet van 100 gebeurtenissen in de geschiedenis.
+
+Controle: `node flora-expedia.test.mjs` en `node scripts/check.mjs all`.

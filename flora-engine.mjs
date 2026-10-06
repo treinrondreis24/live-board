@@ -1,4 +1,5 @@
 import {createHash} from 'node:crypto';
+import {expediaControls} from './flora-expedia.mjs';
 import {knownHotelCity} from './flora-hotel-locations.mjs';
 import {hotelCityConflict,hotelIdentity,nightTrainCodeMatch,adjacentNightStay} from './flora-identity.mjs';
 import {matchTravelerName,referenceBackedNSName} from './flora-names.mjs';
@@ -53,11 +54,25 @@ export function evaluate(state,now=new Date().toISOString(),options={}){
  const seenDuplicates=new Set();
  const emit=(b,t,code,severity,title,detail,related=[])=>{
   const staff=exceptionName([b.firstName,b.lastName].filter(Boolean).join(' '),rules)||(/^(unmatched-|inactive-|unlinked-|name-)/.test(code)&&related.length>0&&related.every(e=>exceptionName(e.name,rules)));
-  if(staff){severity='accepted';detail='Personeelsboeking: geen aandachtspunt; bron en controle blijven raadpleegbaar. '+detail;}
+  if(staff&&!/^expedia-.*-cancelled$/.test(code)){severity='accepted';detail='Personeelsboeking: geen aandachtspunt; bron en controle blijven raadpleegbaar. '+detail;}
   const id=[tripNumber(b.index),t?._key||'booking',code].join(':'),fingerprint=hash({code,severity,detail,t,related:related.map(({importedAt,...e})=>e),passengers:b.passengers,status:b.status}),old=previous.get(id),override=old?.fingerprint===fingerprint?old.override:null;
   if(options.followup&&old?.fingerprint===fingerprint&&!recurringFinding(old)){findings.push(old);return;}
   findings.push({id,trip:tripNumber(b.index),name:[b.firstName,b.lastName].filter(Boolean).join(' '),departure:day(b.dateDeparture),todoKey:t?._key||'',stay:t?.title||'Boeking',type:t?.type||'Boeking',provider:related[0]?.provider||t?.provider||'Onbekend',country:related[0]?.country||(/STC/.test(t?.provider)?'CH (vermoedelijk)':'Onbekend'),reference:t?.reference||related[0]?.reference||'',code,category:categoryFor(code),automatic:severity,status:override?.status||severity,priority:findingPriority(code,override?.status||severity,b.dateDeparture||t?.start,now),title,detail,fingerprint,firstSeen:old?.firstSeen||now,lastChecked:now,override,history:old?.history||[],evidence:related.map(e=>({id:e.id,source:e.source,reference:e.reference,start:e.start,end:e.end,name:e.name,capacity:e.capacity,occupants:e.occupants,status:e.status})),nextCheck:code==='waiting'?(old?.nextCheck&&old.nextCheck>day(now)?old.nextCheck:addDays(now,7)):null});
  };
+ for(const control of expediaControls(state)){
+  const rows=evidence.filter(e=>e.provider==='Expedia'&&String(e.reference)===control.reference);
+  for(const trip of new Set(rows.map(e=>e.trip))){
+   if(!selected(trip))continue;
+   const related=rows.filter(e=>e.trip===trip),b=bookings.find(b=>tripNumber(b.index)===trip)||{index:trip||'onbekend',firstName:related[0]?.name};
+   if(completedBooking(b,related,now))continue;
+   const t=stays(b).find(t=>t._key===related[0]?.todoKey);
+   for(const d of control.differences){
+    const code='expedia-'+control.reference+'-'+d.code;
+    emit(b,t,code,d.severity,d.code==='cancelled'?'Expedia-annulering: voucher blokkeren':'E-mail en Expedia verschillen',d.detail,related);
+    if(d.code==='cancelled'){const f=findings.at(-1);f.status='alarm';f.automatic='alarm';f.priority='hoog';f.override=null;}
+   }
+  }
+ }
  for(const b of bookings){
   if(!selected(tripNumber(b.index)))continue;
   if(duplicateNumbers.has(tripNumber(b.index))){if(!seenDuplicates.has(tripNumber(b.index))){emit(b,null,'booking-number','attention','Boekingsnummer komt meermaals voor','Meerdere verschillende reizen in Sanity gebruiken dit nummer. Reserveringen niet samenvoegen; controleer de nummering.');seenDuplicates.add(tripNumber(b.index));}continue;}
