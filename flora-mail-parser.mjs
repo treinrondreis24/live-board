@@ -1,4 +1,5 @@
 import {dfdsSender,parseDFDS,dfdsCabinMismatch} from './flora-dfds.mjs';
+import {nsOption} from './flora-options.mjs';
 import {hotelIdentity,nightTrainCodeMatch,trainRoom,trainStations,cityFrom,adjacentNightStay} from './flora-identity.mjs';
 import {normalize,hash,validateEvidence,stays} from './flora-engine.mjs';
 import {matchTravelerName,referenceBackedNSName} from './flora-names.mjs';
@@ -39,6 +40,7 @@ function directHotel(s,message){
 }
 // Supported supplier layouts and explicit hotel replies produce evidence; requests alone never do.
 export function parseDocument(doc,message){
+ if(nsOption(message))return null;
  if(doc.label==='E-mail'&&/cancel|annul|refund|storn/i.test(message.subject)&&!(/@teldartravel\.com\b/i.test(message.from)&&/days to cancel|without charge/i.test(message.subject))){
   const c=cancellation(message);if(c?.provider!=='Premier Inn')return null;
   const text=doc.text.replace(/\s+/g,' '),germanDate=s=>dateValue(String(s||'').replace(/(\d)\.\s+/g,'$1 ').replace(/Dezember/gi,'December').replace(/Oktober/gi,'October').replace(/März/gi,'March'));
@@ -49,7 +51,11 @@ export function parseDocument(doc,message){
  const siblings=group&&/@teldartravel\.com\b/i.test(message.from)?(message.docs||[]).filter(d=>d.label.startsWith(group+' · pagina ')):[];
  if(siblings.length>1&&siblings[0]!==doc)return null;
  const s=(siblings.length>1?siblings.map(d=>d.text).join(' '):doc.text).replace(/\s+/g,' ').trim(),n=normalize(s);let e=null;
- if(/expediataap\./i.test(message.from)&&/Naar aanleiding van je verzoek hebben we je boeking gewijzigd/i.test(s)&&/Je reservering is geboekt/i.test(s)){
+ if(doc.label==='E-mail'&&/@balehotels\.ch\b/i.test(message.from)&&/Reservation confirmed.*Hotel Victoria/i.test(message.subject)&&/pleased to confirm the following booking/i.test(s)){
+  const englishDate=label=>{const m=s.match(new RegExp(label+'\\s+(?:[A-Za-z]+,\\s*)?([A-Za-z]+)\\s+(\\d{1,2}),\\s*(20\\d{2})','i'));return m?dateValue(`${m[2]} ${m[1]} ${m[3]}`):'';};
+  const room=s.match(/ROOM TYPE\s+(.*?)\s+NIGHTLY RATE/i)?.[1]||'';
+  e={provider:'Hotel Victoria',reference:s.match(/RESERVATION NUMBER\s+(\d+)/i)?.[1],name:s.match(/GUEST NAME\s+(.*?)\s+RESERVATION NUMBER/i)?.[1]||'',start:englishDate('ARRIVAL DATE'),end:englishDate('DEPARTURE DATE'),room,capacity:roomCapacity(room),product:'Hotel Victoria Basel'};
+ }else if(/expediataap\./i.test(message.from)&&/Naar aanleiding van je verzoek hebben we je boeking gewijzigd/i.test(s)&&/Je reservering is geboekt/i.test(s)){
   const d=s.match(/(\d{1,2} \w+\.? 20\d{2})\s*-\s*(\d{1,2} \w+\.? 20\d{2})\s*\|\s*Reisplannummer\s+(\d+)/i),guest=s.match(/Geboekt voor\s+(.+?)\s+(\d+)\s+volwassen(?:e|en)(?:,?\s*(\d+)\s+kind(?:eren)?)?/i),room=s.match(/\bKamer\s+(.*?)\s+Geboekt voor/)?.[1]||'';
   if(!/\b1 kamer\b/i.test(s))return null;
   e={provider:'Expedia',reference:d?.[3],start:dateValue(d?.[1]),end:dateValue(d?.[2]),name:guest?.[1]||'',occupants:guest?Number(guest[2])+Number(guest[3]||0):null,capacity:roomCapacity(room),roomCount:1,room,product:s.match(/Verblijf bij\s+(.*?)\s+(?:Naar aanleiding|\d{1,2} \w+)/i)?.[1]||''};
@@ -121,7 +127,7 @@ export function amendedHotelEvidence(events,messages){
 // Premier Inn cancellation receipts use a NEW cancellation number, not the booking reference.
 // Only associate them when guest, stay dates and hotel identify exactly one earlier booking.
 export function receiptCancellations(messages,evidence){const result=[];for(const m of messages){if(!/@(?:[\w-]+\.)*(?:whitbread|premierinn)\.com\b/i.test(m.from))continue;for(const d of m.docs||[]){const s=d.text.replace(/\s+/g,' ');if(!/Booking cancelled.*Cancellation reference/i.test(s))continue;const name=s.match(/Hello\s+(.*?)\s+We're/i)?.[1],dates=s.match(/\((\d{2}\.\d{2}\.20\d{2})\s*[–-]\s*(\d{2}\.\d{2}\.20\d{2})\)/),hotel=s.match(/(Premier Inn.*?)\s+Cancelled room details/i)?.[1];if(!name||!dates||!hotel)continue;const matched=evidence.filter(e=>e.provider==='Premier Inn'&&e.observedAt<=m.at&&normalize(e.name)===normalize(name)&&e.start===dateValue(dates[1])&&e.end===dateValue(dates[2])&&normalize(e.product).includes(normalize(hotel)));const refs=[...new Set(matched.map(e=>e.reference))];if(refs.length===1)result.push({provider:'Premier Inn',reference:refs[0],at:m.at,source:m.url});}}return result;}
-export function latestNSTickets(events,messages){const latest=new Map();for(const m of messages){if(!/@confirmation\.nsinternational\.nl\b/i.test(m.from)||m.issues?.length||!m.hasLinks)continue;const ref=m.subject.match(/boekingscode:\s*([A-Z0-9]+)/i)?.[1];if(ref&&(!latest.has(ref)||latest.get(ref).at<m.at))latest.set(ref,m);}return events.map(e=>{const m=e.provider==='NS International'&&latest.get(e.reference.split('/')[0]);return m&&e.ticketLink&&e.observedAt<=m.at&&!m.docs.some(d=>d.link===e.ticketLink)?{...e,status:'cancelled',source:m.url,observedAt:m.at}:e;});}
+export function latestNSTickets(events,messages){const latest=new Map();for(const m of messages){if(nsOption(m)||!/@confirmation\.nsinternational\.nl\b/i.test(m.from)||m.issues?.length||!m.hasLinks)continue;const ref=m.subject.match(/boekingscode:\s*([A-Z0-9]+)/i)?.[1];if(ref&&(!latest.has(ref)||latest.get(ref).at<m.at))latest.set(ref,m);}return events.map(e=>{const m=e.provider==='NS International'&&latest.get(e.reference.split('/')[0]);return m&&e.ticketLink&&e.observedAt<=m.at&&!m.docs.some(d=>d.link===e.ticketLink)?{...e,status:'cancelled',source:m.url,observedAt:m.at}:e;});}
 const quoted=s=>'"'+String(s).replace(/["\\{}\r\n]/g,' ').trim()+'"';
 export function supplierReferences(value){
  const text=String(value||'').replace(/\b(\d{4}) (\d{4}) (\d{4}) (\d{4})\b/g,'$1$2$3$4');
