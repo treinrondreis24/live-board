@@ -24,6 +24,13 @@ test('two hotels on one night are an alarm across todos; cancellation or adjacen
  other.status='cancelled';assert.ok(!evaluate(s,now).findings.some(f=>f.code.startsWith('hotel-overlap-')));
  other.status='confirmed';other.start='2026-10-21';other.end='2026-10-22';assert.ok(!evaluate(s,now).findings.some(f=>f.code.startsWith('hotel-overlap-')));
 });
+test('two rooms overlapping another hotel produce one alarm including the wrong-date detail and all references',()=>{
+ const b=booking();b.todos[0].startDate='2026-10-19';b.todos[0].endDate='2026-10-20';b.todos.push({...b.todos[0],_key:'b',title:'Hotel Bernina',startDate:'2026-10-20',endDate:'2026-10-21'});
+ const s={bookings:[b],evidence:[proof(),proof({id:'b1',todoKey:'b',reference:'Bernina1',product:'Hotel Bernina',group:'rooms',occupants:1}),proof({id:'b2',todoKey:'b',reference:'Bernina2',product:'Hotel Bernina',group:'rooms',occupants:0})]};
+ const f=evaluate(s,now).findings,overlap=f.filter(f=>f.code.startsWith('hotel-overlap-'));
+ assert.equal(overlap.length,1);assert.equal(overlap[0].evidence.length,3);assert.match(overlap[0].detail,/Todo verwacht 2026-10-19/);assert.ok(!f.some(f=>f.code.startsWith('dates-')));
+ s.evidence[1].status='cancelled';s.evidence[2].status='cancelled';assert.ok(evaluate(s,now).findings.some(f=>f.code.startsWith('dates-')&&f.status==='alarm'));
+});
 test('NS option does not become evidence or cancel a real ticket; cached options remain inspectable',()=>{
  const m={id:'option',subject:'Optieboeking, boekingscode: ABCDEFG',from:'no-reply@confirmation.nsinternational.nl',at:now,docs:[],hasLinks:true};assert.equal(parseDocument({label:'ticket',text:'irrelevant'},m),null);
  const e=proof({provider:'NS International',reference:'ABCDEFG/0',ticketLink:'ticket',observedAt:'2026-10-01'});assert.equal(latestNSTickets([e],[m])[0].status,'confirmed');
