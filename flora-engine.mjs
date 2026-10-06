@@ -81,7 +81,7 @@ export function evaluate(state,now=new Date().toISOString(),options={}){
   if(!reservationScope(b,linked,now))continue;
   if(!active&&!waiting){for(const e of linked.filter(e=>e.status==='confirmed'))emit(b,null,'inactive-'+e.id,exceptionName(e.name,rules)?'attention':'alarm','Reservering bij niet-actieve boeking','Controleer annulering of wijziging van de reisstatus.',[e]);continue;}
   const documentIssues=(state.documentChecks?.[String(b.index)]?.files||[]).filter(f=>f.state==='incomplete');
-  const removed=linked.filter(e=>e.automaticSanity&&e.status==='confirmed'&&!(b.documents||[]).some(d=>(d.asset?._id||d.asset?._ref)===e.assetId));
+  const removed=linked.filter(e=>e.automaticSanity&&e.status==='confirmed'&&e.end>=day(now)&&!(b.documents||[]).some(d=>(d.asset?._id||d.asset?._ref)===e.assetId));
   if(documentIssues.length||removed.length)emit(b,null,'documents-incomplete','attention','Sanity-bijlagen nog te beoordelen',[...documentIssues.map(f=>f.title+': '+f.issues.join(' ')),...removed.map(e=>'Eerder bewijs '+e.reference+' is niet meer aan Sanity gekoppeld. Controleer vervanging of annulering; verwijderen is geen annulering.')].join('\n'),removed);
   for(const t of stayGroups(b)){
    // Completed stays do not remain operational alarms, even while the rest of the trip continues.
@@ -143,10 +143,19 @@ export function evaluate(state,now=new Date().toISOString(),options={}){
   }
   // Different linked hotel todos must also be compared: a wrong-date room can overlap the next city.
   const hotels=stays(b).filter(t=>t.type==='Hotel'),hotelProof=[...new Map(linked.filter(e=>hotels.some(t=>t._key===e.todoKey)).sort((a,b)=>String(a.observedAt||'').localeCompare(String(b.observedAt||''))).map(e=>[e.provider+'|'+e.reference,e])).values()].filter(e=>e.status==='confirmed'&&e.end>=day(now));
+  const overlaps=new Map();
   for(let i=0;i<hotelProof.length;i++)for(let j=i+1;j<hotelProof.length;j++){
    const a=hotelProof[i],c=hotelProof[j];if(a.todoKey===c.todoKey||!a.product||!c.product||!(a.start<c.end&&c.start<a.end))continue;
    if(hotelIdentity({title:a.product},c,b))continue;
-   emit(b,null,'hotel-overlap-'+hash([a.id,c.id].sort()).slice(0,16),'alarm','Overlappende hotelreserveringen',`Verschillende hotels zijn bevestigd op dezelfde nacht: ${a.product} (${a.start} t/m ${a.end}) en ${c.product} (${c.start} t/m ${c.end}). Controleer de verdeling of een aantoonbare annulering.`,[a,c]);
+   const key=[a.todoKey,c.todoKey].sort().join('|'),group=overlaps.get(key)||new Map();for(const e of [a,c])group.set(e.id,e);overlaps.set(key,group);
+  }
+  for(const [key,group] of overlaps){
+   const rows=[...group.values()].sort((a,c)=>a.id.localeCompare(c.id)),ids=new Set(rows.map(e=>e.id));
+   const dateIssues=findings.filter(f=>f.trip===tripNumber(b.index)&&f.code.startsWith('dates-')&&f.evidence.length&&f.evidence.every(e=>ids.has(e.id)));
+   const details=[...new Set(rows.map(e=>`${e.product} (${e.start} t/m ${e.end})`))].join(' en ');
+   emit(b,null,'hotel-overlap-'+hash(key).slice(0,16),'alarm','Overlappende hotelreserveringen',`Verschillende hotels zijn bevestigd op dezelfde nacht: ${details}. Controleer de verdeling of een aantoonbare annulering.`+(dateIssues.length?' Datumafwijking: '+[...new Set(dateIssues.map(f=>f.detail))].join(' '):''),rows);
+   // Preserve all evidence and date details in the combined alarm instead of separate room alerts.
+   for(const f of dateIssues)findings.splice(findings.indexOf(f),1);
   }
   if(waiting&&linked.some(e=>e.status==='confirmed')){
    const id=tripNumber(b.index)+':booking:waiting',old=previous.get(id),first=old?.firstSeen||now,deadline=addDays(first,rules.waitingDays),defer=state.deferrals?.[tripNumber(b.index)],latest=b.dateDeparture?twoMonthsBefore(b.dateDeparture):'';
