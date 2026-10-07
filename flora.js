@@ -81,3 +81,9 @@ const scanSummary=()=>{const progress=$('#mailprogress');$('#scan-summary').text
 new MutationObserver(scanSummary).observe($('#mailprogress'),{childList:true,subtree:true,characterData:true});
 new MutationObserver(scanSummary).observe($('#mailissues'),{childList:true,subtree:true,characterData:true});
 $('#showcontrols').addEventListener('click',e=>{e.preventDefault();$('#controlcenter').open=true;$('#controlcenter').scrollIntoView({behavior:'smooth',block:'start'});$('#controlcenter summary').focus();});
+
+// The website header starts on the photograph and becomes a solid brand bar on scroll.
+const updateBrandHeader=()=>document.querySelector('body>header').classList.toggle('is-scrolled',window.scrollY>48);
+window.addEventListener('scroll',updateBrandHeader,{passive:true});
+window.addEventListener('pageshow',updateBrandHeader);
+updateBrandHeader();
