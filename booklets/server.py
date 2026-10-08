@@ -1,5 +1,6 @@
 """Local pilot. PDF originals and published exports are immutable. No AI services; optional read-only Google Docs connection."""
 import copy
+from pdf_geometry import display_meta, normalize_page
 import bulk_ops, preflight, google_sources, google_connection, route_maker, station_catalog
 from types import SimpleNamespace
 from features import COUNTRIES, SIZES, pdf_format, resolved, plan, insert_fillers, refresh_blocks, library_stamp
@@ -30,7 +31,7 @@ pdfmetrics.registerFontFamily('Montserrat',normal='Montserrat',bold='Montserrat-
 def font_name(f):return 'Montserrat' if f.get('font')=='Montserrat' else 'Booklet'
 LOCK = threading.RLock()
 SESSIONS = {}
-APP_VERSION = '2026.09.28.1'
+APP_VERSION = '2026.10.08.1'
 
 def storage_remaining():
     limit=int(os.environ.get('BOOKLETS_STORAGE_LIMIT','5000000000'))
@@ -77,7 +78,7 @@ def obj(i):
 def asset(i):
     with db() as c: r=c.execute('SELECT * FROM assets WHERE id=?',(i,)).fetchone()
     if not r: raise ValueError('PDF ontbreekt.')
-    return {**dict(r),'meta':json.loads(r['meta'])}
+    return {**dict(r),'meta':display_meta(json.loads(r['meta']))}
 def inspect_pdf(raw):
     r=PdfReader(io.BytesIO(raw),strict=False)
     if r.is_encrypted: raise ValueError('Gebruik een PDF zonder wachtwoord.')
@@ -86,6 +87,7 @@ def inspect_pdf(raw):
     for p in r.pages:
         if any(a.get_object().get('/Subtype')!='/Link' for a in p.get('/Annots',[])): raise ValueError('Deze PDF bevat formulieren of andere interactieve elementen. Exporteer voor deze proef een statische Canva druk-PDF. Gewone hyperlinks zijn wel toegestaan.')
         if p.get('/UserUnit',1)!=1: raise ValueError('Afwijkende PDF-schaaleenheid wordt nog niet ondersteund.')
+        normalize_page(p)
         meta.append({'width':float(p.mediabox.width),'height':float(p.mediabox.height),'rotation':p.rotation,'crop':list(map(float,p.cropbox))})
     return r,meta
 TOKEN = re.compile(r'\{\{\s*([^{}]+?)\s*\}\}')
@@ -134,6 +136,7 @@ def wrap_text(value,width,size):
     return lines
 
 def fields_validate(fields,meta):
+    meta=display_meta(meta)
     for f in fields:
         key=f.get('key','')
         if not isinstance(key,str) or not key.strip() or len(key)>80 or not all(c.isalnum() or c in ' _-' for c in key):
@@ -145,7 +148,6 @@ def fields_validate(fields,meta):
         if f.get('type')=='prefilled' and (not isinstance(f.get('template',''),str) or len(f.get('template',''))>20000):raise ValueError('Standaardtekst mag maximaal 20.000 tekens bevatten.')
         n=int(f['page'])
         if not 0<=n<len(meta): raise ValueError('Ongeldige veldpagina.')
-        if meta[n]['rotation'] or meta[n]['crop'][:2]!=[0,0]: raise ValueError('Personalisatie vereist ongedraaide pagina’s met oorsprong 0,0.')
         for k in ['x','y','w','h']:
             if not 0<=float(f[k])<=100: raise ValueError('Veldpositie buiten pagina.')
         if float(f['w'])<=0 or float(f['h'])<=0 or float(f['x'])+float(f['w'])>100 or float(f['y'])+float(f['h'])>100: raise ValueError('Het invulveld valt buiten de pagina.')
@@ -252,6 +254,7 @@ def make_export(book,options=None):
             for _ in toc:
                 toc_indices.append(len(writer.pages));writer.add_blank_page(width=SIZES[b.get('format','A4')][0],height=SIZES[b.get('format','A4')][1])
         a=asset(s['asset']); reader=PdfReader(DATA/'pdfs'/f"{a['id']}.pdf")
+        for page in reader.pages:normalize_page(page)
         if b.get('duplex',True) and s.get('recto') and len(writer.pages)%2:
             blank_indices.add(len(writer.pages))
             writer.add_blank_page(width=float(reader.pages[0].mediabox.width),height=float(reader.pages[0].mediabox.height));report['blanks']+=1
