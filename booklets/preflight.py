@@ -3,6 +3,8 @@ import io
 
 def check(s,body,objects,fill=False):
     b=s.refresh_blocks(body,objects);errors=[];missing=[]
+    try:b=s.sanity_sources.refresh_export(s,b)
+    except ValueError as e:return {'pages':0,'needed':0,'missing':[],'canFill':False,'fillers':[],'libraryStamp':s.library_stamp(objects),'errors':[{'section':None,'title':'Sanity-bron','message':str(e)}]}
     def error(index,title,message):errors.append({'section':index,'title':title,'message':str(message)})
     if not b.get('sections'):error(None,'Boekje','Voeg eerst een bouwsteen toe.')
     for i,slot in enumerate(b.get('sections',[])):

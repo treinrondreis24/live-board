@@ -1,0 +1,13 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const nodes=new Map(),node=s=>{if(!nodes.has(s))nodes.set(s,{innerHTML:'',open:true,showModal(){}});return nodes.get(s)};
+const ctx=vm.createContext({document:{querySelector:node},window:{addEventListener(){}},structuredClone,console,clearTimeout,setTimeout});
+vm.runInContext(fs.readFileSync(__dirname+'/index.html','utf8').split('<script>')[2].split('</script>')[0].replace(/init\(\)\.catch\(e=>\{[^\n]+/,''),ctx);
+vm.runInContext(`sanityPick={selected:[],items:[{id:'a',title:'Hotel <script>',preview:'<img onerror=x>'},{id:'b',title:'Nightjet',preview:'Tekst'}],format:'A5',columns:2,title:'',q:''};sanityPickForm();sanitySelect(0);sanitySelect(1);sanityMove(1,-1)`,ctx);
+assert.equal(vm.runInContext('sanityPick.selected[0].id',ctx),'b');
+assert(node('#sanityResults').innerHTML.includes('&lt;img onerror=x&gt;'));
+assert(!node('#sanityResults').innerHTML.includes('<img onerror'));
+vm.runInContext('sanityRemove(0)',ctx);
+assert.equal(vm.runInContext('sanityPick.selected.length',ctx),1);
+const snapshot=vm.runInContext(`snapshot({id:'source',revision:1,title:'Gids',body:{asset:'pdf',pages:2,fields:[],sanityText:{ids:['a'],format:'A5',columns:2}}})`,ctx);
+assert.equal(snapshot.sanityText.ids[0],'a');
+console.log('Sanity text selection, ordering, escaped previews and linked book snapshots verified.');

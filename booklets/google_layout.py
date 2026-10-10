@@ -86,14 +86,14 @@ def normalize(doc,fetch_image):
 
 def render(model,images,fmt,layout):
     W,H=SIZES[fmt];margin=28;gap=24;width=W-2*margin
-    title=Paragraph(html.escape(model['title']),ParagraphStyle('title',fontName='Montserrat',fontSize=22,leading=28,textColor='#000000'))
+    title=Paragraph(html.escape(model['title']),ParagraphStyle('title',fontName='Montserrat',fontSize=model.get('titleSize',22),leading=model.get('titleLeading',28),textColor='#000000'))
     _,th=title.wrap(width,H);top=margin+th+8
     if th>90:raise ValueError('De documenttitel is te lang. Gebruik een kortere titel in Google Docs.')
     avail=H-top-42
     def para(b):
-        size=b.get('renderSize',10.5)
-        style=ParagraphStyle('body',fontName='Booklet-Bold' if b.get('heading') else 'Booklet',fontSize=size,leading=size*1.6,textColor='#000000',spaceAfter=b.get('spaceAfter',7),spaceBefore=7 if b.get('heading') else 0,keepWithNext=b.get('heading',False))
-        if b.get('bullet'):style.leftIndent=12;style.bulletIndent=0
+        size=b.get('renderSize',model.get('headingSize',10.5) if b.get('heading') else model.get('bodySize',10.5))
+        style=ParagraphStyle('body',fontName='Booklet-Bold' if b.get('heading') else 'Booklet',fontSize=size,leading=size*model.get("lineSpacing",1.6),textColor='#000000',spaceAfter=b.get('spaceAfter',7),spaceBefore=7 if b.get('heading') else 0,keepWithNext=b.get('heading',False))
+        if b.get('bullet'):style.leftIndent=12*b.get('bulletLevel',1);style.bulletIndent=style.leftIndent-12
         return Paragraph(b['html'],style,bulletText=b.get('bullet') or None)
     def picture(b,w,h=avail):
         scale=min(w/b['width'],h/b['height']);im=Image(io.BytesIO(images[b['key']]),width=b['width']*scale,height=b['height']*scale);im.hAlign='LEFT';return im

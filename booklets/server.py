@@ -1,7 +1,7 @@
 """Local pilot. PDF originals and published exports are immutable. No AI services; optional read-only Google Docs connection."""
 import copy
 from pdf_geometry import display_meta, normalize_page
-import bulk_ops, preflight, google_sources, google_connection, route_maker, station_catalog
+import bulk_ops, preflight, sanity_sources, google_sources, google_connection, route_maker, station_catalog
 from types import SimpleNamespace
 from features import COUNTRIES, SIZES, pdf_format, resolved, plan, insert_fillers, refresh_blocks, library_stamp
 import base64, hashlib, hmac, io, json, os, re, secrets, socket, sqlite3, subprocess, threading, time, uuid
@@ -31,7 +31,7 @@ pdfmetrics.registerFontFamily('Montserrat',normal='Montserrat',bold='Montserrat-
 def font_name(f):return 'Montserrat' if f.get('font')=='Montserrat' else 'Booklet'
 LOCK = threading.RLock()
 SESSIONS = {}
-APP_VERSION = '2026.10.08.1'
+APP_VERSION = '2026.10.10.1'
 
 def storage_remaining():
     limit=int(os.environ.get('BOOKLETS_STORAGE_LIMIT','5000000000'))
@@ -169,6 +169,10 @@ def validate_body(kind,b,prepared=False):
         slot.pop('values',None);slot.pop('choiceSource',None);slot.pop('choiceRevision',None)
         validate_body('template',{'format':b.get('format','A4'),'sections':[slot]})
     elif kind=='block':
+        if b.get('sanityText'):
+            sanity_sources.settings(b['sanityText'])
+            if b.get('fillerOrder'):raise ValueError('Gebruik een vaste PDF voor vulpagina’s.')
+            google_sources.number_fields(SimpleNamespace(**globals()),b,b['pages'])
         if b.get('googleDoc'):
             google_sources.settings(b['googleDoc'])
             if b.get('fillerOrder'):raise ValueError('Gebruik een vaste PDF voor vulpagina’s; Google-bronnen kunnen van lengte veranderen.')
@@ -189,6 +193,10 @@ def validate_body(kind,b,prepared=False):
                 if slot.get('choice')=='route' and slot.get('country') not in COUNTRIES:raise ValueError('Kies een land voor de routekeuze.')
             candidates=([*slot.get('options',[]),*([slot['selected']] if slot.get('selected') else [])] if slot.get('choice') else [slot])
             for candidate in candidates:
+                if candidate.get('sanityText'):
+                    source=sanity_sources.settings(candidate['sanityText'])
+                    if source['format']!=b.get('format','A4'):raise ValueError('Sanity-tekst past niet bij dit boekformaat.')
+                    google_sources.number_fields(SimpleNamespace(**globals()),candidate,candidate['pages'])
                 if candidate.get('googleDoc'):
                     source=google_sources.settings(candidate['googleDoc'])
                     if source['format']!=b.get('format','A4'):raise ValueError('Google-bron past niet bij dit boekformaat.')
@@ -229,7 +237,7 @@ def make_export(book,options=None):
     for o in objects:
         if o['kind']=='block':o['body']['format']=pdf_format(asset(o['body']['asset'])['meta'])
     if options.get('libraryStamp') is not None and options['libraryStamp']!=library_stamp(objects):raise ValueError('De bibliotheek is gewijzigd tijdens de controle. Maak de PDF opnieuw om de nieuwste pagina’s te controleren.')
-    b=refresh_blocks(b,objects);book['body']=b
+    b=refresh_blocks(b,objects);b=sanity_sources.refresh_export(SimpleNamespace(**globals()),b);book['body']=b
     validate_body('book',b)
     google_warnings=google_sources.verify(b)
     preparation=plan(b,objects)
@@ -449,6 +457,12 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/api/users':
                 if not session['user']['admin']:return self.send(403,{'error':'Alleen de beheerder kan accounts toevoegen.'})
                 user_create(b['name'],b['password']);return self.send(200,{'ok':True})
+            if path.startswith('/api/sanity/'):
+                context=SimpleNamespace(**globals());action=path.rsplit('/',1)[-1]
+                if action=='search':return self.send(200,sanity_sources.search(b))
+                if action=='import':return self.send(200,sanity_sources.load(context,b))
+                if action=='prepare':return self.send(200,{'body':sanity_sources.refresh_export(context,b['body'])})
+                return self.send(404,{'error':'Niet gevonden.'})
             if path.startswith('/api/google/'):
                 context=SimpleNamespace(**globals())
                 action=path.rsplit('/',1)[-1]
