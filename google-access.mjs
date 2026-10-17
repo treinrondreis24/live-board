@@ -5,7 +5,7 @@ import {createGoogleLogin,googleLoginConfig} from './google-login.mjs';
 import {hash,token,cookieValue,accessState,audit,googleSessionFor,GOOGLE_SESSION,GOOGLE_DEVICE,revokeDevice,blockAccount,APP_SCOPES} from './google-access-state.mjs';
 const DAY=86400000,STATE_COOKIE='tr_google_state',SESSION_DAYS=30;
 function setCookie(res,name,value,seconds){const existing=res.getHeader('Set-Cookie')||[];res.setHeader('Set-Cookie',[...(Array.isArray(existing)?existing:[existing]),`${name}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${seconds}`]);}
-function fail(message,status=400){throw Object.assign(Error(message),{status});}
+function fail(message,status=400,confirmationRequired=false){throw Object.assign(Error(message),{status,confirmationRequired});}
 function legacyOwner(req,s,now){const v=sessionFor(req,s,countryFor(req),now);return v&&!v.recovery&&(!v.username||v.username===s.user.name)?v:null;}
 function issueSession(g,d,id,res,now){const raw=token();g.sessions[hash(raw)]={email:d.email,sub:d.sub,device:id,created:now,verifiedAt:d.verifiedAt,expires:now+SESSION_DAYS*DAY,lastSeen:now};setCookie(res,GOOGLE_SESSION,raw,SESSION_DAYS*86400);}
 function clean(g,now){for(const [id,v] of Object.entries(g.pending))if(v.expires<=now)delete g.pending[id];for(const [id,v] of Object.entries(g.sessions))if(v.expires<=now)delete g.sessions[id];}
@@ -28,7 +28,7 @@ export function createGoogleAccess({login=createGoogleLogin(),configuration=goog
    const action=path.slice('/api/seinhuis-access/'.length);
    if(req.method==='GET'&&action==='status'){
     const device=g.devices[hash(cookieValue(req,GOOGLE_DEVICE))];
-    return json(200,{configured:login.configured(),authenticated:!!current,isAdmin,legacyOwner:!!owner,identity:current?.email,device:device?{email:device.email,status:device.status,label:device.label}:null,sessionDays:SESSION_DAYS,country,countryAllowed});
+    return json(200,{configured:login.configured(),authenticated:!!current,isAdmin,legacyOwner:!!owner,identity:current?.email,device:device?{email:device.email,status:device.status,label:device.label}:null,confirmation:isAdmin?{method:current?'google':'totp',validUntil:current?current.verifiedAt+10*60000:0}:null,currentDeviceId:isAdmin&&current?current.device:null,sessionDays:SESSION_DAYS,country,countryAllowed});
    }
    if(req.method==='GET'&&action==='overview'){
     if(!isAdmin)fail('Alleen beheerders kunnen toegang beheren.',403);
@@ -49,6 +49,13 @@ export function createGoogleAccess({login=createGoogleLogin(),configuration=goog
     if(!account?.active)fail('Dit Google-account heeft geen toegang tot Seinhuis.',403);
     if(account.sub&&account.sub!==identity.sub)fail('Dit e-mailadres hoort bij een ander gekoppeld Google-account.',403);
     if(Object.values(g.accounts).some(a=>a.email!==identity.email&&a.sub===identity.sub))fail('Dit Google-account is al gekoppeld.',409);
+    if(pending.reauth){
+     const session=googleSessionFor(req,s,countryFor(req),time);
+     if(!session||session.role!=='admin'||hash(cookieValue(req,GOOGLE_SESSION))!==pending.reauth.session||session.device!==pending.reauth.device||identity.email!==session.email||identity.sub!==session.sub)fail('Bevestig met hetzelfde beheerdersaccount in dezelfde browser. Er is geen toegang gewijzigd.',403);
+     g.sessions[pending.reauth.session].verifiedAt=time;
+     await write(s,record.revision);
+     res.writeHead(303,{Location:'/seinhuis/toegang?confirmed='+encodeURIComponent(pending.reauth.channel)});res.end();return true;
+    }
     const linking=pending.link===true;
     if(linking&&(!legacyOwner(req,s,time)||hash(cookieValue(req,'tr_admin_session'))!==pending.legacySession||account.role!=='admin'))fail('Koppel je beheerdersaccount opnieuw vanuit de bestaande beheerlogin.',403);
     account.sub=identity.sub;
@@ -71,18 +78,21 @@ export function createGoogleAccess({login=createGoogleLogin(),configuration=goog
    const c=configuration();if(req.headers.origin!==c.origin||req.headers.host!==new URL(c.origin).host)fail('Open deze pagina op de eigen website.',403);
    if(!String(req.headers['content-type']||'').startsWith('application/json'))fail('Gebruik JSON.',415);
    const input=await body(req);
-   if(['start','link'].includes(action)){
+   if(['start','link','reauth'].includes(action)){
     if(!countryAllowed)fail('Dit land is niet toegestaan of kon niet worden vastgesteld. Vraag een beheerder het land toe te staan.',403);
     if(!login.configured())fail('De Google-login moet nog worden ingesteld.',503);
     if(action==='link'){
      if(!owner||!consumeTotp(s.user,input.code,time))fail('Log in met het bestaande beheeraccount en bevestig met een verse Authenticator-code.',403);
     }
+    if(action==='reauth'&&(!current||current.role!=='admin'))fail('Je beheerderssessie is verlopen. Log opnieuw in via de bestaande ingang of Google.',401);
+    if(action==='reauth'&&(typeof input.channel!=='string'||!/^[-a-zA-Z0-9_]{16,64}$/.test(input.channel)))fail('Ongeldige bevestiging. Open het venster opnieuw.');
     if(Object.keys(g.pending).length>=200)fail('Te veel lopende logins. Probeer later opnieuw.',429);
     const ipKey='google:'+hash(clientIP(req)||'unknown'),rate=s.attempts[ipKey];
     s.attempts[ipKey]=rate&&rate.start>time-15*60000?rate:{start:time,count:0};
     if(s.attempts[ipKey].count>=20)fail('Te veel loginpogingen. Wacht 15 minuten.',429);s.attempts[ipKey].count++;
     const state=token(),browser=token(),nonce=token(),verifier=token();
     g.pending[hash(state)]={browser:hash(browser),nonce,verifier:seal(verifier),expires:time+10*60000,link:action==='link',legacySession:action==='link'?hash(cookieValue(req,'tr_admin_session')):null,label:String(input.label||'Mijn browser').slice(0,80)};
+    if(action==='reauth')g.pending[hash(state)].reauth={session:hash(cookieValue(req,GOOGLE_SESSION)),device:current.device,channel:input.channel};
     await write(s,record.revision);setCookie(res,STATE_COOKIE,browser,600);
     return json(200,{url:login.start({state,nonce,verifier})});
    }
@@ -99,8 +109,8 @@ export function createGoogleAccess({login=createGoogleLogin(),configuration=goog
    if(!isAdmin)fail('Alleen beheerders kunnen toegang beheren.',403);
    if(!['approve','revoke','block','enable','revoke-session','permissions'].includes(action))fail('Niet gevonden.',404);
    if(current?.role==='admin'){
-    if(current.verifiedAt<time-10*60000)fail('Bevestig deze beheeractie door opnieuw via Google aan te melden.',401);
-   }else if(!consumeTotp(s.user,input.code,time))fail('Vul een verse Authenticator-code in.',403);
+    if(current.verifiedAt<time-10*60000)fail('Bevestig deze beheeractie via Google. Je blijft op deze pagina.',401,true);
+   }else if(!consumeTotp(s.user,input.code,time))fail('Vul een verse Authenticator-code in.',403,true);
    const actor=current?.email||s.user.name;
    if(action==='permissions'){
     const a=g.accounts[input.email];if(!a)fail('Account niet gevonden.',404);
@@ -121,7 +131,7 @@ export function createGoogleAccess({login=createGoogleLogin(),configuration=goog
     const v=g.sessions[input.id];if(!v)fail('Sessie niet gevonden.',404);g.devices[v.device].verifiedAt=0;delete g.sessions[input.id];audit(g,'session-revoked',actor,v.email,time);
    }
    await write(s,record.revision);return json(200,{ok:true});
-  }catch(e){return json(e.status||400,{error:e.status?e.message:e.message==='De beveiliging is ondertussen gewijzigd. Probeer opnieuw.'?e.message:'De aanvraag kon niet worden verwerkt. Begin opnieuw of probeer later.'});}
+  }catch(e){return json(e.status||400,{error:e.status?e.message:e.message==='De beveiliging is ondertussen gewijzigd. Probeer opnieuw.'?e.message:'De aanvraag kon niet worden verwerkt. Begin opnieuw of probeer later.',...(e.confirmationRequired?{confirmationRequired:true}:{})});}
  };
 }
 export const handleGoogleAccess=createGoogleAccess();

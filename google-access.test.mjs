@@ -85,7 +85,24 @@ test('Google onboarding, least privilege, lasting approvals and immediate revoca
   assert.equal((await login(user)).status,303);assert.equal((await call(user,'status')).data.device.status,'approved','approval survives session expiry');
   assert.equal(await adminAuthenticated(request(user,'GET'),'flora'),true);
   identity={email:'hildebrand@treinreiziger.nl',sub:'111111'};await login(admin);now+=11*60000;
-  assert.equal((await call(admin,'revoke',{id})).status,401,'sensitive actions require recent Google confirmation');
+  const expired=await call(admin,'revoke',{id});assert.equal(expired.status,401,'sensitive actions require recent Google confirmation');assert.equal(expired.data.confirmationRequired,true);
+  const channel='fictional-confirmation-channel',previousSession=admin.tr_google_session;
+  assert.equal((await call(user,'reauth',{channel})).status,401,'users cannot start administrator confirmation');
+  assert.equal((await call(admin,'reauth',{channel:'bad'})).status,400);
+  async function beginConfirmation(){const begin=await call(admin,'reauth',{channel});assert.equal(begin.status,200);return new URL(begin.data.url).searchParams.get('state');}
+  let confirmState=await beginConfirmation();identity={email:'reservations@treinrondreis.nl',sub:'444444'};
+  assert.equal((await call(admin,'/seinhuis/google/callback?state='+confirmState+'&code=test')).status,403,'confirmation cannot switch administrator identities');
+  assert.equal(admin.tr_google_session,previousSession,'wrong account does not replace the original session');
+  assert.equal((await call(admin,'revoke',{id})).status,401,'failed confirmation never extends authority');
+  identity={email:'hildebrand@treinreiziger.nl',sub:'111111'};confirmState=await beginConfirmation();
+  const confirmed=await call(admin,'/seinhuis/google/callback?state='+confirmState+'&code=test');assert.equal(confirmed.status,303);assert.equal(confirmed.headers.Location,'/seinhuis/toegang?confirmed='+channel);
+  assert.equal(admin.tr_google_session,previousSession,'popup refreshes the existing session without logging out');
+  const status=(await call(admin,'status')).data;assert.equal(status.confirmation.validUntil,now+10*60000);assert.equal(status.currentDeviceId,hash(admin.tr_google_device));
+  assert.equal((await call(admin,'/seinhuis/google/callback?state='+confirmState+'&code=test')).status,400,'confirmation state remains single use');
+  assert.equal((await call(admin,'revoke',{id})).status,200,'confirmed action succeeds on the original page');
+  now+=11*60000;confirmState=await beginConfirmation();
+  duringFinish=async()=>{const r=await readAdminSecurity();delete r.value.googleAccess.sessions[hash(admin.tr_google_session)];await writeAdminSecurity(r.value,r.revision);};
+  assert.equal((await call(admin,'/seinhuis/google/callback?state='+confirmState+'&code=test')).status,403,'popup cannot restore a revoked session');duringFinish=null;
   await login(admin);assert.equal((await call(admin,'revoke',{id})).status,200);
   // A revocation during Google's network response must not be overwritten.
   duringFinish=async()=>{const r=await readAdminSecurity();r.value.googleAccess.accounts['tickets@treinrondreis.nl'].active=false;await writeAdminSecurity(r.value,r.revision);};

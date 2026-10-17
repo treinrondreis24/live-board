@@ -35,6 +35,14 @@ Een succesvolle overgang naar een goedgekeurde Google-sessie sluit de bestaande 
 
 ## Sessies, intrekken en locaties
 
+### Beheeractie bevestigen zonder de pagina te verlaten
+
+Aanvragen staan bovenaan. Het computeroverzicht groepeert browsergoedkeuringen per account, met zoeken en statusfilters. Een kaart stelt een browsercookie bij een account voor, geen vastgesteld fysiek apparaat. Sessies en IP-/browserdetails staan afzonderlijk bij het overzicht. Meldingen krijgen focus en de pagina schuift naar de melding.
+
+Een Google-beheerder kan gedurende tien minuten na de laatste bevestiging beheeracties uitvoeren. Na die termijn opent de gekozen actie een dialoog met het doel van de actie. De knop daarin opent Google in een apart venster. De server bindt deze bevestiging aan het bestaande sessietoken, dezelfde goedgekeurde browser en exact hetzelfde Google-account. Een geblokkeerd account, ingetrokken sessie/browser of niet-toegestaan land kan daarmee niet worden hersteld. Na succes wordt uitsluitend de bevestigingstijd van de bestaande sessie vernieuwd; daarna probeert de oorspronkelijke pagina de bewaarde actie opnieuw met de normale servercontroles.
+
+Het venster geeft alleen een willekeurige kanaalcode door, geen tokens of accountgegevens. De oorspronkelijke pagina vertrouwt een vensterbericht niet als bewijs: zij controleert opnieuw de eigen serverstatus. Ook wanneer Google de vensterverbinding isoleert, controleert de pagina die status tijdelijk om de bevestiging op te merken. Annuleren of een verlopen bevestiging voert de bewaarde actie niet uit. Bij een geblokkeerd pop-upvenster verschijnt uitleg in de dialoog. De bestaande eigenaarlogin vraagt een verse Authenticator-code in dezelfde dialoog; onjuiste codes worden nooit automatisch opnieuw geprobeerd.
+
 - Browsergoedkeuring verloopt niet na 30 dagen. De database bewaart de goedkeuring totdat een beheerder haar intrekt. De browser krijgt een beveiligde cookie van maximaal 400 dagen, opnieuw geplaatst bij Google-login; browsers mogen cookies eerder verwijderen.
 - Een Google-sessie verloopt na 30 dagen. Daarna volgt opnieuw de Google-accountkeuze, zonder nieuwe browsergoedkeuring. Google bepaalt zelf of extra verificatie nodig is.
 - Iedere beschermde aanvraag controleert account, browsergoedkeuring en sessie in de database. Een ingetrokken browser blijft ingetrokken na Google-login. Accountblokkade beëindigt alle Google-sessies en trekt alle bijbehorende browsers in; het account opnieuw toestaan keurt die browsers niet automatisch goed.
